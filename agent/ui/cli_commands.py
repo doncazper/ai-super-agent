@@ -8,6 +8,7 @@ from agent.config.loader import load_capabilities_config
 from agent.tools.registry import default_registry
 from agent.ui.audit_viewer import tail_audit
 from agent.ui.config_viewer import config_as_json
+from agent.ui.doctor import doctor_exit_code, format_doctor, run_doctor
 from agent.ui.memory_viewer import delete_memory, list_memory
 from agent.ui.permissions_dashboard import PermissionStore
 
@@ -36,6 +37,10 @@ def dispatch_cli(argv: list[str], *, project_root: str | Path = ".") -> int | No
     if command == "setup":
         print("Set LMSTUDIO_MODEL, start LM Studio at http://localhost:1234/v1, then run tests.")
         return 0
+    if command == "doctor":
+        checks = run_doctor()
+        print(format_doctor(checks))
+        return doctor_exit_code(checks)
     return None
 
 

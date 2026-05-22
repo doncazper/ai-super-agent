@@ -6,6 +6,12 @@ from typing import Any
 
 import httpx
 
+from agent.config.runtime import RuntimeConfig, RuntimeConfigError, validate_base_url
+
+
+class LMStudioError(RuntimeError):
+    pass
+
 
 @dataclass(frozen=True)
 class LMStudioConfig:
@@ -18,19 +24,24 @@ class LMStudioConfig:
 
     @classmethod
     def from_env(cls) -> "LMStudioConfig":
+        runtime = RuntimeConfig.from_env()
+        return cls.from_runtime(runtime)
+
+    @classmethod
+    def from_runtime(cls, runtime: RuntimeConfig) -> "LMStudioConfig":
         return cls(
-            base_url=os.getenv("LMSTUDIO_BASE_URL", cls.base_url).rstrip("/"),
-            model=os.getenv("LMSTUDIO_MODEL", ""),
-            temperature=float(os.getenv("LMSTUDIO_TEMPERATURE", cls.temperature)),
-            top_p=float(os.getenv("LMSTUDIO_TOP_P", cls.top_p)),
-            max_tokens=int(os.getenv("LMSTUDIO_MAX_TOKENS", cls.max_tokens)),
+            base_url=runtime.lmstudio_base_url,
+            model=runtime.lmstudio_model,
+            temperature=runtime.temperature,
+            top_p=runtime.top_p,
+            max_tokens=runtime.max_tokens,
         )
 
 
 class LMStudioClient:
     def __init__(self, config: LMStudioConfig) -> None:
         if not config.model:
-            raise ValueError("LMSTUDIO_MODEL is required")
+            raise LMStudioError("LMSTUDIO_MODEL is not set. Export LMSTUDIO_MODEL='<model id>'.")
         self.config = config
 
     def build_payload(
@@ -58,7 +69,31 @@ class LMStudioClient:
         tools: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         payload = self.build_payload(messages, tools=tools)
-        with httpx.Client(timeout=self.config.timeout_seconds) as client:
-            response = client.post(f"{self.config.base_url}/chat/completions", json=payload)
-            response.raise_for_status()
-            return response.json()
+        try:
+            with httpx.Client(timeout=self.config.timeout_seconds) as client:
+                response = client.post(f"{self.config.base_url}/chat/completions", json=payload)
+                response.raise_for_status()
+                data = response.json()
+        except httpx.ConnectError as exc:
+            raise LMStudioError(
+                f"LM Studio server not reachable at {self.config.base_url}. "
+                "Start LM Studio Developer Server and retry."
+            ) from exc
+        except httpx.TimeoutException as exc:
+            raise LMStudioError(
+                f"LM Studio request timed out at {self.config.base_url}. "
+                "Confirm the model is loaded and retry."
+            ) from exc
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            body = exc.response.text[:500]
+            raise LMStudioError(
+                f"LM Studio returned HTTP {status}. Confirm model '{self.config.model}' is loaded. "
+                f"Response: {body}"
+            ) from exc
+        except ValueError as exc:
+            raise LMStudioError("LM Studio returned a malformed non-JSON response.") from exc
+
+        if not isinstance(data, dict) or not data.get("choices"):
+            raise LMStudioError("LM Studio returned a malformed response: missing choices.")
+        return data

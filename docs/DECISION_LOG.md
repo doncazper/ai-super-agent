@@ -6,3 +6,4 @@
 | 2026-05-22 | Start with M0 only after governance docs exist. | Prevents capability sprawl before safety requirements are explicit. | Accepted |
 | 2026-05-22 | Deny unknown tools by default. | Safe default for model-requested tool calls. | Accepted |
 | 2026-05-22 | Use hash-chained JSONL for the initial audit log. | Simple local format with tamper-evidence. | Accepted |
+| 2026-05-22 | Add centralized runtime config and `doctor` diagnostics before external connectors. | Keeps LM Studio/CLI troubleshooting safe and local without adding new capabilities. | Accepted |

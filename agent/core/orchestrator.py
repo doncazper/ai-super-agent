@@ -17,6 +17,7 @@ class OrchestratorResult:
     content: str
     messages: list[dict[str, Any]]
     tool_results: list[dict[str, Any]] = field(default_factory=list)
+    debug_events: list[dict[str, Any]] = field(default_factory=list)
 
 
 class Orchestrator:
@@ -47,8 +48,26 @@ class Orchestrator:
         messages = initial_messages(user_message)
         route_decision = route or self.router.route(user_message, force_no_tools=no_tools)
         tools = self.registry.schemas(route_decision.tool_names) if route_decision.use_tools else None
+        if no_tools and tools:
+            raise RuntimeError("No-tool mode should not attach tools. This is a bug.")
+        debug_events: list[dict[str, Any]] = [
+            {
+                "event": "route",
+                "route": route_decision.name,
+                "risk_level": route_decision.risk_level.value,
+                "tools_attached": [tool["function"]["name"] for tool in tools or []],
+            },
+            {
+                "event": "messages",
+                "messages": [
+                    {"role": message["role"], "content": self._shorten(str(message.get("content", "")))}
+                    for message in messages
+                ],
+            },
+        ]
 
         response = self.client.chat(messages, tools=tools)
+        debug_events.append(self._response_debug("initial_model_response", response))
         assistant_message = self._assistant_message(response)
         messages.append(assistant_message)
 
@@ -57,13 +76,27 @@ class Orchestrator:
         while assistant_message.get("tool_calls") and not no_tools:
             if iterations >= self.max_tool_iterations:
                 return OrchestratorResult(
-                    content="Tool iteration limit reached before final model response.",
+                    content=(
+                        "Tool-call loop limit reached before final model response. "
+                        "This can happen if the model repeatedly requests tools."
+                    ),
                     messages=messages,
                     tool_results=tool_results,
+                    debug_events=debug_events
+                    + [{"event": "tool_loop_limit", "max_tool_iterations": self.max_tool_iterations}],
                 )
             iterations += 1
             for tool_call in assistant_message["tool_calls"]:
+                debug_events.append(
+                    {
+                        "event": "tool_call",
+                        "tool_call_id": tool_call.get("id", ""),
+                        "tool_name": (tool_call.get("function") or {}).get("name", ""),
+                    }
+                )
                 execution = self.broker.execute(tool_call)
+                if execution.debug:
+                    debug_events.append({"event": "tool_broker", **execution.debug})
                 tool_message = {
                     "role": "tool",
                     "tool_call_id": execution.tool_call_id,
@@ -74,6 +107,7 @@ class Orchestrator:
                 tool_results.append(tool_message)
 
             response = self.client.chat(messages, tools=tools)
+            debug_events.append(self._response_debug("final_model_response", response))
             assistant_message = self._assistant_message(response)
             messages.append(assistant_message)
 
@@ -81,11 +115,31 @@ class Orchestrator:
             content=str(assistant_message.get("content") or ""),
             messages=messages,
             tool_results=tool_results,
+            debug_events=debug_events,
         )
 
     def _assistant_message(self, response: dict[str, Any]) -> dict[str, Any]:
         message = response["choices"][0]["message"]
         return clean_assistant_message(message)
+
+    def _response_debug(self, event: str, response: dict[str, Any]) -> dict[str, Any]:
+        choice = response.get("choices", [{}])[0]
+        message = choice.get("message", {})
+        tool_calls = message.get("tool_calls") or []
+        return {
+            "event": event,
+            "finish_reason": choice.get("finish_reason"),
+            "tool_calls_returned": [
+                {
+                    "id": tool_call.get("id", ""),
+                    "name": (tool_call.get("function") or {}).get("name", ""),
+                }
+                for tool_call in tool_calls
+            ],
+        }
+
+    def _shorten(self, text: str, limit: int = 180) -> str:
+        return text if len(text) <= limit else text[: limit - 3] + "..."
 
 
 def new_session_id() -> str:

@@ -18,6 +18,7 @@ class ToolExecutionResult:
     tool_name: str
     allowed: bool
     content: str
+    debug: dict[str, Any] | None = None
 
 
 class ToolBroker:
@@ -48,7 +49,7 @@ class ToolBroker:
 
         tool = self.registry.get(tool_name)
         if tool is None:
-            self._log(
+            audit = self._log(
                 tool_name=tool_name,
                 capability="unknown",
                 decision=PolicyDecision.DENY,
@@ -61,11 +62,12 @@ class ToolBroker:
                 tool_name=tool_name,
                 allowed=False,
                 content=json.dumps({"error": "unknown tool denied", "tool_name": tool_name}),
+                debug=self._debug_from_audit(audit),
             )
 
         args = self._parse_arguments(raw_arguments)
         if isinstance(args, str):
-            self._log(
+            audit = self._log(
                 tool_name=tool_name,
                 capability=tool.capability,
                 decision=PolicyDecision.DENY,
@@ -78,6 +80,7 @@ class ToolBroker:
                 tool_name=tool_name,
                 allowed=False,
                 content=json.dumps({"error": args}),
+                debug=self._debug_from_audit(audit),
             )
 
         policy = self.policy_engine.evaluate(tool.capability)
@@ -96,7 +99,7 @@ class ToolBroker:
             if approval_result is ApprovalResult.APPROVED:
                 policy_decision = PolicyDecision.ALLOW
             else:
-                self._log(
+                audit = self._log(
                     tool_name=tool_name,
                     capability=tool.capability,
                     decision=PolicyDecision.DENY,
@@ -112,16 +115,18 @@ class ToolBroker:
                     content=json.dumps(
                         {
                             "error": "approval required",
+                            "detail": "approval required but approval UI unavailable or denied",
                             "decision": PolicyDecision.ASK.value,
                             "approval_result": approval_result.value,
                         }
                     ),
+                    debug=self._debug_from_audit(audit),
                 )
         else:
             policy_decision = policy.decision
 
         if policy_decision is not PolicyDecision.ALLOW:
-            self._log(
+            audit = self._log(
                 tool_name=tool_name,
                 capability=tool.capability,
                 decision=policy_decision,
@@ -135,13 +140,14 @@ class ToolBroker:
                 tool_name=tool_name,
                 allowed=False,
                 content=json.dumps({"error": policy.reason, "decision": policy_decision.value}),
+                debug=self._debug_from_audit(audit),
             )
 
         try:
             result = tool.handler(**args)
             result_payload, audit_metadata = self._split_audit_metadata(result)
             content = json.dumps(result_payload)
-            self._log(
+            audit = self._log(
                 tool_name=tool_name,
                 capability=tool.capability,
                 decision=policy_decision,
@@ -154,9 +160,9 @@ class ToolBroker:
                 commands_run=audit_metadata.get("commands_run", []),
                 network_domains=audit_metadata.get("network_domains", []),
             )
-            return ToolExecutionResult(tool_call_id, tool_name, True, content)
+            return ToolExecutionResult(tool_call_id, tool_name, True, content, debug=self._debug_from_audit(audit))
         except ToolError as exc:
-            self._log(
+            audit = self._log(
                 tool_name=tool_name,
                 capability=tool.capability,
                 decision=PolicyDecision.DENY,
@@ -170,9 +176,10 @@ class ToolBroker:
                 tool_name=tool_name,
                 allowed=False,
                 content=json.dumps({"error": str(exc)}),
+                debug=self._debug_from_audit(audit),
             )
         except Exception as exc:
-            self._log(
+            audit = self._log(
                 tool_name=tool_name,
                 capability=tool.capability,
                 decision=PolicyDecision.DENY,
@@ -186,6 +193,7 @@ class ToolBroker:
                 tool_name=tool_name,
                 allowed=False,
                 content=json.dumps({"error": "tool execution failed", "type": type(exc).__name__}),
+                debug=self._debug_from_audit(audit),
             )
 
     def _parse_arguments(self, raw_arguments: str | dict[str, Any]) -> dict[str, Any] | str:
@@ -213,8 +221,8 @@ class ToolBroker:
         files_written: list[str] | None = None,
         commands_run: list[str] | None = None,
         network_domains: list[str] | None = None,
-    ) -> None:
-        self.audit_logger.log(
+    ) -> dict[str, Any]:
+        return self.audit_logger.log(
             AuditEvent(
                 session_id=self.session_id,
                 request_id=new_request_id(),
@@ -277,3 +285,13 @@ class ToolBroker:
                 "rollback_available=False; approval_choices=approve,deny,abort"
             )
         return f"Model requested {tool_name}."
+
+    def _debug_from_audit(self, audit: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "policy_decision": audit.get("policy_decision"),
+            "approval_result": audit.get("approval_result"),
+            "risk_level": audit.get("risk_level"),
+            "audit_path": str(self.audit_logger.path),
+            "audit_request_id": audit.get("request_id"),
+            "audit_hash": audit.get("hash_current"),
+        }

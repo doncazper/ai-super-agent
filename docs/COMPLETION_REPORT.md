@@ -407,3 +407,91 @@ Do not implement personal-data access before prerequisites are complete.
 Do not implement send/write actions before draft-only workflows are complete.
 Do not modify safety policy to reduce restrictions.
 Do not disable audit logging."
+
+## Run: 2026-05-22 Phase A0.1
+
+- Date/time: 2026-05-22, post-baseline LM Studio smoke-test readiness.
+- Phase attempted: A0.1-A0.4 baseline verification and smoke readiness.
+- Files changed:
+  - Updated `agent/core/lmstudio_client.py` with user-friendly LM Studio diagnostics.
+  - Updated `smart_agent.py` to print LM Studio diagnostics without tracebacks.
+  - Updated `tests/test_lmstudio_loop.py` for missing-model and malformed-response diagnostics.
+  - Updated `README.md` with Qwopus smoke-test commands and expected errors.
+  - Updated `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read required governance docs, release docs, capability config, runtime files, and tests with `sed`, `find`, and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy()`.
+  - Checked `LMSTUDIO_MODEL`; it was not set in the shell environment.
+  - Checked LM Studio model endpoint: `curl --max-time 2 -sS http://localhost:1234/v1/models`.
+  - Ran no-tools smoke: `LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m" $PY smart_agent.py --no-tools "Explain RCS vs iMessage"`.
+  - Ran tool-enabled smoke: `LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m" $PY smart_agent.py --debug "What time is it?"`.
+- Tests run:
+  - Baseline before diagnostics: 90 passed in 1.44s.
+  - Final after diagnostics: 92 passed in 1.17s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Verified M0-M11 are marked complete.
+  - Verified baseline commit `858b9a8 Create safety-first agent baseline` is present.
+  - Verified tests are present.
+  - Verified startup policy validation exists.
+  - Verified `ToolBroker` remains the brokered execution path for model-requested tools.
+  - Verified unknown tools are denied.
+  - Verified personal-data tools are disabled by default.
+  - Verified critical actions require `per_action` approval and are disabled by default.
+  - Verified audit logging is enabled with hash-chained JSONL.
+  - Added documented Qwopus smoke-test commands:
+    - `export LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m"`
+    - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"`
+    - `$PY smart_agent.py --no-tools "Explain RCS vs iMessage"`
+    - `$PY smart_agent.py --debug "What time is it?"`
+- Live LM Studio smoke test:
+  - Ran successfully against `qwopus3.6-35b-a3b-v1@q5_k_m`.
+  - No-tools smoke returned a natural explanation of RCS vs iMessage.
+  - Tool-enabled smoke printed debug metadata and returned the current UTC time using the safe time path.
+
+## Run: 2026-05-22 Phase A Runtime Polish
+
+- Date/time: 2026-05-22, post-baseline runtime ergonomics.
+- Phase attempted: Phase A local runtime polish.
+- Files changed:
+  - Updated `agent/config/runtime.py` for centralized runtime config, `.env` loading, env aliases, and validation.
+  - Updated `agent/core/lmstudio_client.py` for LM Studio diagnostics.
+  - Updated `agent/core/orchestrator.py` for structured debug events and loop-limit diagnostics.
+  - Updated `agent/core/tool_broker.py` for policy/audit debug metadata and approval-unavailable detail.
+  - Updated `agent/safety/audit.py` for user-facing audit write failures.
+  - Added `agent/ui/doctor.py`.
+  - Updated `agent/ui/cli_commands.py`.
+  - Updated `agent/ui/config_viewer.py`.
+  - Updated `smart_agent.py`.
+  - Updated `.env.example`.
+  - Added `tests/test_runtime_config.py`.
+  - Updated `tests/test_lmstudio_loop.py`.
+  - Updated `tests/test_ux_packaging.py`.
+  - Updated `README.md`, `docs/DECISION_LOG.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read SDLC/governance/runtime/test files with `sed`, `rg`, `find`, and `git status`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy()`.
+  - `LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m" $PY smart_agent.py doctor`
+  - `LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m" $PY smart_agent.py --debug --no-tools "Explain RCS vs iMessage"`
+  - `LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m" $PY smart_agent.py --debug "What time is it?"`
+- Tests run:
+  - Final command: `$PY -m pytest -q`
+  - Result: 100 passed in 1.39s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Runtime config now supports `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL`, `TEMPERATURE`, `TOP_P`, `MAX_TOKENS`, `TOOL_MODE`, `DEBUG`, `AUDIT_LOG_PATH`, and capabilities config path.
+  - `.env` loading is supported without overriding already-set environment variables.
+  - Invalid base URLs, invalid numeric generation settings, and invalid tool modes produce clear config errors.
+  - `python smart_agent.py doctor` checks Python version, imports, config, LM Studio server, `/v1/models`, selected model availability, startup policy, audit path writability, registry loading, and personal-tool default state.
+  - `--debug --no-tools` shows selected model, base URL, generation settings, route decision, shortened messages, finish reason, and confirms no tools attached.
+  - Tool-enabled debug shows route decision, attached tools, returned tool calls, ToolBroker policy decision, audit log path/request/hash, and final model call.
+  - User-facing errors were added for missing model, invalid base URL, LM Studio unreachable, timeout, HTTP/model-load failures, malformed responses, loop limits, approval unavailable, and audit write failure.
+  - No new web providers, personal-data connectors, or send/write capabilities were added.
+- Known limitations:
+  - `doctor` checks LM Studio reachability but does not send prompts to the model.
+  - Personal and write/send tools remain disabled by default.
+  - Web search still has no live provider configured.
+- Next recommended action:
+  - Commit Phase A runtime polish, then begin Phase A1 CLI interaction polish or Phase B web-search provider selection without enabling personal-data connectors.

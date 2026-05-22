@@ -56,6 +56,12 @@ python -m pip install -e ".[dev]"
 export LMSTUDIO_MODEL="your-local-model-name"
 ```
 
+On this Mac, the bundled Codex runtime is the known-good Python 3.12 path:
+
+```bash
+PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+```
+
 ## Usage
 
 No-tool chat:
@@ -91,11 +97,67 @@ Inspection commands:
 
 ```bash
 python smart_agent.py tools list
+python smart_agent.py doctor
 python smart_agent.py permissions show
 python smart_agent.py audit tail
 python smart_agent.py memory list
 python smart_agent.py config show
 python smart_agent.py setup
+```
+
+The `doctor` command does not send prompts to the model or access personal data. It checks Python, imports, runtime config, LM Studio reachability, `/v1/models`, selected model availability, startup policy, audit path writability, tool registry loading, and whether personal-data tools are disabled by default.
+
+## Runtime Config
+
+Supported environment variables:
+
+```bash
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+LMSTUDIO_MODEL=qwopus3.6-35b-a3b-v1@q5_k_m
+TEMPERATURE=0.7
+TOP_P=0.95
+MAX_TOKENS=2048
+TOOL_MODE=auto
+DEBUG=false
+AUDIT_LOG_PATH=logs/audit.jsonl
+CAPABILITIES_CONFIG=config/capabilities.yaml
+```
+
+`TOOL_MODE` may be `auto`, `no-tools`, or `force-time`. The older `LMSTUDIO_TEMPERATURE`, `LMSTUDIO_TOP_P`, `LMSTUDIO_MAX_TOKENS`, and `AGENT_AUDIT_LOG` names are still accepted as fallbacks.
+
+## LM Studio Smoke Test
+
+Start LM Studio Developer Server at `http://localhost:1234/v1`, load Qwopus, then run:
+
+```bash
+export LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m"
+PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+
+$PY smart_agent.py --no-tools "Explain RCS vs iMessage"
+$PY smart_agent.py --debug "What time is it?"
+```
+
+Optional readiness check:
+
+```bash
+$PY smart_agent.py doctor
+```
+
+Expected result:
+
+- The first command answers naturally and attaches no tools.
+- The second command prints route/tool-call/policy/audit debug details and lets the model request the safe time tool through `ToolBroker`.
+
+If LM Studio is not running, the CLI should say:
+
+```text
+LM Studio server not reachable at http://localhost:1234/v1. Start LM Studio Developer Server and retry.
+```
+
+If the model variable is missing, the CLI should say:
+
+```text
+LMSTUDIO_MODEL is not set. Export LMSTUDIO_MODEL='<model id>'.
 ```
 
 ## Architecture

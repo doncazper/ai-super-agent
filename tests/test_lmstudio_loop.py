@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agent.core.lmstudio_client import LMStudioConfig, LMStudioClient
+import httpx
+import pytest
+
+from agent.core.lmstudio_client import LMStudioConfig, LMStudioClient, LMStudioError
 from agent.core.orchestrator import MINIMAL_SYSTEM_PROMPT, Orchestrator, format_debug_payload
 from agent.core.tool_broker import ToolBroker
 from agent.safety.audit import AuditLogger
@@ -46,6 +49,36 @@ def test_lmstudio_payload_omits_tools_when_none() -> None:
     assert "tools" not in payload
     assert payload["model"] == "q"
     assert payload["max_tokens"] >= 2048
+
+
+def test_missing_lmstudio_model_has_user_friendly_error() -> None:
+    with pytest.raises(LMStudioError, match="LMSTUDIO_MODEL is not set"):
+        LMStudioClient(LMStudioConfig(model=""))
+
+
+def test_malformed_lmstudio_response_has_user_friendly_error(monkeypatch) -> None:
+    class FakeHTTPClient:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args) -> None:
+            pass
+
+        def post(self, *args, **kwargs):
+            return httpx.Response(
+                200,
+                json={"not_choices": []},
+                request=httpx.Request("POST", "http://localhost:1234/v1/chat/completions"),
+            )
+
+    monkeypatch.setattr(httpx, "Client", FakeHTTPClient)
+    client = LMStudioClient(LMStudioConfig(model="q"))
+
+    with pytest.raises(LMStudioError, match="missing choices"):
+        client.chat([{"role": "user", "content": "hello"}])
 
 
 def test_no_tool_mode_attaches_no_tools_and_preserves_user_message(tmp_path) -> None:
@@ -105,6 +138,7 @@ def test_tool_result_is_appended_with_matching_tool_call_id(tmp_path) -> None:
     assert tool_messages[0]["tool_call_id"] == "call_time"
     assert tool_messages[0]["name"] == "time.get_current_time"
     assert json.loads(tool_messages[0]["content"])["timezone"] == "UTC"
+    assert any(event["event"] == "tool_broker" for event in result.debug_events)
 
 
 def test_malformed_tool_arguments_are_returned_as_tool_error(tmp_path) -> None:
@@ -135,6 +169,29 @@ def test_malformed_tool_arguments_are_returned_as_tool_error(tmp_path) -> None:
     assert result.content == "I could not use the tool."
     tool_messages = [message for message in fake.calls[1]["messages"] if message["role"] == "tool"]
     assert json.loads(tool_messages[0]["content"])["error"] == "invalid tool arguments"
+
+
+def test_tool_loop_limit_has_diagnostic(tmp_path) -> None:
+    repeated_tool_call = response(
+        {
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call_time",
+                    "type": "function",
+                    "function": {"name": "time.get_current_time", "arguments": "{}"},
+                }
+            ],
+        }
+    )
+    fake = FakeClient([repeated_tool_call, repeated_tool_call, repeated_tool_call, repeated_tool_call])
+    orchestrator = make_orchestrator(fake, tmp_path)
+    orchestrator.max_tool_iterations = 1
+
+    result = orchestrator.run("What time is it?")
+
+    assert "Tool-call loop limit reached" in result.content
+    assert any(event["event"] == "tool_loop_limit" for event in result.debug_events)
 
 
 def test_reasoning_content_is_not_fed_back_or_displayed(tmp_path) -> None:

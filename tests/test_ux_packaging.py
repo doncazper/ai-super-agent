@@ -4,12 +4,14 @@ import json
 
 import pytest
 
+from agent.config.runtime import RuntimeConfig
 from agent.config.schema import CapabilityConfigError, validate_capabilities_config
 from agent.safety.approvals import ApprovalRequest
 from agent.safety.policy import RiskLevel
 from agent.ui.approvals_ui import ConsoleApprovalPrompt
 from agent.ui.audit_viewer import tail_audit
 from agent.ui.cli_commands import dispatch_cli
+from agent.ui.doctor import doctor_exit_code, run_doctor
 from agent.ui.permissions_dashboard import PermissionStore
 
 
@@ -77,6 +79,67 @@ def test_config_validator_rejects_dangerous_config() -> None:
                 }
             }
         )
+
+
+def test_doctor_with_mocked_lmstudio_reachable(tmp_path) -> None:
+    config = RuntimeConfig(
+        lmstudio_base_url="http://localhost:1234/v1",
+        lmstudio_model="qwopus",
+        audit_log_path=str(tmp_path / "audit.jsonl"),
+    )
+
+    checks = run_doctor(
+        config=config,
+        get_json=lambda url: {"data": [{"id": "qwopus"}]},
+    )
+
+    by_name = {check.name: check for check in checks}
+    assert by_name["lmstudio_server"].status == "ok"
+    assert by_name["selected_model_available"].status == "ok"
+    assert by_name["startup_policy"].status == "ok"
+    assert by_name["audit_log_path_writable"].status == "ok"
+    assert by_name["personal_tools_disabled"].status == "ok"
+    assert doctor_exit_code(checks) == 0
+
+
+def test_doctor_with_lmstudio_unavailable(tmp_path) -> None:
+    config = RuntimeConfig(
+        lmstudio_base_url="http://localhost:1234/v1",
+        lmstudio_model="qwopus",
+        audit_log_path=str(tmp_path / "audit.jsonl"),
+    )
+
+    def fail(url: str):
+        raise ConnectionError("no server")
+
+    checks = run_doctor(config=config, get_json=fail)
+    by_name = {check.name: check for check in checks}
+
+    assert by_name["lmstudio_server"].status == "fail"
+    assert doctor_exit_code(checks) == 1
+
+
+def test_doctor_reports_missing_model(tmp_path) -> None:
+    config = RuntimeConfig(
+        lmstudio_base_url="http://localhost:1234/v1",
+        lmstudio_model="",
+        audit_log_path=str(tmp_path / "audit.jsonl"),
+    )
+
+    checks = run_doctor(config=config, get_json=lambda url: {"data": []})
+    by_name = {check.name: check for check in checks}
+
+    assert by_name["lmstudio_model"].status == "fail"
+
+
+def test_doctor_command_can_be_dispatched(monkeypatch, capsys) -> None:
+    from agent.ui import cli_commands
+    from agent.ui.doctor import DoctorCheck
+
+    monkeypatch.setattr(cli_commands, "run_doctor", lambda: [DoctorCheck("config_loaded", "ok", "loaded")])
+
+    assert dispatch_cli(["doctor"]) == 0
+    assert "[ok] config_loaded" in capsys.readouterr().out
 
 
 def test_cli_audit_tail_command_works(tmp_path, monkeypatch, capsys) -> None:

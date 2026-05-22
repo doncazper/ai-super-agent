@@ -13,6 +13,10 @@ from agent.safety.redaction import SecretRedactor
 from agent.safety.trust import TrustLevel
 
 
+class AuditLogError(RuntimeError):
+    pass
+
+
 def utc_now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -51,8 +55,11 @@ class AuditLogger:
         payload = self.redactor.redact(event.__dict__.copy())
         payload["hash_previous"] = self._last_hash
         payload["hash_current"] = self._hash_payload(payload)
-        with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(payload, sort_keys=True) + "\n")
+        try:
+            with self.path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, sort_keys=True) + "\n")
+        except OSError as exc:
+            raise AuditLogError(f"Audit log is not writable at {self.path}: {exc.strerror}") from exc
         self._last_hash = payload["hash_current"]
         return payload
 
