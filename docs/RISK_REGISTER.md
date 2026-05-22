@@ -4,6 +4,8 @@
 |---|---|---:|---:|---|---|---|
 | Model hallucination causes false claims | core, ui | Medium | Medium | Model writes answers only from messages/tool results; debug mode shows payloads | Project | Open |
 | Prompt injection from web pages | web, workflows | High | High | Wrap untrusted content; never execute page instructions; tests verify webpage instructions remain data | Project | Mitigated in M4 |
+| Search-provider data leakage | web, audit | Medium | Medium | Search provider is opt-in; `WEB_ACCESS_ENABLED` can disable all web access; audit redacts search queries by default; no query history is persisted | Project | Mitigated in Phase B |
+| Search-provider outage or malformed results | web | Medium | Medium | Provider errors are normalized; missing provider returns structured error; tests use mocks instead of live internet | Project | Mitigated in Phase B |
 | Prompt injection from email | personal, workflows | High | High | Treat email as `UNTRUSTED_EMAIL`; selected-scope only | Project | Open |
 | Prompt injection from messages | personal, workflows | High | High | Treat messages as `UNTRUSTED_MESSAGE`; selected-scope only | Project | Open |
 | Malicious documents | web, personal | Medium | High | Treat as `UNTRUSTED_DOCUMENT`; no automatic macros/binary execution; web fetch refuses binary downloads by default | Project | Partially mitigated in M4 |

@@ -495,3 +495,108 @@ Do not disable audit logging."
   - Web search still has no live provider configured.
 - Next recommended action:
   - Commit Phase A runtime polish, then begin Phase A1 CLI interaction polish or Phase B web-search provider selection without enabling personal-data connectors.
+
+## Run: 2026-05-22 Phase A1 CLI Interaction Polish
+
+- Date/time: 2026-05-22, post-baseline CLI ergonomics.
+- Phase attempted: Phase A1 local interactive CLI polish.
+- Files changed:
+  - Added `agent/ui/interactive.py`.
+  - Updated `smart_agent.py` to support real `--interactive` mode without requiring a message.
+  - Updated `agent/ui/cli_commands.py` so the main entry point owns `--interactive`.
+  - Added `tests/test_interactive_cli.py`.
+  - Updated `README.md`, `docs/DECISION_LOG.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - `git status --short && git log --oneline -3`
+  - `git -c user.name='Codex' -c user.email='codex@local' commit -m "Polish LM Studio runtime diagnostics"`
+  - Read CLI/runtime/test/docs files with `sed` and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy()`.
+  - `printf ':help\n:exit\n' | LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m" $PY smart_agent.py --interactive`
+- Tests run:
+  - Final command: `$PY -m pytest -q`
+  - Result: 106 passed in 1.50s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Committed the completed Phase A runtime polish as `ee124fc Polish LM Studio runtime diagnostics`.
+  - `python smart_agent.py --interactive` now starts a real local shell.
+  - Interactive commands include `:help`, `:doctor`, `:tools`, `:config`, `:no-tools on/off`, `:debug on/off`, and `:exit`.
+  - Interactive command-only flows such as `:help` and `:doctor` do not send prompts to the model.
+  - Normal interactive chat turns still use the existing orchestrator, router, `ToolBroker`, policy engine, approval manager, and audit logger.
+  - No external connectors, personal-data access, send/write actions, or policy weakening were added.
+- Known limitations:
+  - Interactive mode is single-session CLI state only; it does not yet provide a rich TUI or persistent conversation browser.
+  - `:doctor` may check LM Studio reachability, but it still does not send prompts or attach tools.
+- Next recommended action:
+  - Continue Phase A2 with CLI history/session ergonomics or begin Phase B web-search provider selection. Do not enable personal-data connectors or write/send actions.
+
+## Run: 2026-05-22 Phase B Web Search Provider
+
+- Date/time: 2026-05-22, post-baseline web provider integration.
+- Phase attempted: Phase B first real web search provider.
+- Files changed:
+  - Updated `agent/tools/web/search.py` with a provider interface, disabled/unsupported providers, Brave Search provider support, result normalization, timeout/error handling, safe-search config, and untrusted-result labeling.
+  - Updated `agent/core/tool_broker.py` to enforce `WEB_ACCESS_ENABLED`, capability rate limits, and default `web.search` query redaction in audit logs.
+  - Updated `agent/safety/policy.py` with a public capability lookup used by broker-side controls.
+  - Updated `smart_agent.py` with `python smart_agent.py web "query"` routed through `ToolBroker`.
+  - Updated `config/capabilities.yaml` with web-access metadata.
+  - Updated `.env.example`.
+  - Updated `tests/test_web.py`.
+  - Updated `README.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/DECISION_LOG.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read web tool, broker, policy, runtime config, capabilities, tests, and docs with `sed` and `rg`.
+  - Checked Brave Search official docs for the Web Search endpoint and `X-Subscription-Token` header.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy()`.
+  - `WEB_SEARCH_PROVIDER= BRAVE_SEARCH_API_KEY= $PY smart_agent.py web "local ai news"`
+  - `WEB_ACCESS_ENABLED=false WEB_SEARCH_PROVIDER= BRAVE_SEARCH_API_KEY= $PY smart_agent.py web "local ai news"`
+- Tests run:
+  - First command found a broker indentation error during collection; fixed immediately.
+  - Final command: `$PY -m pytest -q`
+  - Result: 111 passed in 1.33s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - `web.search` now supports an opt-in Brave Search provider via `WEB_SEARCH_PROVIDER=brave` and `BRAVE_SEARCH_API_KEY`.
+  - Missing provider still returns a structured disabled error and does not hallucinate results.
+  - `WEB_ACCESS_ENABLED=false` denies `web.search` through the broker before provider execution.
+  - Capability `rate_limit.requests_per_minute` is enforced by `ToolBroker`.
+  - Search queries are redacted from audit logs by default with `WEB_SEARCH_AUDIT_QUERIES=false`.
+  - Results are compact structured records with title, URL, snippet, source, retrieval timestamp, and `UNTRUSTED_WEB`.
+  - The direct CLI command returns result metadata only and does not fetch full pages.
+  - No personal-data connectors, browser automation, MCP defaults, send/write actions, or policy weakening were added.
+- Known limitations:
+  - Live Brave Search was not called because no API key was configured in this environment.
+  - DuckDuckGo no-key support was not added; Brave is the first real provider.
+- Next recommended action:
+  - Configure a Brave Search API key and run a live smoke test, then add a readable result formatter or search-result-to-fetch workflow only if it continues to route every step through `ToolBroker`.
+
+## Run: 2026-05-22 Phase B Checkpoint and Smoke Readiness
+
+- Date/time: 2026-05-22, post-baseline checkpoint and provider smoke readiness.
+- Phase attempted: Commit completed Phase A1 interactive CLI polish and Phase B Brave Search provider work; run smoke readiness without adding capabilities.
+- Files changed:
+  - No new product capability was added in this pass.
+  - Updated `docs/COMPLETION_REPORT.md` with this checkpoint and smoke-readiness record.
+- Commands run:
+  - Read required governance docs and release docs with `sed`.
+  - Checked `git status --short` and changed file list.
+  - Checked environment for `BRAVE_SEARCH_API_KEY` and `LMSTUDIO_MODEL`.
+  - Planned validation commands:
+    - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+    - Startup policy validation with `validate_startup_policy()`.
+    - Disabled-provider smoke: `WEB_SEARCH_PROVIDER= BRAVE_SEARCH_API_KEY= $PY smart_agent.py web "local ai news"`.
+    - Web-disabled smoke: `WEB_ACCESS_ENABLED=false WEB_SEARCH_PROVIDER= BRAVE_SEARCH_API_KEY= $PY smart_agent.py web "local ai news"`.
+- Tests run:
+  - Final command: `$PY -m pytest -q`
+  - Result: 111 passed in 1.47s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - `BRAVE_SEARCH_API_KEY` is not set in this shell, so a live Brave Search smoke test cannot run honestly here.
+  - `LMSTUDIO_MODEL` is not set in this shell, but direct `smart_agent.py web` smoke tests do not require model prompts.
+  - Disabled-provider smoke returned structured `provider not configured` JSON.
+  - `WEB_ACCESS_ENABLED=false` smoke returned structured broker denial JSON.
+  - Approval gates checked: no personal-data tools, browser automation, MCP defaults, or send/write actions are being enabled.
+- Known limitations:
+  - Live Brave Search requires the user to export `BRAVE_SEARCH_API_KEY`.
+- Next recommended action:
+  - Run live Brave Search smoke with `WEB_SEARCH_PROVIDER=brave` and `BRAVE_SEARCH_API_KEY` configured, then consider a readable result formatter without fetching pages automatically.

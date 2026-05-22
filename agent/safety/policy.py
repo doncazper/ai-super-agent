@@ -85,6 +85,9 @@ class PolicyEngine:
             return PolicyResult(PolicyDecision.ASK, capability, "approval required")
         return PolicyResult(PolicyDecision.ALLOW, capability, "allowed")
 
+    def get_capability(self, capability_name: str) -> Capability | None:
+        return self._capabilities.get(capability_name)
+
 
 def default_capabilities() -> dict[str, Capability]:
     return {

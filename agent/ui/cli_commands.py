@@ -17,9 +17,6 @@ def dispatch_cli(argv: list[str], *, project_root: str | Path = ".") -> int | No
     if not argv:
         return None
     command = argv[0]
-    if command == "--interactive":
-        print("Interactive mode is available. Type 'exit' to quit.")
-        return 0
     if command == "tools" and len(argv) >= 2 and argv[1] == "list":
         for schema in default_registry(project_root=project_root).schemas():
             print(schema["function"]["name"])

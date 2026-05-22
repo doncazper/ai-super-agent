@@ -10,13 +10,42 @@ from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
 from agent.tools.web.extraction import extract_readable_text
 from agent.tools.web.fetch import DomainRules, WebResponse, make_fetch_tool
+from agent.tools.web.search import BraveSearchProvider, normalize_brave_results
 from agent.tools.web.untrusted_content import UNTRUSTED_WEB_WARNING
+
+
+class StaticSearchProvider:
+    name = "static"
+
+    def is_configured(self) -> bool:
+        return True
+
+    def search(self, query: str, max_results: int, locale: str | None = None, safe_search: bool = True):
+        return [
+            {
+                "title": "Local AI News",
+                "url": "https://example.com/ai",
+                "snippet": f"{locale}:{safe_search}:{query}",
+                "source": "example.com",
+                "trust_level": "UNTRUSTED_WEB",
+            }
+        ][:max_results]
 
 
 def web_capabilities() -> dict[str, Capability]:
     return {
         "web.search": Capability("web.search", RiskLevel.LOW),
         "web.fetch_url": Capability("web.fetch_url", RiskLevel.MEDIUM),
+    }
+
+
+def rate_limited_web_capabilities() -> dict[str, Capability]:
+    return {
+        "web.search": Capability(
+            "web.search",
+            RiskLevel.LOW,
+            metadata={"rate_limit": {"requests_per_minute": 1}},
+        ),
     }
 
 
@@ -28,14 +57,21 @@ def call(tool_name: str, arguments: dict[str, object]) -> dict[str, object]:
     }
 
 
-def make_broker(tmp_path, fetcher=None, domain_rules: DomainRules | None = None) -> ToolBroker:
+def make_broker(
+    tmp_path,
+    fetcher=None,
+    domain_rules: DomainRules | None = None,
+    search_provider=None,
+    capabilities: dict[str, Capability] | None = None,
+) -> ToolBroker:
     return ToolBroker(
         default_registry(
             project_root=tmp_path,
             web_fetcher=fetcher,
             web_domain_rules=domain_rules,
+            web_search_provider=search_provider,
         ),
-        PolicyEngine(web_capabilities()),
+        PolicyEngine(capabilities or web_capabilities()),
         AuditLogger(tmp_path / "audit.jsonl"),
         session_id="test-session",
         model="test-model",
@@ -43,15 +79,102 @@ def make_broker(tmp_path, fetcher=None, domain_rules: DomainRules | None = None)
     )
 
 
-def test_web_search_disabled_returns_clear_error(tmp_path) -> None:
+def test_web_search_disabled_returns_clear_error(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("WEB_SEARCH_PROVIDER", raising=False)
+    monkeypatch.delenv("BRAVE_SEARCH_API_KEY", raising=False)
     broker = make_broker(tmp_path)
 
     result = broker.execute(call("web.search", {"query": "local news"}))
 
     assert result.allowed is True
     payload = json.loads(result.content)
+    assert payload["status"] == "error"
     assert payload["error"] == "web search provider is not configured"
+    assert payload["configured"] is False
     assert payload["results"] == []
+
+
+def test_configured_provider_returns_normalized_untrusted_results(tmp_path) -> None:
+    broker = make_broker(tmp_path, search_provider=StaticSearchProvider())
+
+    result = broker.execute(call("web.search", {"query": "local ai news", "max_results": 1, "locale": "en-US"}))
+
+    assert result.allowed is True
+    payload = json.loads(result.content)
+    assert payload["status"] == "ok"
+    assert payload["provider"] == "static"
+    assert payload["trust_level"] == "UNTRUSTED_WEB"
+    assert payload["results"][0]["title"] == "Local AI News"
+    assert payload["results"][0]["trust_level"] == "UNTRUSTED_WEB"
+    assert payload["results"][0]["retrieved_at"]
+
+
+def test_brave_result_normalization() -> None:
+    assert BraveSearchProvider(api_key="key").is_configured() is True
+    results = normalize_brave_results(
+        {
+            "web": {
+                "results": [
+                    {
+                        "title": "Example",
+                        "url": "https://example.com/page",
+                        "description": "Snippet",
+                        "profile": {"name": "Example Source"},
+                    }
+                ]
+            }
+        },
+        max_results=3,
+    )
+
+    assert results == [
+        {
+            "title": "Example",
+            "url": "https://example.com/page",
+            "snippet": "Snippet",
+            "source": "Example Source",
+            "trust_level": "UNTRUSTED_WEB",
+        }
+    ]
+
+
+def test_web_access_disabled_denies_search(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEB_ACCESS_ENABLED", "false")
+    broker = make_broker(tmp_path, search_provider=StaticSearchProvider())
+
+    result = broker.execute(call("web.search", {"query": "local ai news"}))
+
+    assert result.allowed is False
+    assert json.loads(result.content)["error"] == "web access disabled"
+
+
+def test_web_search_rate_limit_enforced(tmp_path) -> None:
+    broker = make_broker(
+        tmp_path,
+        search_provider=StaticSearchProvider(),
+        capabilities=rate_limited_web_capabilities(),
+    )
+
+    first = broker.execute(call("web.search", {"query": "first"}))
+    second = broker.execute(call("web.search", {"query": "second"}))
+
+    assert first.allowed is True
+    assert second.allowed is False
+    assert json.loads(second.content)["error"] == "rate limit exceeded"
+
+
+def test_web_search_query_redacted_in_audit_and_no_history_persisted(tmp_path) -> None:
+    query = "private sensitive search"
+    broker = make_broker(tmp_path, search_provider=StaticSearchProvider())
+
+    result = broker.execute(call("web.search", {"query": query}))
+
+    assert result.allowed is True
+    audit_text = (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
+    event = json.loads(audit_text.splitlines()[0])
+    assert event["sanitized_args"]["query"] == "[WEB_SEARCH_QUERY_REDACTED]"
+    assert query not in audit_text
+    assert event["network_domains"] == ["static"]
 
 
 def test_blocked_domain_denied(tmp_path) -> None:

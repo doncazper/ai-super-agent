@@ -4,9 +4,11 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from agent.config.runtime import env_bool
 from agent.safety.audit import AuditEvent, AuditLogger, new_request_id
 from agent.safety.approvals import ApprovalManager, ApprovalRequest, ApprovalResult
 from agent.safety.policy import PolicyDecision, PolicyEngine, RiskLevel
+from agent.safety.rate_limits import RateLimiter
 from agent.safety.trust import TrustLevel
 from agent.tools.errors import ToolError
 from agent.tools.registry import ToolRegistry
@@ -40,6 +42,7 @@ class ToolBroker:
         self.model = model
         self.route = route
         self.approval_manager = approval_manager or ApprovalManager()
+        self._rate_limiters: dict[str, RateLimiter] = {}
 
     def execute(self, tool_call: dict[str, Any]) -> ToolExecutionResult:
         tool_call_id = str(tool_call.get("id", ""))
@@ -140,6 +143,42 @@ class ToolBroker:
                 tool_name=tool_name,
                 allowed=False,
                 content=json.dumps({"error": policy.reason, "decision": policy_decision.value}),
+                debug=self._debug_from_audit(audit),
+            )
+
+        if tool.capability.startswith("web.") and not env_bool("WEB_ACCESS_ENABLED", default=True):
+            audit = self._log(
+                tool_name=tool_name,
+                capability=tool.capability,
+                decision=PolicyDecision.DENY,
+                risk_level=risk,
+                args=self._sanitize_args(tool_name, args),
+                summary="Denied by policy: web access disabled",
+                approval_result=approval_result.value,
+            )
+            return ToolExecutionResult(
+                tool_call_id=tool_call_id,
+                tool_name=tool_name,
+                allowed=False,
+                content=json.dumps({"error": "web access disabled", "decision": PolicyDecision.DENY.value}),
+                debug=self._debug_from_audit(audit),
+            )
+
+        if not self._rate_limit_allowed(tool.capability):
+            audit = self._log(
+                tool_name=tool_name,
+                capability=tool.capability,
+                decision=PolicyDecision.DENY,
+                risk_level=risk,
+                args=self._sanitize_args(tool_name, args),
+                summary="Denied by policy: rate limit exceeded",
+                approval_result=approval_result.value,
+            )
+            return ToolExecutionResult(
+                tool_call_id=tool_call_id,
+                tool_name=tool_name,
+                allowed=False,
+                content=json.dumps({"error": "rate limit exceeded", "decision": PolicyDecision.DENY.value}),
                 debug=self._debug_from_audit(audit),
             )
 
@@ -257,6 +296,11 @@ class ToolBroker:
 
     def _sanitize_args(self, tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
         sanitized = dict(args)
+        if tool_name == "web.search" and "query" in sanitized and not env_bool(
+            "WEB_SEARCH_AUDIT_QUERIES",
+            default=False,
+        ):
+            sanitized["query"] = "[WEB_SEARCH_QUERY_REDACTED]"
         if tool_name.startswith("memory.") and "content" in sanitized:
             sanitized["content"] = "[MEMORY_CONTENT_REDACTED]"
         if tool_name.startswith(("email.", "messages.")):
@@ -264,6 +308,19 @@ class ToolBroker:
                 if key in sanitized:
                     sanitized[key] = "[PERSONAL_CONTENT_REDACTED]"
         return sanitized
+
+    def _rate_limit_allowed(self, capability_name: str) -> bool:
+        capability = self.policy_engine.get_capability(capability_name)
+        if capability is None:
+            return False
+        raw_rate_limit = capability.metadata.get("rate_limit")
+        if not isinstance(raw_rate_limit, dict):
+            return True
+        requests_per_minute = raw_rate_limit.get("requests_per_minute")
+        if not isinstance(requests_per_minute, int) or requests_per_minute <= 0:
+            return True
+        limiter = self._rate_limiters.setdefault(capability_name, RateLimiter(requests_per_minute))
+        return limiter.allow(capability_name)
 
     def _approval_summary(self, tool_name: str, args: dict[str, Any], risk: RiskLevel) -> str:
         sanitized = self._sanitize_args(tool_name, args)

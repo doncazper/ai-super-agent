@@ -19,7 +19,7 @@ M0-M11 are complete:
 - Workspace-bounded filesystem tools.
 - Fixed git status/diff/branch tools, with commit approval-gated.
 - Fixed pytest runner inside the project repo.
-- Web search tool with clear provider-not-configured behavior.
+- Web search tool with optional Brave Search provider support and clear provider-not-configured behavior.
 - Web fetch tool with blocked-domain checks, binary-download refusal, script-stripping extraction, and untrusted-content wrapping.
 - Session and SQLite-backed persistent memory.
 - Memory tools refuse secrets and personal content by default.
@@ -81,9 +81,21 @@ Web tools:
 ```bash
 python smart_agent.py --debug "Read this URL https://example.com"
 python smart_agent.py --debug "Look up local AI news"
+python smart_agent.py web "local AI news"
 ```
 
-`web.search` currently returns a clear error until a supported provider is configured. `web.fetch_url` treats fetched pages as untrusted data and refuses binary downloads by default.
+`web.search` returns a clear error until a supported provider is configured. With Brave Search:
+
+```bash
+export WEB_ACCESS_ENABLED=true
+export WEB_SEARCH_PROVIDER=brave
+export BRAVE_SEARCH_API_KEY="..."
+python smart_agent.py web "local AI news"
+```
+
+The direct `web` command executes `web.search` through `ToolBroker`, `PolicyEngine`, rate limits, and audit logging. It returns search-result metadata only; it does not fetch full pages. Search results are labeled `UNTRUSTED_WEB`, and search queries are redacted from audit logs by default unless `WEB_SEARCH_AUDIT_QUERIES=true` is explicitly set.
+
+`web.fetch_url` treats fetched pages as untrusted data and refuses binary downloads by default.
 
 Memory tools:
 
@@ -107,6 +119,28 @@ python smart_agent.py setup
 
 The `doctor` command does not send prompts to the model or access personal data. It checks Python, imports, runtime config, LM Studio reachability, `/v1/models`, selected model availability, startup policy, audit path writability, tool registry loading, and whether personal-data tools are disabled by default.
 
+Interactive mode:
+
+```bash
+python smart_agent.py --interactive
+```
+
+Inside interactive mode:
+
+```text
+:help
+:doctor
+:tools
+:config
+:no-tools on
+:no-tools off
+:debug on
+:debug off
+:exit
+```
+
+Interactive commands such as `:doctor`, `:tools`, and `:config` do not send prompts to the model. Normal chat turns still use the same orchestrator, router, `ToolBroker`, policy engine, approval manager, and audit logger as one-shot CLI requests.
+
 ## Runtime Config
 
 Supported environment variables:
@@ -121,6 +155,13 @@ TOOL_MODE=auto
 DEBUG=false
 AUDIT_LOG_PATH=logs/audit.jsonl
 CAPABILITIES_CONFIG=config/capabilities.yaml
+WEB_ACCESS_ENABLED=true
+WEB_SEARCH_PROVIDER=brave
+BRAVE_SEARCH_API_KEY=
+WEB_SEARCH_TIMEOUT_SECONDS=10
+WEB_SEARCH_MAX_RESULTS=8
+WEB_SAFE_SEARCH=true
+WEB_SEARCH_AUDIT_QUERIES=false
 ```
 
 `TOOL_MODE` may be `auto`, `no-tools`, or `force-time`. The older `LMSTUDIO_TEMPERATURE`, `LMSTUDIO_TOP_P`, `LMSTUDIO_MAX_TOKENS`, and `AGENT_AUDIT_LOG` names are still accepted as fallbacks.

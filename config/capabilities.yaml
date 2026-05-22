@@ -10,6 +10,7 @@ tools:
     default_enabled: true
     approval_required: false
     stores_data: false
+    requires_web_access: true
     rate_limit:
       requests_per_minute: 10
 
@@ -18,6 +19,7 @@ tools:
     default_enabled: true
     approval_required: false
     stores_data: false
+    requires_web_access: true
     timeout_seconds: 10
     blocked_domains: []
     allowed_domains: []
