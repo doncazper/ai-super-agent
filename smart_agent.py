@@ -16,6 +16,7 @@ from agent.safety.approvals import ApprovalManager, ApprovalStore
 from agent.safety.policy import PolicyEngine
 from agent.safety.validation import validate_startup_policy
 from agent.tools.registry import default_registry
+from agent.ui.approvals_ui import ConsoleApprovalPrompt
 from agent.ui.cli_commands import dispatch_cli
 from agent.ui.interactive import InteractiveState, run_interactive
 from agent.workflows.research import source_grounded_research
@@ -23,11 +24,12 @@ from agent.workflows.research import source_grounded_research
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Safety-first local Mac AI agent.")
-    parser.add_argument("message", nargs="*", help="User message to send to the local model.")
+    parser.add_argument("message", nargs=argparse.REMAINDER, help="User message to send to the local model.")
     parser.add_argument("--interactive", action="store_true", help="Start an interactive local chat shell.")
     parser.add_argument("--no-tools", action="store_true", help="Do not attach tool schemas.")
     parser.add_argument("--force-tools", action="store_true", help="Attach available safe tool schemas.")
     parser.add_argument("--debug", action="store_true", help="Print debug details to stderr.")
+    parser.add_argument("--dry-run", action="store_true", help="Evaluate policy and previews without executing tools.")
     return parser.parse_args(argv)
 
 
@@ -52,6 +54,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     audit_logger = AuditLogger(runtime_config.audit_log_path)
     session_id = new_session_id()
+    approval_store = ApprovalStore()
+    approval_interactive = args.interactive or (
+        bool(args.message) and args.message[0] == "calendar" and sys.stdin.isatty()
+    )
+    approval_prompt = ConsoleApprovalPrompt(interactive=approval_interactive)
     broker = ToolBroker(
         registry,
         policy_engine,
@@ -59,7 +66,11 @@ def main(argv: list[str] | None = None) -> int:
         session_id=session_id,
         model=config.model,
         route="cli",
-        approval_manager=ApprovalManager(store=ApprovalStore()),
+        approval_manager=ApprovalManager(
+            store=approval_store,
+            decision_provider=approval_prompt.prompt if args.interactive else None,
+        ),
+        dry_run=args.dry_run,
     )
     debug_enabled = args.debug or runtime_config.debug
 
@@ -67,6 +78,10 @@ def main(argv: list[str] | None = None) -> int:
         return _run_web_search_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "research":
         return _run_research_command(args.message[1:], broker)
+    if args.message and args.message[0] == "calendar":
+        return _run_calendar_command(args.message[1:], broker, debug=debug_enabled)
+    if args.message and args.message[0] == "contacts":
+        return _run_contacts_command(args.message[1:], broker, debug=debug_enabled)
 
     try:
         client = LMStudioClient(config)
@@ -80,7 +95,8 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "[debug] "
             f"session_id={session_id} model={config.model} base_url={config.base_url} tools={tool_state} "
-            f"temperature={config.temperature} top_p={config.top_p} max_tokens={config.max_tokens}",
+            f"temperature={config.temperature} top_p={config.top_p} max_tokens={config.max_tokens} "
+            f"dry_run={args.dry_run}",
             file=sys.stderr,
         )
 
@@ -103,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
             respond,
             registry=registry,
             state=InteractiveState(no_tools=no_tools, debug=debug_enabled),
+            approval_store=approval_store,
         )
 
     if not args.message:
@@ -200,6 +217,113 @@ def _run_research_command(argv: list[str], broker: ToolBroker) -> int:
         return 2
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report.get("status") == "ok" else 2
+
+
+def _run_calendar_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py calendar", description="Read selected calendar ranges.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    read_parser = subparsers.add_parser("read", help="Read compact event summaries for a selected date range.")
+    read_parser.add_argument("--start", required=True, help="Start date/datetime, e.g. 2026-05-22.")
+    read_parser.add_argument("--end", required=True, help="End date/datetime, e.g. 2026-05-23.")
+    read_parser.add_argument("--calendar", action="append", default=[], help="Optional calendar name filter.")
+
+    availability_parser = subparsers.add_parser("availability", help="Find availability without event details.")
+    availability_parser.add_argument("--start", required=True, help="Start date/datetime, e.g. 2026-05-22.")
+    availability_parser.add_argument("--end", required=True, help="End date/datetime, e.g. 2026-05-23.")
+    availability_parser.add_argument("--duration", type=int, default=30, help="Required slot duration in minutes.")
+    availability_parser.add_argument("--work-start", default="09:00", help="Working-hours start, HH:MM.")
+    availability_parser.add_argument("--work-end", default="17:00", help="Working-hours end, HH:MM.")
+    availability_parser.add_argument("--calendar", action="append", default=[], help="Optional calendar name filter.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    tool_name = "calendar.read_date_range" if parsed.command == "read" else "calendar.find_availability"
+    arguments: dict[str, object] = {
+        "start": parsed.start,
+        "end": parsed.end,
+        "calendar_filters": parsed.calendar,
+    }
+    if parsed.command == "availability":
+        arguments.update(
+            {
+                "duration_minutes": parsed.duration,
+                "working_hours_start": parsed.work_start,
+                "working_hours_end": parsed.work_end,
+            }
+        )
+    tool_call = {
+        "id": f"cli_{tool_name.replace('.', '_')}",
+        "type": "function",
+        "function": {
+            "name": tool_name,
+            "arguments": json.dumps(arguments),
+        },
+    }
+    try:
+        result = broker.execute(tool_call)
+    except AuditLogError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    if debug and result.debug:
+        from agent.core.orchestrator import format_debug_payload
+
+        print("[debug] " + format_debug_payload({"event": "tool_broker", **result.debug}), file=sys.stderr)
+    print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
+    return 0 if result.allowed else 2
+
+
+def _run_contacts_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py contacts", description="Read selected contacts.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    search_parser = subparsers.add_parser("search", help="Search compact contact candidates.")
+    search_parser.add_argument("query", nargs="?", help="Search query, at least 2 characters.")
+    search_parser.add_argument("--query", dest="query_option", default=None, help="Search query, at least 2 characters.")
+    search_parser.add_argument("--max-results", type=int, default=None, help="Max candidates, capped by config.")
+
+    read_parser = subparsers.add_parser("read", help="Read one explicitly selected contact.")
+    read_parser.add_argument("contact_id", nargs="?", help="Selected contact id/token returned by contacts search.")
+    read_parser.add_argument("--token", default=None, help="Selected scope token returned by contacts search.")
+    read_parser.add_argument("--field", action="append", default=[], help="Requested field; may be repeated.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    if parsed.command == "search":
+        tool_name = "contacts.search"
+        query = parsed.query_option or parsed.query
+        if not query:
+            parser.error('contacts search requires a query, e.g. contacts search "Sam"')
+        arguments: dict[str, object] = {"query": query}
+        if parsed.max_results is not None:
+            arguments["max_results"] = parsed.max_results
+    else:
+        tool_name = "contacts.read_selected"
+        token = parsed.token or parsed.contact_id
+        if not token:
+            parser.error('contacts read requires a selected contact id, e.g. contacts read "<contact_id>"')
+        arguments = {"selected_scope_token": token}
+        if parsed.field:
+            arguments["requested_fields"] = parsed.field
+    tool_call = {
+        "id": f"cli_{tool_name.replace('.', '_')}",
+        "type": "function",
+        "function": {
+            "name": tool_name,
+            "arguments": json.dumps(arguments),
+        },
+    }
+    try:
+        result = broker.execute(tool_call)
+    except AuditLogError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    if debug and result.debug:
+        from agent.core.orchestrator import format_debug_payload
+
+        print("[debug] " + format_debug_payload({"event": "tool_broker", **result.debug}), file=sys.stderr)
+    print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
+    return 0 if result.allowed else 2
 
 
 def _print_debug_events(result: OrchestratorResult) -> None:

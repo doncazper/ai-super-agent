@@ -39,6 +39,7 @@ class AuditEvent:
     files_written: list[str] = field(default_factory=list)
     commands_run: list[str] = field(default_factory=list)
     network_domains: list[str] = field(default_factory=list)
+    dry_run: bool = False
     timestamp: str = field(default_factory=utc_now_iso)
 
 

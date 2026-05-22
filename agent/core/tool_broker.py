@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agent.config.runtime import env_bool
+from agent.safety.action_preview import ActionPreviewError, ActionPreviewFormatter
 from agent.safety.audit import AuditEvent, AuditLogger, new_request_id
 from agent.safety.approvals import ApprovalManager, ApprovalRequest, ApprovalResult
 from agent.safety.policy import PolicyDecision, PolicyEngine, RiskLevel
@@ -34,6 +35,7 @@ class ToolBroker:
         model: str = "",
         route: str = "default",
         approval_manager: ApprovalManager | None = None,
+        dry_run: bool = False,
     ) -> None:
         self.registry = registry
         self.policy_engine = policy_engine
@@ -41,6 +43,7 @@ class ToolBroker:
         self.session_id = session_id
         self.model = model
         self.route = route
+        self.dry_run_mode = dry_run
         self.approval_manager = approval_manager or ApprovalManager()
         self.approval_manager.configure_audit(
             audit_logger,
@@ -49,8 +52,106 @@ class ToolBroker:
             route=route,
         )
         self._rate_limiters: dict[str, RateLimiter] = {}
+        self.preview_formatter = ActionPreviewFormatter()
+
+    def dry_run(self, tool_call: dict[str, Any]) -> ToolExecutionResult:
+        tool_call_id = str(tool_call.get("id", ""))
+        function = tool_call.get("function") or {}
+        tool_name = str(function.get("name", ""))
+        raw_arguments = function.get("arguments") or "{}"
+        tool = self.registry.get(tool_name)
+        if tool is None:
+            audit = self._log(
+                tool_name=tool_name,
+                capability="unknown",
+                decision=PolicyDecision.DENY,
+                risk_level=RiskLevel.FORBIDDEN,
+                args={},
+                summary="Dry-run denied unknown tool.",
+                dry_run=True,
+            )
+            return ToolExecutionResult(
+                tool_call_id,
+                tool_name,
+                False,
+                json.dumps({"dry_run": True, "would_execute": False, "error": "unknown tool denied"}),
+                debug=self._debug_from_audit(audit),
+            )
+        args = self._parse_arguments(raw_arguments)
+        if isinstance(args, str):
+            audit = self._log(
+                tool_name=tool_name,
+                capability=tool.capability,
+                decision=PolicyDecision.DENY,
+                risk_level=RiskLevel.LOW,
+                args={},
+                summary=f"Dry-run invalid arguments: {args}",
+                dry_run=True,
+            )
+            return ToolExecutionResult(
+                tool_call_id,
+                tool_name,
+                False,
+                json.dumps({"dry_run": True, "would_execute": False, "error": args}),
+                debug=self._debug_from_audit(audit),
+            )
+        policy = self.policy_engine.evaluate(tool.capability)
+        risk = policy.capability.risk_level if policy.capability else RiskLevel.FORBIDDEN
+        approval_required = policy.decision is PolicyDecision.ASK
+        would_execute = policy.decision is PolicyDecision.ALLOW
+        try:
+            preview = self.preview_formatter.format(tool_name, args, risk).to_dict()
+            preview["sanitized_args"] = self._sanitize_args(tool_name, args)
+        except ActionPreviewError as exc:
+            audit = self._log(
+                tool_name=tool_name,
+                capability=tool.capability,
+                decision=PolicyDecision.DENY,
+                risk_level=risk,
+                args=self._sanitize_args(tool_name, args),
+                summary=f"Dry-run blocked: {exc}",
+                dry_run=True,
+            )
+            return ToolExecutionResult(
+                tool_call_id,
+                tool_name,
+                False,
+                json.dumps({"dry_run": True, "would_execute": False, "error": str(exc)}),
+                debug=self._debug_from_audit(audit),
+            )
+        audit = self._log(
+            tool_name=tool_name,
+            capability=tool.capability,
+            decision=policy.decision,
+            risk_level=risk,
+            args=self._sanitize_args(tool_name, args),
+            summary="Dry-run evaluated tool call.",
+            dry_run=True,
+        )
+        return ToolExecutionResult(
+            tool_call_id,
+            tool_name,
+            would_execute,
+            json.dumps(
+                {
+                    "dry_run": True,
+                    "tool_name": tool_name,
+                    "capability": tool.capability,
+                    "risk_level": risk.value,
+                    "policy_decision": policy.decision.value,
+                    "approval_required": approval_required,
+                    "approval_type": "per_action" if risk is RiskLevel.CRITICAL else ("once" if approval_required else "none"),
+                    "would_execute": would_execute,
+                    "sanitized_args": self._sanitize_args(tool_name, args),
+                    "preview": preview,
+                }
+            ),
+            debug=self._debug_from_audit(audit),
+        )
 
     def execute(self, tool_call: dict[str, Any]) -> ToolExecutionResult:
+        if self.dry_run_mode:
+            return self.dry_run(tool_call)
         tool_call_id = str(tool_call.get("id", ""))
         function = tool_call.get("function") or {}
         tool_name = str(function.get("name", ""))
@@ -96,17 +197,35 @@ class ToolBroker:
         risk = policy.capability.risk_level if policy.capability else RiskLevel.FORBIDDEN
         approval_result = ApprovalResult.NOT_REQUIRED
         approval_request: ApprovalRequest | None = None
+        try:
+            preview = self.preview_formatter.format(tool_name, args, risk)
+        except ActionPreviewError as exc:
+            audit = self._log(
+                tool_name=tool_name,
+                capability=tool.capability,
+                decision=PolicyDecision.DENY,
+                risk_level=risk,
+                args=self._sanitize_args(tool_name, args),
+                summary=f"Blocked by action preview: {exc}",
+            )
+            return ToolExecutionResult(
+                tool_call_id=tool_call_id,
+                tool_name=tool_name,
+                allowed=False,
+                content=json.dumps({"error": str(exc), "decision": PolicyDecision.DENY.value}),
+                debug=self._debug_from_audit(audit),
+            )
         if policy.decision is PolicyDecision.ASK:
             approval_request = ApprovalRequest(
                 capability=tool.capability,
                 tool_name=tool_name,
                 risk_level=risk,
-                summary=self._approval_summary(tool_name, args, risk),
+                summary=self._approval_summary(tool_name, args, risk, preview),
                 per_action=risk is RiskLevel.CRITICAL,
                 session_id=self.session_id,
-                trust_level=TrustLevel.MODEL_OUTPUT,
-                args_preview=self._approval_args_preview(tool_name, args),
-                rollback_available=self._rollback_available(tool_name),
+                trust_level=self._trust_level_for_tool(tool_name),
+                args_preview=preview.to_dict()["sanitized_args"],
+                rollback_available=preview.rollback_available,
             )
             approval_result = self.approval_manager.request_approval(approval_request)
             if approval_result is ApprovalResult.APPROVED:
@@ -273,6 +392,7 @@ class ToolBroker:
         files_written: list[str] | None = None,
         commands_run: list[str] | None = None,
         network_domains: list[str] | None = None,
+        dry_run: bool = False,
     ) -> dict[str, Any]:
         return self.audit_logger.log(
             AuditEvent(
@@ -283,7 +403,7 @@ class ToolBroker:
                 tool_name=tool_name,
                 capability=capability,
                 risk_level=risk_level.value,
-                trust_level=TrustLevel.MODEL_OUTPUT.value,
+                trust_level=self._trust_level_for_tool(tool_name).value,
                 policy_decision=decision.value,
                 approval_result=approval_result,
                 sanitized_args=args,
@@ -292,6 +412,7 @@ class ToolBroker:
                 files_written=files_written or [],
                 commands_run=commands_run or [],
                 network_domains=network_domains or [],
+                dry_run=dry_run,
             )
         )
 
@@ -322,6 +443,19 @@ class ToolBroker:
                     sanitized[key] = "[PERSONAL_CONTENT_REDACTED]"
         return sanitized
 
+    def _trust_level_for_tool(self, tool_name: str) -> TrustLevel:
+        if tool_name.startswith("calendar."):
+            return TrustLevel.LOCAL_PRIVATE_DATA
+        if tool_name.startswith("email."):
+            return TrustLevel.UNTRUSTED_EMAIL
+        if tool_name.startswith("messages."):
+            return TrustLevel.UNTRUSTED_MESSAGE
+        if tool_name.startswith("web."):
+            return TrustLevel.UNTRUSTED_WEB
+        if tool_name.startswith(("contacts.", "browser.")):
+            return TrustLevel.LOCAL_PRIVATE_DATA
+        return TrustLevel.MODEL_OUTPUT
+
     def _rate_limit_allowed(self, capability_name: str) -> bool:
         capability = self.policy_engine.get_capability(capability_name)
         if capability is None:
@@ -335,28 +469,18 @@ class ToolBroker:
         limiter = self._rate_limiters.setdefault(capability_name, RateLimiter(requests_per_minute))
         return limiter.allow(capability_name)
 
-    def _approval_summary(self, tool_name: str, args: dict[str, Any], risk: RiskLevel) -> str:
-        preview = self._approval_args_preview(tool_name, args)
-        if tool_name in {"email.send_approved", "messages.send_approved"}:
-            return (
-                f"Preflight for {tool_name}: recipient={preview.get('to', '')}; "
-                f"subject={preview.get('subject', '')}; body={preview.get('body', '')}; "
-                f"attachments={preview.get('attachments', [])}; risk={risk.value}; "
-                "rollback_available=False; approval_choices=approve,deny,abort"
-            )
-        if tool_name.startswith("calendar."):
-            return (
-                f"Preflight for {tool_name}: title={preview.get('title', '')}; "
-                f"start={preview.get('start', '')}; end={preview.get('end', '')}; "
-                f"attendees={preview.get('attendees', [])}; fields={preview}; risk={risk.value}; "
-                "rollback_available=False; approval_choices=approve,deny,abort"
-            )
-        if tool_name == "contacts.update_selected":
-            return (
-                f"Preflight for {tool_name}: fields_changed={preview.get('changes', preview)}; risk={risk.value}; "
-                "rollback_available=False; approval_choices=approve,deny,abort"
-            )
-        return f"Model requested {tool_name}."
+    def _approval_summary(
+        self,
+        tool_name: str,
+        args: dict[str, Any],
+        risk: RiskLevel,
+        preview: Any | None = None,
+    ) -> str:
+        preview = preview or self.preview_formatter.format(tool_name, args, risk)
+        return (
+            f"Preflight for {tool_name}: {preview.summary}; risk={risk.value}; "
+            f"rollback_available={preview.rollback_available}; approval_choices=approve,deny,abort"
+        )
 
     def _approval_args_preview(self, tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
         from agent.safety.redaction import SecretRedactor

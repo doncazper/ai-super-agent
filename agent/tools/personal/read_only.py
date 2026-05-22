@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
+from agent.tools.personal.calendar import CalendarConnector, calendar_connector_from_env, find_availability, read_date_range
+from agent.tools.personal.contacts import ContactsConnector, contacts_connector_from_env, read_selected_contact, search_contacts
 from agent.tools.errors import ToolError
 
 
@@ -27,29 +29,64 @@ def _draft_reply(source_text: str, user_instruction: str = "") -> str:
     )
 
 
-def make_personal_tools() -> dict[str, Any]:
-    def contacts_search(query: str) -> dict[str, object]:
-        return {**_not_configured("contacts.search"), "query": query, "results": []}
+def make_personal_tools(
+    calendar_connector: CalendarConnector | None = None,
+    contacts_connector: ContactsConnector | None = None,
+) -> dict[str, Any]:
+    connector = calendar_connector or calendar_connector_from_env()
+    contact_connector = contacts_connector or contacts_connector_from_env()
 
-    def contacts_read_selected(selected_scope_token: str | None = None) -> dict[str, object]:
-        _require_selected_scope(selected_scope_token)
-        return _not_configured("contacts.read_selected")
+    def contacts_search(query: str, max_results: int | None = None) -> dict[str, object]:
+        return search_contacts(contact_connector, query=query, max_results=max_results)
+
+    def contacts_read_selected(
+        selected_scope_token: str | None = None,
+        contact_id: str | None = None,
+        requested_fields: list[str] | None = None,
+    ) -> dict[str, object]:
+        return read_selected_contact(
+            contact_connector,
+            selected_scope_token=selected_scope_token or contact_id,
+            requested_fields=requested_fields,
+        )
 
     def calendar_read_date_range(
-        start_date: str,
-        end_date: str,
-        selected_scope_token: str | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        calendar_filters: list[str] | None = None,
     ) -> dict[str, object]:
-        _require_selected_scope(selected_scope_token)
-        return {**_not_configured("calendar.read_date_range"), "start_date": start_date, "end_date": end_date}
+        return read_date_range(
+            connector,
+            start=start,
+            end=end,
+            start_date=start_date,
+            end_date=end_date,
+            calendar_filters=calendar_filters,
+        )
 
     def calendar_find_availability(
-        start_date: str,
-        end_date: str,
-        selected_scope_token: str | None = None,
+        start: str | None = None,
+        end: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        duration_minutes: int = 30,
+        working_hours_start: str = "09:00",
+        working_hours_end: str = "17:00",
+        calendar_filters: list[str] | None = None,
     ) -> dict[str, object]:
-        _require_selected_scope(selected_scope_token)
-        return {**_not_configured("calendar.find_availability"), "start_date": start_date, "end_date": end_date}
+        return find_availability(
+            connector,
+            start=start,
+            end=end,
+            start_date=start_date,
+            end_date=end_date,
+            duration_minutes=duration_minutes,
+            working_hours_start=working_hours_start,
+            working_hours_end=working_hours_end,
+            calendar_filters=calendar_filters,
+        )
 
     def email_list_metadata(selected_scope_token: str | None = None) -> dict[str, object]:
         _require_selected_scope(selected_scope_token)
@@ -138,19 +175,45 @@ def _schema(name: str, description: str, properties: dict[str, object], required
 
 
 PERSONAL_SCHEMAS = {
-    "contacts.search": _schema("contacts.search", "Search approved selected contacts metadata.", {"query": {"type": "string"}}, ["query"]),
-    "contacts.read_selected": _schema("contacts.read_selected", "Read an explicitly selected contact.", {"selected_scope_token": {"type": "string"}}),
+    "contacts.search": _schema(
+        "contacts.search",
+        "Search approved selected contacts metadata. Returns compact candidates only.",
+        {"query": {"type": "string"}, "max_results": {"type": "integer", "minimum": 1, "maximum": 10}},
+        ["query"],
+    ),
+    "contacts.read_selected": _schema(
+        "contacts.read_selected",
+        "Read an explicitly selected contact.",
+        {
+            "selected_scope_token": {"type": "string"},
+            "contact_id": {"type": "string"},
+            "requested_fields": {"type": "array", "items": {"type": "string"}},
+        },
+    ),
     "calendar.read_date_range": _schema(
         "calendar.read_date_range",
         "Read an approved selected calendar date range.",
-        {"start_date": {"type": "string"}, "end_date": {"type": "string"}, "selected_scope_token": {"type": "string"}},
-        ["start_date", "end_date"],
+        {
+            "start": {"type": "string"},
+            "end": {"type": "string"},
+            "start_date": {"type": "string"},
+            "end_date": {"type": "string"},
+            "calendar_filters": {"type": "array", "items": {"type": "string"}},
+        },
     ),
     "calendar.find_availability": _schema(
         "calendar.find_availability",
         "Find availability from an approved selected calendar range.",
-        {"start_date": {"type": "string"}, "end_date": {"type": "string"}, "selected_scope_token": {"type": "string"}},
-        ["start_date", "end_date"],
+        {
+            "start": {"type": "string"},
+            "end": {"type": "string"},
+            "start_date": {"type": "string"},
+            "end_date": {"type": "string"},
+            "duration_minutes": {"type": "integer", "minimum": 5, "maximum": 480},
+            "working_hours_start": {"type": "string"},
+            "working_hours_end": {"type": "string"},
+            "calendar_filters": {"type": "array", "items": {"type": "string"}},
+        },
     ),
     "email.list_metadata": _schema("email.list_metadata", "List approved selected email metadata.", {"selected_scope_token": {"type": "string"}}),
     "email.read_selected_thread": _schema("email.read_selected_thread", "Read an approved selected email thread.", {"selected_scope_token": {"type": "string"}}),

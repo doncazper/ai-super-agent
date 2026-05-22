@@ -27,6 +27,7 @@
 - Approval required when policy returns `ASK`.
 - Denial prevents execution.
 - Critical actions do not reuse approvals.
+- Interactive approval prompts display previews, allow details review, and execute only after explicit approval.
 
 ## Audit-Log Tests
 
@@ -60,6 +61,9 @@
 - Personal modules disabled by default.
 - Selected-scope reads require approval.
 - Body text is not stored in long-term memory by default.
+- Calendar selected-range reads require approval, enforce max date ranges, omit notes/body by default, redact locations by default, and audit accesses as `LOCAL_PRIVATE_DATA`.
+- Calendar availability returns slots without leaking event details.
+- Contacts search/read require approval, keep tools disabled by default, return compact search candidates, require a selected-scope token and explicit requested fields for selected reads, omit notes, redact email/phone/address values by default, deny bulk export attempts, and audit accesses as `LOCAL_PRIVATE_DATA`.
 
 ## Self-Improvement Tests
 

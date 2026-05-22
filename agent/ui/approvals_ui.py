@@ -26,13 +26,22 @@ class ConsoleApprovalPrompt:
             if not self.interactive:
                 return ApprovalResult.DENIED
             self.output_fn(format_approval_preview(request))
-            response = self.input_fn("approval> ").strip()
+            while True:
+                response = self.input_fn("approval> ").strip()
+                if is_details_response(response):
+                    self.output_fn(format_approval_details(request))
+                    continue
+                return approval_result_from_response(request, response)
         return approval_result_from_response(request, response)
+
+
+def is_details_response(response: str) -> bool:
+    return response.strip().casefold() in {"details", "detail", "show details", "d"}
 
 
 def approval_result_from_response(request: ApprovalRequest, response: str) -> ApprovalResult:
     normalized = response.strip().casefold()
-    if normalized in {"details", "detail", "show details", "d"}:
+    if is_details_response(response):
         return ApprovalResult.DENIED
     if normalized in {"deny", "denied", "no", "n"}:
         return ApprovalResult.DENIED
@@ -64,6 +73,15 @@ def format_approval_preview(request: ApprovalRequest) -> str:
             "Args preview:",
             json.dumps(SecretRedactor().redact(request.args_preview), indent=2, sort_keys=True),
             "Choices: " + ", ".join(choices),
+        ]
+    )
+
+
+def format_approval_details(request: ApprovalRequest) -> str:
+    return "\n".join(
+        [
+            "Approval details",
+            json.dumps(SecretRedactor().redact(request.to_dict()), indent=2, sort_keys=True),
         ]
     )
 

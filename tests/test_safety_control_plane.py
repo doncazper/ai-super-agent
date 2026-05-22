@@ -94,12 +94,15 @@ def test_critical_action_requests_per_action_approval(tmp_path) -> None:
     )
 
     result = broker.execute(
-        {
-            "id": "call_critical",
-            "type": "function",
-            "function": {"name": "email.send", "arguments": "{}"},
-        }
-    )
+            {
+                "id": "call_critical",
+                "type": "function",
+                "function": {
+                    "name": "email.send",
+                    "arguments": json.dumps({"to": "a@example.com", "subject": "Hi", "body": "Exact body"}),
+                },
+            }
+        )
 
     assert result.allowed is False
     assert len(approvals.requests) == 1

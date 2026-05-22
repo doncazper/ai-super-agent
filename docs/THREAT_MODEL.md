@@ -29,6 +29,8 @@
 | Secrets leakage | Deny known secret paths; redact audit/debug output; never store secrets. |
 | Unsafe memory storage | Use categories and approvals; block secrets and default personal-body storage; redact memory content from audit arguments. |
 | Overbroad personal-data access | Disable personal tools by default; selected-scope reads only; avoid private database scraping and broad Full Disk Access. |
+| Calendar read overreach | Calendar read connector is disabled by default, approval-gated, selected date range only, max-range limited, and returns compact summaries without notes/body or locations by default. The optional macOS path uses Calendar.app Automation permissions and does not scrape private databases or require Full Disk Access. |
+| Contacts read overreach | Contacts connector is disabled by default, approval-gated, selected-scope only, and search returns compact candidates without email/phone values. Selected reads require a selected-scope token and explicit requested fields, omit notes, redact email/phone/address values by default, and do not scrape private databases or require Full Disk Access. |
 | Email/text sending abuse | Draft-only workflows before send tools; M8 send tools disabled by default with critical per-action approval and preflight summaries. |
 | Calendar/contact modification abuse | M8 write tools disabled by default with critical per-action approval and preflight summaries. |
 | Self-improvement weakening safety | Branch-based changes; policy-reduction checks; protected safety files; tests and diff before approval-gated commit. |

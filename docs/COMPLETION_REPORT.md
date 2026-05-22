@@ -727,3 +727,196 @@ Do not disable audit logging."
   - Phase C queue approvals do not replay old tool calls; execution still requires a fresh brokered action.
 - Next recommended action:
   - Add interactive approval mode for live CLI model sessions before enabling any personal-data connector.
+
+## Run: 2026-05-22 Phase C2 Approval UX Polish and Dry-Run
+
+- Date/time: 2026-05-22, post-baseline approval UX polish.
+- Phase attempted: Phase C2 universal dry-run mode and reusable action previews.
+- Files changed:
+  - Added `agent/safety/action_preview.py`.
+  - Updated `agent/core/tool_broker.py` with dry-run evaluation, dry-run audit marking, reusable action previews, and critical exact-args blocking.
+  - Updated `agent/safety/audit.py` with a `dry_run` audit field.
+  - Updated `smart_agent.py` with `--dry-run`.
+  - Added `tests/test_action_preview.py`.
+  - Updated `tests/test_tool_broker.py`, `tests/test_approved_write_actions.py`, and `tests/test_safety_control_plane.py`.
+  - Updated `README.md`, `docs/ACCEPTANCE_CRITERIA.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read current CLI, broker, approval UI, approval manager, and related tests with `sed`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy()`.
+  - `WEB_SEARCH_PROVIDER= BRAVE_SEARCH_API_KEY= $PY smart_agent.py --dry-run web "local ai news"`
+- Tests run:
+  - First run found two expected assertion changes: email preview wording and critical empty-args now blocking before approval. Updated code/tests accordingly.
+  - Final command: `$PY -m pytest -q`
+  - Result: 126 passed in 1.29s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Dry-run mode routes through `ToolBroker`, evaluates policy and approval requirements, returns sanitized args and previews, and does not execute tool handlers.
+  - Dry-run audit records include `dry_run=true`.
+  - CLI smoke `smart_agent.py --dry-run web "local ai news"` returned a dry-run report with redacted query args and no provider execution.
+  - `ActionPreviewFormatter` supports generic tool calls, file writes, web fetches, calendar events, contact updates, email sends, and message sends.
+  - Critical action previews require exact action args; missing exact args blocks execution before approval.
+  - No personal-data connectors, send/write enabling, or approval-rule weakening was added.
+- Known limitations:
+  - Dry-run for natural model chat still requires the model to request a tool before a dry-run tool report exists.
+- Next recommended action:
+  - Add interactive approval mode for live CLI model sessions, reusing dry-run previews and approval request records.
+
+## Run: 2026-05-22 Phase C3 Interactive Approval Mode
+
+- Date/time: 2026-05-22, post-baseline approval UX continuation.
+- Phase attempted: Phase C3 interactive approval mode for live CLI model sessions.
+- Files changed:
+  - Updated `smart_agent.py` so `--interactive` sessions attach a live `ConsoleApprovalPrompt` to `ApprovalManager`.
+  - Updated `agent/ui/approvals_ui.py` so interactive users can request details before approving, denying, or aborting.
+  - Updated `agent/ui/interactive.py` with `:approvals` and `:approvals <request_id>` inspection commands backed by the session approval store.
+  - Updated `tests/test_tool_broker.py`, `tests/test_interactive_cli.py`, and `tests/test_ux_packaging.py`.
+  - Updated `README.md`, `docs/ACCEPTANCE_CRITERIA.md`, `docs/TEST_PLAN.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read required governance docs and current approval/runtime code with `sed` and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `printf ':help\n:approvals\n:exit\n' | LMSTUDIO_MODEL=smoke-model $PY smart_agent.py --interactive`
+  - `git diff --check`
+- Tests run:
+  - Final command: `$PY -m pytest -q`
+  - Result: 129 passed in 1.38s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Interactive CLI sessions now display approval prompts for approval-required tool calls instead of always denying as non-interactive.
+  - Users can type `show details` at an approval prompt without converting the request into a denial.
+  - `:approvals` lists queued approval requests inside interactive mode without sending a model prompt.
+  - `:approvals <request_id>` displays a queued request preview inside interactive mode.
+  - Critical actions still require per-action approval only; no broad approval or approval reuse was added.
+  - No personal-data connectors, send/write enabling, or policy weakening was added.
+- Known limitations:
+  - The approval queue remains an inspection/status queue; approving old queued requests does not replay old tool calls.
+  - The scripted interactive smoke used `LMSTUDIO_MODEL=smoke-model` and did not send any model prompt.
+- Next recommended action:
+  - Commit the Phase C2/C3 approval UX checkpoint, then continue with connector-specific approval preview polish before enabling any personal-data connector.
+
+## Run: 2026-05-22 Phase D1 Selected-Scope Calendar Read-Only Connector
+
+- Date/time: 2026-05-22, first post-baseline personal-data connector.
+- Phase attempted: Phase D1 calendar read-only selected date range connector.
+- Connector path chosen:
+  - Added a dedicated calendar adapter layer with an optional `CALENDAR_CONNECTOR=applescript` Calendar.app bridge.
+  - The bridge uses macOS Calendar/Automation privacy prompts, does not scrape Calendar databases, and does not require Full Disk Access.
+  - If no connector is configured, the tool returns structured setup instructions after policy/approval allows execution.
+- Files changed:
+  - Added `agent/tools/personal/calendar.py`.
+  - Updated `agent/tools/personal/read_only.py` to use the calendar adapter for `calendar.read_date_range` and `calendar.find_availability`.
+  - Updated `agent/tools/registry.py` to support injected calendar connectors for tests.
+  - Updated `agent/core/tool_broker.py` so calendar approval/audit events are labeled `LOCAL_PRIVATE_DATA`.
+  - Updated `smart_agent.py` with `python smart_agent.py calendar read ...` and `python smart_agent.py calendar availability ...`.
+  - Updated `config/capabilities.yaml`, `.env.example`, `README.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/TEST_PLAN.md`, `docs/DECISION_LOG.md`, and `docs/COMPLETION_REPORT.md`.
+  - Updated `tests/test_personal_modules.py`.
+- Commands run:
+  - Read governance docs, personal tool stubs, policy config, CLI/runtime code, and existing personal tests with `sed` and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_personal_modules.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `$PY smart_agent.py calendar read --start 2026-05-22 --end 2026-05-23`
+  - `$PY smart_agent.py calendar availability --start 2026-05-22 --end 2026-05-23 --duration 30`
+  - `WEB_SEARCH_PROVIDER= BRAVE_SEARCH_API_KEY= $PY smart_agent.py research --max-results 2 --no-fetch "local ai news"`
+- Tests run:
+  - First targeted run found two test expectation issues: date-only end is an exclusive boundary, and memory store initialization creates an empty SQLite database. Adjusted the test assertions.
+  - Targeted personal tests: 16 passed in 0.15s.
+  - Final full suite: 137 passed in 1.30s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - `calendar.read_date_range` is HIGH risk, disabled by default, approval-required, selected-range only, and max-range limited by `CALENDAR_MAX_RANGE_DAYS` defaulting to 31.
+  - `calendar.find_availability` returns available slots without event details.
+  - Event notes/body are not returned by default.
+  - Locations are redacted unless `CALENDAR_INCLUDE_LOCATIONS=true`.
+  - Calendar results are marked `LOCAL_PRIVATE_DATA` and `stored_in_memory=false`.
+  - Calendar accesses are audited through `ToolBroker`.
+  - Calendar write actions remain disabled-by-default stubs and were not enabled.
+  - No email, messages, contacts connector, browser automation, Full Disk Access requirement, or unsafe database scraping was added.
+- Known limitations:
+  - The live Calendar.app connector was not exercised in this environment.
+  - Personal calendar capabilities remain disabled by default in `config/capabilities.yaml`; enabling them requires human review and explicit approval flow.
+  - The AppleScript bridge is best-effort and may require the user to approve macOS Automation/Calendar prompts for the Python host process.
+- Next recommended action:
+  - Run a live calendar smoke test only after intentionally enabling the two calendar read-only capabilities and setting `CALENDAR_CONNECTOR=applescript`; then consider a read-only contacts selected-record connector, not email/messages yet.
+
+## Run: 2026-05-22 Phase D2 Selected-Scope Contacts Read-Only Connector
+
+- Date/time: 2026-05-22, second post-baseline personal-data connector.
+- Phase attempted: Phase D2 contacts read-only selected-scope connector.
+- Connector path chosen:
+  - Added a dedicated contacts adapter layer with an optional `CONTACTS_CONNECTOR=applescript` Contacts.app bridge.
+  - The bridge uses macOS Contacts/Automation privacy prompts, does not scrape AddressBook databases, and does not require Full Disk Access.
+  - If no connector is configured, the tool returns structured setup instructions after policy/approval allows execution.
+- Files changed:
+  - Added `agent/tools/personal/contacts.py`.
+  - Updated `agent/tools/personal/read_only.py` to use the contacts adapter for `contacts.search` and `contacts.read_selected`.
+  - Updated `agent/tools/registry.py` to support injected contacts connectors for tests.
+  - Updated `smart_agent.py` with `python smart_agent.py contacts search ...` and `python smart_agent.py contacts read ...`.
+  - Updated `agent/safety/action_preview.py` with contacts read previews.
+  - Updated `config/capabilities.yaml`, `.env.example`, `README.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/TEST_PLAN.md`, `docs/DECISION_LOG.md`, and `docs/COMPLETION_REPORT.md`.
+  - Updated `tests/test_personal_modules.py`.
+- Commands run:
+  - Read required governance docs and the latest completion, risk, threat, test, and release docs.
+  - Read contacts/calendar stubs, policy config, action previews, registry, and personal tests with `sed` and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_personal_modules.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `$PY smart_agent.py contacts search "Sam"`
+  - `$PY smart_agent.py contacts read "person-1"`
+- Tests run:
+  - Targeted personal tests: 24 passed in 0.29s.
+  - Final full suite: 145 passed in 1.50s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - `contacts.search` is HIGH risk, disabled by default, approval-required, and selected-scope only.
+  - Search requires a query of at least two characters and returns compact candidates only: selected-scope token, display name, organization, job title, email count, phone count, and address flag.
+  - Search does not return email addresses, phone numbers, notes, or addresses.
+  - `contacts.read_selected` requires a selected-scope token, approval, and explicit requested fields.
+  - Selected contact reads omit notes, redact email/phone/address values unless their explicit config gates are enabled, mark results `LOCAL_PRIVATE_DATA`, and set `stored_in_memory=false`.
+  - Bulk-style search/read requests such as `all` or wildcard fields are denied.
+  - Contact accesses are audited through `ToolBroker`.
+  - Direct contacts CLI commands safely returned `capability disabled` while capabilities remain disabled by default.
+  - No email, messages, browser automation, write/send connector enabling, Full Disk Access requirement, or unsafe database scraping was added.
+- Known limitations:
+  - The live Contacts.app connector was not exercised in this environment.
+  - Personal contacts capabilities remain disabled by default in `config/capabilities.yaml`; enabling them requires human review and explicit approval flow.
+  - The AppleScript bridge is best-effort and may require the user to approve macOS Automation/Contacts prompts for the Python host process.
+- Next recommended action:
+  - Checkpoint/commit the C2-D2 safety and personal connector work, then run live calendar/contacts smoke tests only after intentionally enabling the relevant read-only capabilities. Do not start email/messages yet.
+
+## Run: 2026-05-22 C2-D2 Safety and Personal Connector Checkpoint
+
+- Date/time: 2026-05-22, post-baseline checkpoint.
+- Phase attempted: Validate and commit accumulated Phase C2, C3, D1, and D2 work without adding new capabilities.
+- Scope:
+  - Universal dry-run mode and reusable action previews.
+  - Interactive approval prompt polish.
+  - Calendar read-only selected-range connector adapter.
+  - Contacts read-only selected-scope connector adapter.
+- Approval gates checked:
+  - Personal calendar and contacts capabilities remain disabled by default.
+  - No email connector was added.
+  - No messages connector was added.
+  - No write/send connector was enabled.
+  - No Full Disk Access requirement was introduced.
+  - No private macOS database scraping was introduced.
+  - No policy weakening or audit disabling was introduced.
+- Files changed:
+  - Checkpoint includes the code, tests, config, and documentation changes already listed in the Phase C2, C3, D1, and D2 entries above.
+- Commands run:
+  - Read required governance docs, risk register, threat model, test plan, release checklist, and completion history.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - Disabled contacts smoke: `$PY smart_agent.py contacts search "Sam"` and `$PY smart_agent.py contacts read "person-1"`.
+  - `git diff --check`.
+- Tests run:
+  - Final full suite: 148 passed in 1.60s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Disabled contacts smoke commands safely returned `capability disabled`.
+  - Checkpoint validation passed.
+- Known limitations:
+  - Live Calendar.app and Contacts.app connectors still require an intentional local smoke test after explicitly enabling the relevant disabled read-only capabilities.
+- Next recommended action:
+  - After this checkpoint commit, run live calendar/contacts smoke tests only if the user explicitly chooses to enable those read-only capabilities. Do not start email/messages yet.

@@ -13,6 +13,7 @@ M0-M11 are complete:
 - `ToolBroker` enforcement.
 - Manifest-backed `PolicyEngine`.
 - Approval manager with request IDs, preview formatting, audit lifecycle logging, and conservative non-interactive denial.
+- Interactive approval prompts for live CLI sessions.
 - Hash-chained audit JSONL.
 - Deterministic router so normal chat attaches no tools by default.
 - Redacted debug payload formatting.
@@ -25,6 +26,8 @@ M0-M11 are complete:
 - Memory tools refuse secrets and personal content by default.
 - Personal-memory storage is approval-gated.
 - Read-only personal module interfaces are present but disabled by default.
+- Calendar read-only selected-range connector support is present but disabled by default.
+- Contacts read-only selected-scope connector support is present but disabled by default.
 - Email/message reply drafting is draft-only and never sends.
 - Assistant workflows compose existing tools only through `ToolBroker`.
 - Workflow action reports show each step and result.
@@ -76,6 +79,15 @@ Tool-enabled chat:
 python smart_agent.py --debug "What time is it?"
 ```
 
+Dry-run mode:
+
+```bash
+python smart_agent.py --dry-run --debug "What time is it?"
+python smart_agent.py --dry-run web "local AI news"
+```
+
+Dry-run mode routes normally and evaluates policy, approval requirements, sanitized args, and action previews, but does not execute tools. Dry-run evaluations are audited with `dry_run=true`.
+
 Web tools:
 
 ```bash
@@ -107,6 +119,36 @@ python smart_agent.py research --locale es --summary-language en "últimas notic
 ```
 
 The research command runs `web.search` and optional `web.fetch_url` calls through `ToolBroker`, then returns a source-aware JSON report. It does not fabricate citations; if search or fetch fails, the report says so. Foreign-language titles, snippets, and excerpts are preserved, with a simple language hint when available.
+
+Calendar read-only selected-range access:
+
+```bash
+python smart_agent.py calendar read --start 2026-05-22 --end 2026-05-23
+python smart_agent.py calendar availability --start 2026-05-22 --end 2026-05-23 --duration 30
+```
+
+Calendar tools are HIGH risk, disabled by default, approval-required, and selected-range only. The optional connector path is Calendar.app through AppleScript:
+
+```bash
+export CALENDAR_CONNECTOR=applescript
+```
+
+This adapter uses macOS Calendar/Automation privacy prompts. It does not scrape private Calendar databases and does not require Full Disk Access. Event notes are not returned, locations are redacted unless `CALENDAR_INCLUDE_LOCATIONS=true`, availability returns slots without event details, and calendar results are not stored in long-term memory by default.
+
+Contacts read-only selected-scope access:
+
+```bash
+python smart_agent.py contacts search "Sam" --max-results 5
+python smart_agent.py contacts read "<contact_id>"
+```
+
+Contacts tools are HIGH risk, disabled by default, approval-required, and selected-scope only. The optional connector path is Contacts.app through AppleScript:
+
+```bash
+export CONTACTS_CONNECTOR=applescript
+```
+
+This adapter uses macOS Contacts/Automation privacy prompts. It does not scrape private AddressBook databases and does not require Full Disk Access. Search returns compact candidates only: name, organization, job title, counts/flags, and a selected-scope token. It does not return email addresses or phone numbers from search results. Reading a selected contact returns only requested fields; notes are never returned, and email, phone, and address values are redacted unless their explicit config gates are enabled.
 
 Memory tools:
 
@@ -153,10 +195,12 @@ Inside interactive mode:
 :no-tools off
 :debug on
 :debug off
+:approvals
+:approvals <request_id>
 :exit
 ```
 
-Interactive commands such as `:doctor`, `:tools`, and `:config` do not send prompts to the model. Normal chat turns still use the same orchestrator, router, `ToolBroker`, policy engine, approval manager, and audit logger as one-shot CLI requests.
+Interactive commands such as `:doctor`, `:tools`, `:config`, and `:approvals` do not send prompts to the model. Normal chat turns still use the same orchestrator, router, `ToolBroker`, policy engine, approval manager, and audit logger as one-shot CLI requests. If a live interactive tool call requires approval, the CLI shows the approval preview and waits for `approve once`, `deny`, `abort`, or `show details`. Critical actions still allow only per-action approval.
 
 ## Runtime Config
 
@@ -180,6 +224,14 @@ WEB_SEARCH_MAX_RESULTS=8
 WEB_SAFE_SEARCH=true
 WEB_SEARCH_AUDIT_QUERIES=false
 WEB_FETCH_MAX_BYTES=500000
+CALENDAR_CONNECTOR=
+CALENDAR_MAX_RANGE_DAYS=31
+CALENDAR_INCLUDE_LOCATIONS=false
+CONTACTS_CONNECTOR=
+CONTACTS_MAX_SEARCH_RESULTS=5
+CONTACTS_INCLUDE_EMAILS=false
+CONTACTS_INCLUDE_PHONES=false
+CONTACTS_INCLUDE_ADDRESSES=false
 ```
 
 `TOOL_MODE` may be `auto`, `no-tools`, or `force-time`. The older `LMSTUDIO_TEMPERATURE`, `LMSTUDIO_TOP_P`, `LMSTUDIO_MAX_TOKENS`, and `AGENT_AUDIT_LOG` names are still accepted as fallbacks.
@@ -248,9 +300,12 @@ The model writes final answers. The harness executes only validated tool calls t
 - Higher-risk actions require approval and are denied safely in non-interactive mode.
 - Tool calls and denials are audited.
 - Approval lifecycle events are audited: requested, displayed, approved, denied, expired/aborted, used, and final execution/denial.
+- Dry-run mode evaluates tool calls without execution and records dry-run audit events.
 - Webpage content is wrapped as untrusted data.
 - Long-term memory refuses secrets and personal content by default.
 - Personal modules are disabled by default and selected-scope only.
+- Calendar read-only access is selected-range only, approval-gated, and uses macOS privacy prompts when configured.
+- Contacts read-only access is selected-scope only, approval-gated, compact in search mode, and uses macOS privacy prompts when configured.
 - Email/message drafts do not send.
 - Approved send/write actions are disabled by default and require per-action approval.
-- Personal-data and write/send modules are locked until later approval gates.
+- Other personal-data and write/send modules remain locked until later approval gates.

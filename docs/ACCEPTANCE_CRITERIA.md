@@ -11,6 +11,9 @@
 - Denials, approvals, executions, and failures are audited.
 - Secrets are redacted from logs.
 - Untrusted content is treated as data, never instructions.
+- Dry-run mode evaluates policy, approval requirements, sanitized args, and action previews without executing tools.
+- Critical action previews require exact action arguments and cannot use broad approval.
+- Interactive CLI sessions display approval previews for approval-required tool calls and still route execution through `ToolBroker`.
 
 ## M0
 

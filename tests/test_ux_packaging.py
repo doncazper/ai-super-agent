@@ -56,6 +56,28 @@ def test_approval_preview_redacts_secrets() -> None:
     assert "[REDACTED]" in preview
 
 
+def test_interactive_approval_details_then_approve() -> None:
+    output: list[str] = []
+    responses = iter(["details", "approve"])
+    prompt = ConsoleApprovalPrompt(
+        input_fn=lambda label: next(responses),
+        output_fn=output.append,
+        interactive=True,
+    )
+    request = ApprovalRequest(
+        capability="git.commit",
+        tool_name="git.commit",
+        risk_level=RiskLevel.HIGH,
+        summary="Commit changes",
+        args_preview={"message": "safe"},
+    )
+
+    result = prompt.prompt(request)
+
+    assert result.value == "approved"
+    assert any("Approval details" in line for line in output)
+
+
 def test_audit_viewer_displays_entries(tmp_path) -> None:
     audit_path = tmp_path / "audit.jsonl"
     audit_path.write_text('{"tool_name": "time.get_current_time"}\n', encoding="utf-8")

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import sys
+import json
 from dataclasses import dataclass
 from typing import Callable
 
+from agent.safety.approvals import ApprovalStore
 from agent.tools.registry import ToolRegistry
+from agent.ui.approvals_ui import format_approval_preview
 from agent.ui.config_viewer import config_as_json
 from agent.ui.doctor import doctor_exit_code, format_doctor, run_doctor
 
@@ -29,6 +32,8 @@ HELP_TEXT = """Commands:
   :no-tools off     Allow router-selected tools for chat turns.
   :debug on         Print debug details for chat turns.
   :debug off        Hide debug details for chat turns.
+  :approvals        List queued approval requests.
+  :approvals <id>   Show one queued approval request.
   :exit             Quit interactive mode."""
 
 
@@ -37,6 +42,7 @@ def run_interactive(
     *,
     registry: ToolRegistry,
     state: InteractiveState | None = None,
+    approval_store: ApprovalStore | None = None,
     input_fn: InputFn = input,
     output_fn: OutputFn = print,
     error_fn: OutputFn | None = None,
@@ -62,7 +68,14 @@ def run_interactive(
             output_fn("Goodbye.")
             return 0
         if lowered.startswith(":"):
-            _handle_command(lowered, registry=registry, state=current, output_fn=output_fn, error_fn=write_error)
+            _handle_command(
+                lowered,
+                registry=registry,
+                state=current,
+                approval_store=approval_store,
+                output_fn=output_fn,
+                error_fn=write_error,
+            )
             continue
         try:
             answer = respond(text, current)
@@ -78,6 +91,7 @@ def _handle_command(
     *,
     registry: ToolRegistry,
     state: InteractiveState,
+    approval_store: ApprovalStore | None,
     output_fn: OutputFn,
     error_fn: OutputFn,
 ) -> None:
@@ -113,4 +127,37 @@ def _handle_command(
         state.debug = False
         output_fn("Debug output is off.")
         return
+    if command == ":approvals":
+        if approval_store is None:
+            error_fn("Approval queue is not available in this session.")
+            return
+        output_fn(_format_approval_list(approval_store))
+        return
+    if command.startswith(":approvals "):
+        if approval_store is None:
+            error_fn("Approval queue is not available in this session.")
+            return
+        request_id = command.split(maxsplit=1)[1].strip()
+        request = approval_store.get(request_id)
+        if request is None:
+            error_fn("Approval request not found.")
+            return
+        output_fn(format_approval_preview(request))
+        return
     error_fn("Unknown command. Type :help for interactive commands.")
+
+
+def _format_approval_list(approval_store: ApprovalStore) -> str:
+    payload = [
+        {
+            "request_id": request.request_id,
+            "timestamp": request.timestamp,
+            "tool_name": request.tool_name,
+            "capability": request.capability,
+            "risk_level": request.risk_level.value,
+            "status": request.status.value,
+            "expires_at": request.expires_at,
+        }
+        for request in approval_store.list()
+    ]
+    return json.dumps({"approvals": payload}, indent=2, sort_keys=True)

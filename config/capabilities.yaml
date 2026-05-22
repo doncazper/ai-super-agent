@@ -151,6 +151,8 @@ tools:
     default_enabled: false
     approval_required: true
     selected_scope_only: true
+    compact_results_only: true
+    max_results: 5
     stores_data: false
 
   contacts.read_selected:
@@ -158,6 +160,11 @@ tools:
     default_enabled: false
     approval_required: true
     selected_scope_only: true
+    requested_fields_only: true
+    emails_included_by_default: false
+    phones_included_by_default: false
+    notes_included: false
+    addresses_included: false
     stores_data: false
 
   calendar.read_date_range:
@@ -165,6 +172,8 @@ tools:
     default_enabled: false
     approval_required: true
     selected_scope_only: true
+    selected_date_range_only: true
+    max_range_days: 31
     stores_data: false
 
   calendar.find_availability:
@@ -172,6 +181,9 @@ tools:
     default_enabled: false
     approval_required: true
     selected_scope_only: true
+    selected_date_range_only: true
+    max_range_days: 31
+    returns_event_details: false
     stores_data: false
 
   email.list_metadata:

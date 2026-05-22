@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from agent.safety.approvals import ApprovalRequest, ApprovalStore
+from agent.safety.policy import RiskLevel
 from agent.tools.registry import default_registry
 from agent.ui.cli_commands import dispatch_cli
 from agent.ui.interactive import InteractiveState, run_interactive
@@ -108,3 +110,30 @@ def test_interactive_unknown_command_reports_help_hint() -> None:
 
     assert result == 0
     assert "Unknown command. Type :help for interactive commands." in output
+
+
+def test_interactive_approvals_list_and_show_use_session_store(tmp_path) -> None:
+    output: list[str] = []
+    store = ApprovalStore(tmp_path / "approvals.json")
+    request = ApprovalRequest(
+        capability="git.commit",
+        tool_name="git.commit",
+        risk_level=RiskLevel.HIGH,
+        summary="Commit changes",
+        args_preview={"message": "safe"},
+    )
+    store.add(request)
+
+    result = run_interactive(
+        lambda message, state: "unused",
+        registry=default_registry(),
+        approval_store=store,
+        input_fn=input_script([":approvals", f":approvals {request.request_id}", ":exit"]),
+        output_fn=output.append,
+        error_fn=output.append,
+    )
+
+    assert result == 0
+    assert any('"approvals"' in line for line in output)
+    assert any(request.request_id in line for line in output)
+    assert any("Approval required" in line for line in output)
