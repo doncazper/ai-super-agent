@@ -50,6 +50,9 @@ class FakeWeatherProvider:
     ) -> dict[str, Any]:
         return {"location": location, "forecast": []}
 
+    def alerts(self, location: str, locale: str | None = None) -> dict[str, Any]:
+        return {"location": location, "alerts": []}
+
 
 def make_orchestrator(fake_client: FakeClient, tmp_path, *, weather_provider=None) -> Orchestrator:
     registry = default_registry(weather_provider=weather_provider)
@@ -59,6 +62,8 @@ def make_orchestrator(fake_client: FakeClient, tmp_path, *, weather_provider=Non
             "time.get_current_time": Capability("time.get_current_time", RiskLevel.SAFE),
             "weather.current": Capability("weather.current", RiskLevel.LOW, metadata={"requires_web_access": True}),
             "weather.forecast": Capability("weather.forecast", RiskLevel.LOW, metadata={"requires_web_access": True}),
+            "weather.alerts": Capability("weather.alerts", RiskLevel.LOW, metadata={"requires_web_access": True}),
+            "web.search": Capability("web.search", RiskLevel.LOW, metadata={"requires_web_access": True}),
         }
     broker = ToolBroker(
         registry,
@@ -162,6 +167,21 @@ def test_weather_route_attaches_weather_tools_without_rewriting_user_message(tmp
     assert fake.calls[0]["messages"][1] == {
         "role": "user",
         "content": "What's the weather in Phoenix?",
+    }
+
+
+def test_weather_impact_route_attaches_weather_and_web_tools(tmp_path) -> None:
+    fake = FakeClient([response({"content": "I'll check weather and source-grounded web context."})])
+    orchestrator = make_orchestrator(fake, tmp_path, weather_provider=FakeWeatherProvider())
+
+    result = orchestrator.run("Are flights delayed due to weather at LAX?")
+
+    tool_names = {tool["function"]["name"] for tool in fake.calls[0]["tools"]}
+    assert result.content == "I'll check weather and source-grounded web context."
+    assert {"weather.current", "weather.forecast", "web.search"}.issubset(tool_names)
+    assert fake.calls[0]["messages"][1] == {
+        "role": "user",
+        "content": "Are flights delayed due to weather at LAX?",
     }
 
 

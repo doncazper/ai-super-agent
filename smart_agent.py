@@ -17,9 +17,11 @@ from agent.safety.policy import PolicyEngine
 from agent.safety.validation import validate_startup_policy
 from agent.tools.registry import default_registry
 from agent.tools.weather.formatter import format_weather_answer
+from agent.tools.weather.preferences import clear_default_location, set_default_location, weather_preferences
 from agent.ui.approvals_ui import ConsoleApprovalPrompt
 from agent.ui.cli_commands import dispatch_cli
 from agent.ui.interactive import InteractiveState, run_interactive
+from agent.workflows.daily_briefing import weather_daily_briefing
 from agent.workflows.research import source_grounded_research
 
 
@@ -81,6 +83,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_research_command(args.message[1:], broker)
     if args.message and args.message[0] == "weather":
         return _run_weather_command(args.message[1:], broker, debug=debug_enabled)
+    if args.message and args.message[0] == "briefing":
+        return _run_briefing_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "calendar":
         return _run_calendar_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "contacts":
@@ -231,6 +235,13 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("doctor", help="Check weather provider configuration without fetching weather data.")
+    config_parser = subparsers.add_parser("config", help="Show or update explicit weather preferences.")
+    config_subparsers = config_parser.add_subparsers(dest="config_command", required=True)
+    config_subparsers.add_parser("show", help="Show safe weather preferences.")
+    set_default_parser = config_subparsers.add_parser("set-default", help="Persist an explicit default weather location.")
+    set_default_parser.add_argument("location", nargs="+", help="City, region, or direct lat/lon explicitly provided by the user.")
+    config_subparsers.add_parser("clear-default", help="Clear the persisted default weather location.")
+
     cache_parser = subparsers.add_parser("cache", help="Manage the local TTL weather cache.")
     cache_subparsers = cache_parser.add_subparsers(dest="cache_command", required=True)
     cache_subparsers.add_parser("clear", help="Clear cached weather responses.")
@@ -241,22 +252,31 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     smoke_parser.add_argument("--units", choices=["metric", "imperial"], default=None)
     smoke_parser.add_argument("--locale", default=None)
     smoke_parser.add_argument("--hourly", action="store_true", help="Include hourly forecast slices when supported.")
+    smoke_parser.add_argument("--provider", default=None, help="Override the configured weather provider for this request.")
 
     current_parser = subparsers.add_parser("current", help="Fetch current weather for a user-provided location.")
-    current_parser.add_argument("location", nargs="+", help="City, ZIP/postal code, or other user-provided location.")
+    current_parser.add_argument("location", nargs="*", help="City, ZIP/postal code, or other user-provided location.")
     current_parser.add_argument("--units", choices=["metric", "imperial"], default=None)
     current_parser.add_argument("--locale", default=None)
+    current_parser.add_argument("--provider", default=None, help="Override the configured weather provider for this request.")
     current_parser.add_argument("--no-cache", action="store_true", help="Bypass the local weather cache for this request.")
     current_parser.add_argument("--json", action="store_true", help="Print the raw structured weather payload.")
 
     forecast_parser = subparsers.add_parser("forecast", help="Fetch a forecast for a user-provided location.")
-    forecast_parser.add_argument("location", nargs="+", help="City, ZIP/postal code, or other user-provided location.")
+    forecast_parser.add_argument("location", nargs="*", help="City, ZIP/postal code, or other user-provided location.")
     forecast_parser.add_argument("--days", type=int, default=None)
     forecast_parser.add_argument("--units", choices=["metric", "imperial"], default=None)
     forecast_parser.add_argument("--locale", default=None)
+    forecast_parser.add_argument("--provider", default=None, help="Override the configured weather provider for this request.")
     forecast_parser.add_argument("--hourly", action="store_true", help="Include hourly forecast slices when supported.")
     forecast_parser.add_argument("--no-cache", action="store_true", help="Bypass the local weather cache for this request.")
     forecast_parser.add_argument("--json", action="store_true", help="Print the raw structured weather payload.")
+
+    alerts_parser = subparsers.add_parser("alerts", help="Fetch active weather alerts for a user-provided location when supported.")
+    alerts_parser.add_argument("location", nargs="*", help="City, ZIP/postal code, or other user-provided location.")
+    alerts_parser.add_argument("--locale", default=None)
+    alerts_parser.add_argument("--provider", default=None, help="Override the configured weather provider for this request.")
+    alerts_parser.add_argument("--json", action="store_true", help="Print the raw structured weather payload.")
     try:
         parsed = parser.parse_args(argv)
     except SystemExit as exc:
@@ -272,6 +292,18 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
         payload["capabilities"] = _weather_capability_status(broker)
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0 if result.allowed else 2
+
+    if parsed.command == "config":
+        if parsed.config_command == "show":
+            print(json.dumps(weather_preferences().to_dict(), indent=2, sort_keys=True))
+            return 0
+        if parsed.config_command == "set-default":
+            payload = set_default_location(" ".join(parsed.location))
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            return 0 if payload.get("status") == "ok" else 2
+        if parsed.config_command == "clear-default":
+            print(json.dumps(clear_default_location(), indent=2, sort_keys=True))
+            return 0
 
     if parsed.command == "cache":
         try:
@@ -289,6 +321,8 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
             base_args["units"] = parsed.units
         if parsed.locale is not None:
             base_args["locale"] = parsed.locale
+        if parsed.provider is not None:
+            base_args["provider"] = parsed.provider
         forecast_args = dict(base_args)
         forecast_args["days"] = parsed.days
         if parsed.hourly:
@@ -332,12 +366,18 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
         print(json.dumps(report, indent=2, sort_keys=True))
         return 0 if ok else 2
 
-    tool_name = "weather.current" if parsed.command == "current" else "weather.forecast"
+    tool_name = {
+        "current": "weather.current",
+        "forecast": "weather.forecast",
+        "alerts": "weather.alerts",
+    }[parsed.command]
     arguments: dict[str, object] = {"location": " ".join(parsed.location)}
-    if parsed.units is not None:
+    if getattr(parsed, "units", None) is not None:
         arguments["units"] = parsed.units
-    if parsed.locale is not None:
+    if getattr(parsed, "locale", None) is not None:
         arguments["locale"] = parsed.locale
+    if getattr(parsed, "provider", None) is not None:
+        arguments["provider"] = parsed.provider
     if parsed.command == "forecast" and parsed.days is not None:
         arguments["days"] = parsed.days
     if parsed.command == "forecast" and parsed.hourly:
@@ -355,6 +395,42 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     else:
         print(format_weather_answer(payload, mode=parsed.command))
     return 0 if result.allowed else 2
+
+
+def _run_briefing_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py briefing", description="Safety-scoped briefings.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    daily_parser = subparsers.add_parser("daily", help="Build a daily briefing from explicitly selected sources.")
+    source_group = daily_parser.add_mutually_exclusive_group(required=True)
+    source_group.add_argument("--weather", nargs="+", help="User-provided city, ZIP/postal code, or location string.")
+    source_group.add_argument("--weather-default", action="store_true", help="Use WEATHER_DEFAULT_LOCATION if explicitly configured.")
+    daily_parser.add_argument("--json", action="store_true", help="Print the structured briefing payload.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    if parsed.command != "daily":
+        parser.error("unsupported briefing command")
+
+    location = " ".join(parsed.weather) if parsed.weather else None
+    try:
+        payload = weather_daily_briefing(
+            broker,
+            location=location,
+            use_default_location=bool(parsed.weather_default),
+        )
+    except AuditLogError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    if debug:
+        print("[debug] briefing sources=weather personal_tools=none memory_writes=false", file=sys.stderr)
+    if parsed.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    elif payload.get("status") == "ok":
+        print(str(payload.get("briefing", "Weather briefing unavailable")))
+    else:
+        print(str(payload.get("error", "weather briefing failed")), file=sys.stderr)
+    return 0 if payload.get("status") == "ok" else 2
 
 
 def _execute_weather_tool(
@@ -382,7 +458,7 @@ def _execute_weather_tool(
 
 def _weather_capability_status(broker: ToolBroker) -> dict[str, dict[str, object]]:
     statuses: dict[str, dict[str, object]] = {}
-    for capability_name in ("weather.status", "weather.current", "weather.forecast"):
+    for capability_name in ("weather.status", "weather.current", "weather.forecast", "weather.alerts"):
         policy = broker.policy_engine.evaluate(capability_name)
         statuses[capability_name] = {
             "decision": policy.decision.value,

@@ -69,8 +69,13 @@
 - Configured mock providers return normalized current weather and forecast data.
 - Open-Meteo provider tests mock geocoding and forecast endpoints; live internet is not required for unit tests.
 - Open-Meteo tests cover current normalization, forecast normalization, malformed responses, timeouts, geocoding failures, and audit domains.
+- NWS provider tests mock geocoding, points/grid, forecast, hourly, and alerts endpoints; live internet is not required for unit tests.
+- NWS tests cover U.S.-only location enforcement, forecast normalization, alert normalization, retryable timeouts, missing grid data, CLI alerts, and audit domains.
+- WeatherKit stub tests cover not-configured errors, env presence checks, no secret values in output/audit logs, and provider selection only when explicitly configured.
 - Forecast days are capped by `WEATHER_MAX_FORECAST_DAYS`.
 - Location arguments are redacted from audit logs and are not persisted as history by default.
+- Weather preferences tests cover no default location by default, explicit default-location use, default-location audit source, units preference, cache disabling, config show/set/clear, and no automatic memory writes.
+- Weather-aware web research tests cover simple weather staying weather-only, delay/closure/latest-storm queries attaching web when needed, provider errors becoming limitations, web-disabled limitations, untrusted web instruction filtering, separated weather/web sections, and audit logs for both weather and web calls.
 - Provider timeouts/errors return structured error payloads.
 - Unknown weather tools are denied.
 

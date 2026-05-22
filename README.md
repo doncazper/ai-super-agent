@@ -121,6 +121,10 @@ python smart_agent.py research --locale es --summary-language en "últimas notic
 
 The research command runs `web.search` and optional `web.fetch_url` calls through `ToolBroker`, then returns a source-aware JSON report. It does not fabricate citations; if search or fetch fails, the report says so. Foreign-language titles, snippets, and excerpts are preserved, with a simple language hint when available.
 
+Weather-aware research:
+
+Simple weather prompts use weather tools only. Weather-impact prompts that need current public context, such as flight delays, school closures, or latest hurricane updates, may attach `web.search` in addition to weather tools when web search is configured. Web content remains `UNTRUSTED_WEB`, weather provider data and web results stay separated in workflow output, and the agent must not claim current closures or delays without web sources. Requests such as "near me" or "my area" do not infer personal location; configure an explicit default location first or provide a location in the request.
+
 Weather provider abstraction:
 
 ```bash
@@ -129,10 +133,14 @@ python smart_agent.py weather smoke "Phoenix, AZ"
 python smart_agent.py weather current "San Francisco"
 python smart_agent.py weather current "Phoenix, AZ" --no-cache
 python smart_agent.py weather forecast "San Francisco" --days 3
+python smart_agent.py weather alerts "Los Angeles, CA" --provider nws
+python smart_agent.py weather config show
+python smart_agent.py weather config set-default "Phoenix, AZ"
+python smart_agent.py weather config clear-default
 python smart_agent.py weather cache clear
 ```
 
-`weather.status`, `weather.current`, `weather.forecast`, and `weather.cache_clear` are LOW-risk, audited, rate-limited, ToolBroker-only capabilities for user-provided locations. The `doctor` command checks provider configuration and capability policy without fetching weather data. The `smoke` command runs `weather.status`, `weather.current`, and `weather.forecast` through the broker for a user-provided location. Open-Meteo is used when `WEATHER_PROVIDER` is unset; `WEATHER_PROVIDER=disabled` returns structured `weather provider is not configured` JSON.
+`weather.status`, `weather.current`, `weather.forecast`, `weather.alerts`, and `weather.cache_clear` are LOW-risk, audited, rate-limited, ToolBroker-only capabilities for user-provided locations. The `doctor` command checks provider configuration and capability policy without fetching weather data. The `smoke` command runs `weather.status`, `weather.current`, and `weather.forecast` through the broker for a user-provided location. Open-Meteo is used when `WEATHER_PROVIDER` is unset; `WEATHER_PROVIDER=disabled` returns structured `weather provider is not configured` JSON.
 
 Open-Meteo is the default no-key provider:
 
@@ -146,13 +154,32 @@ python smart_agent.py weather forecast "San Francisco" --days 3
 python smart_agent.py weather forecast "33.4484,-112.0740" --days 3 --hourly
 ```
 
-Direct `weather current` and `weather forecast` commands print a readable answer with current conditions or daily forecast, umbrella/clothing guidance when data supports it, alert availability, cache warnings, uncertainty, provider, and `retrieved_at`. Add `--json` to either command to inspect the structured provider payload instead.
+NOAA/National Weather Service is available as a U.S.-only no-key provider. It uses user-provided locations, Open-Meteo geocoding for coordinates, and `api.weather.gov` points/grid/alerts endpoints. It does not use device location or IP geolocation.
 
-The weather tools do not use macOS Location Services, IP geolocation, personal data, writes, or long-term memory storage. Location arguments are redacted from audit logs by default. Open-Meteo geocoding and forecast responses are treated as `UNTRUSTED_WEB`. To disable weather entirely, set `WEATHER_PROVIDER=disabled`.
+```bash
+python smart_agent.py weather current "Los Angeles, CA" --provider nws
+python smart_agent.py weather forecast "Los Angeles, CA" --provider nws --days 3 --hourly
+python smart_agent.py weather alerts "Los Angeles, CA" --provider nws
+```
 
-Natural-language weather requests route to weather tools only when they include a location, such as "What's the weather in Phoenix?" or "Is it going to rain tomorrow in LA?". Requests like "near me" do not infer personal location. To allow location-less weather questions, explicitly set `WEATHER_DEFAULT_LOCATION`, for example `WEATHER_DEFAULT_LOCATION=Phoenix, AZ`.
+WeatherKit is documented as an optional planning stub only. `WEATHER_PROVIDER=weatherkit` checks whether Apple Developer credential env vars are present, but it does not sign JWTs or call Apple yet. Review [docs/decisions/weatherkit_provider.md](</Users/sambehdjou/Documents/AI Super Agent/docs/decisions/weatherkit_provider.md>) before implementing full WeatherKit support.
 
-Weather responses are cached in a short-lived local TTL cache at `WEATHER_CACHE_PATH` using hashed keys. Defaults are 900 seconds for current weather and 3600 seconds for forecasts. Use `--no-cache` to bypass cache for a request, or `python smart_agent.py weather cache clear` to clear cached weather responses. This cache is separate from long-term memory.
+Direct `weather current`, `weather forecast`, and `weather alerts` commands print a readable answer with current conditions, daily forecast, active alert summaries, umbrella/clothing guidance when data supports it, alert availability, cache warnings, uncertainty, provider, and `retrieved_at`. Add `--json` to inspect the structured provider payload instead.
+
+The weather tools do not use macOS Location Services, IP geolocation, personal data, writes, or long-term memory storage. Location arguments are redacted from audit logs by default. Open-Meteo geocoding, Open-Meteo forecast responses, and NWS responses are treated as `UNTRUSTED_WEB`. To disable weather entirely, set `WEATHER_PROVIDER=disabled`.
+
+Natural-language weather requests route to weather tools only when they include a location, such as "What's the weather in Phoenix?" or "Is it going to rain tomorrow in LA?". Requests like "near me" do not infer personal location. To allow location-less weather questions, explicitly set `WEATHER_DEFAULT_LOCATION`, `WEATHER_DEFAULT_LATITUDE` plus `WEATHER_DEFAULT_LONGITUDE`, or run `python smart_agent.py weather config set-default "Phoenix, AZ"`. Default location use is audited with the source of the setting, while the location value remains redacted from audit args.
+
+Weather responses are cached in a short-lived local TTL cache at `WEATHER_CACHE_PATH` using hashed keys. Defaults are 900 seconds for current weather and 3600 seconds for forecasts; `WEATHER_CACHE_TTL_SECONDS` can override both, and `WEATHER_CACHE_ENABLED=false` disables caching. Use `--no-cache` to bypass cache for a request, or `python smart_agent.py weather cache clear` to clear cached weather responses. This cache is separate from long-term memory.
+
+Weather-only daily briefing:
+
+```bash
+python smart_agent.py briefing daily --weather "Phoenix, AZ"
+python smart_agent.py briefing daily --weather-default
+```
+
+The daily briefing uses only `weather.current` and `weather.forecast` through `ToolBroker`. It does not read calendar, contacts, email, messages, browser history, or memory, and it does not infer location. `--weather-default` requires `WEATHER_DEFAULT_LOCATION`; otherwise it returns a clear location-required error.
 
 Connector status dashboard:
 
@@ -305,10 +332,20 @@ WEB_SAFE_SEARCH=true
 WEB_SEARCH_AUDIT_QUERIES=false
 WEB_FETCH_MAX_BYTES=500000
 WEATHER_PROVIDER=open_meteo
+WEATHERKIT_TEAM_ID=
+WEATHERKIT_SERVICE_ID=
+WEATHERKIT_KEY_ID=
+WEATHERKIT_PRIVATE_KEY_PATH=
 WEATHER_TIMEOUT_SECONDS=10
 WEATHER_MAX_FORECAST_DAYS=7
+WEATHER_UNITS=metric
 WEATHER_DEFAULT_UNITS=metric
 WEATHER_DEFAULT_LOCATION=
+WEATHER_DEFAULT_LATITUDE=
+WEATHER_DEFAULT_LONGITUDE=
+WEATHER_PREFERENCES_PATH=config/weather_preferences.json
+WEATHER_CACHE_ENABLED=true
+WEATHER_CACHE_TTL_SECONDS=
 WEATHER_CACHE_PATH=data/weather_cache.json
 WEATHER_CURRENT_CACHE_TTL_SECONDS=900
 WEATHER_FORECAST_CACHE_TTL_SECONDS=3600

@@ -7,11 +7,38 @@ def format_weather_answer(payload: dict[str, Any], *, mode: str = "auto") -> str
     """Format structured weather payloads for direct CLI display only."""
     if payload.get("status") != "ok":
         return _format_error(payload)
+    if mode == "alerts" or (mode == "auto" and isinstance(payload.get("alerts"), list)):
+        return _format_alerts(payload)
     if mode == "current" or (mode == "auto" and isinstance(payload.get("current"), dict)):
         return _format_current(payload)
     if mode == "forecast" or (mode == "auto" and isinstance(payload.get("forecast"), list)):
         return _format_forecast(payload)
     return _format_error({**payload, "error": "weather data unavailable"})
+
+
+def format_weather_daily_briefing(current_payload: dict[str, Any], forecast_payload: dict[str, Any]) -> str:
+    """Format a weather-only daily briefing from structured weather tool results."""
+    if current_payload.get("status") != "ok":
+        return _format_error(current_payload)
+    if forecast_payload.get("status") != "ok":
+        return _format_error(forecast_payload)
+
+    current = _mapping(current_payload.get("current"))
+    today = _first_forecast_day(forecast_payload)
+    lines = [
+        f"Daily weather briefing for {_value(current_payload.get('location') or forecast_payload.get('location'))}",
+        f"Current weather: {_current_summary(current, current_payload)}",
+        f"Today's high/low: {_today_high_low(today, forecast_payload)}",
+        f"Precipitation: {_briefing_precipitation_note(current_payload, forecast_payload)}",
+        f"Wind: {_briefing_wind_note(current, today)}",
+        _combined_alerts_summary(current_payload, forecast_payload),
+        f"Umbrella: {_umbrella_recommendation(_merge_weather_payloads(current_payload, forecast_payload))}",
+        f"Clothing: {_clothing_recommendation(current, current_payload)}",
+        _combined_cache_summary(current_payload, forecast_payload),
+        "Limitations: Weather can change quickly; this briefing uses only the configured weather provider and does not use calendar, contacts, email, messages, browser history, inferred location, or memory.",
+        _combined_source_note(current_payload, forecast_payload),
+    ]
+    return "\n".join(line for line in lines if line)
 
 
 def _format_current(payload: dict[str, Any]) -> str:
@@ -27,6 +54,86 @@ def _format_current(payload: dict[str, Any]) -> str:
         _source_note(payload),
     ]
     return "\n".join(line for line in lines if line)
+
+
+def _first_forecast_day(payload: dict[str, Any]) -> dict[str, Any]:
+    forecast = payload.get("forecast")
+    if isinstance(forecast, list) and forecast and isinstance(forecast[0], dict):
+        return forecast[0]
+    return {}
+
+
+def _today_high_low(day: dict[str, Any], payload: dict[str, Any]) -> str:
+    unit = _temperature_unit(payload.get("units"))
+    high = _number_with_unit(day.get("temperature_max") or day.get("high"), day.get("temperature_max_unit") or unit)
+    low = _number_with_unit(day.get("temperature_min") or day.get("low"), day.get("temperature_min_unit") or unit)
+    return f"high {high}, low {low}"
+
+
+def _briefing_precipitation_note(current_payload: dict[str, Any], forecast_payload: dict[str, Any]) -> str:
+    current = _mapping(current_payload.get("current"))
+    today = _first_forecast_day(forecast_payload)
+    pieces = []
+    current_rain = _number_with_unit(current.get("rain"), current.get("rain_unit"))
+    current_precip = _number_with_unit(current.get("precipitation"), current.get("precipitation_unit"))
+    today_rain = _rain_summary(today)
+    if current_rain != "unavailable":
+        pieces.append(f"current rain {current_rain}")
+    if current_precip != "unavailable":
+        pieces.append(f"current precipitation {current_precip}")
+    if today_rain != "unavailable":
+        pieces.append(f"today {today_rain}")
+    return "; ".join(pieces) if pieces else "rain/precipitation data unavailable"
+
+
+def _briefing_wind_note(current: dict[str, Any], today: dict[str, Any]) -> str:
+    current_wind = _number_with_unit(current.get("wind_speed"), current.get("wind_speed_unit"))
+    forecast_wind = _number_with_unit(today.get("wind_speed_max"), today.get("wind_speed_max_unit"))
+    if current_wind != "unavailable" and forecast_wind != "unavailable":
+        return f"current {current_wind}; today up to {forecast_wind}"
+    if current_wind != "unavailable":
+        return f"current {current_wind}"
+    if forecast_wind != "unavailable":
+        return f"today up to {forecast_wind}"
+    return "wind data unavailable"
+
+
+def _combined_alerts_summary(*payloads: dict[str, Any]) -> str:
+    combined: list[dict[str, Any]] = []
+    unsupported = True
+    for payload in payloads:
+        alerts = payload.get("alerts")
+        if isinstance(alerts, list):
+            unsupported = False
+            combined.extend(alert for alert in alerts if isinstance(alert, dict))
+    if unsupported:
+        return "Alerts: unavailable; this provider/result does not include alerts"
+    if not combined:
+        return "Alerts: no active alerts reported by provider"
+    return _alerts_summary({"alerts": combined})
+
+
+def _combined_cache_summary(*payloads: dict[str, Any]) -> str:
+    cached_payloads = [payload for payload in payloads if payload.get("cached") is True]
+    if not cached_payloads:
+        return ""
+    summaries = [_cache_summary(payload) for payload in cached_payloads]
+    return " ".join(summary for summary in summaries if summary)
+
+
+def _combined_source_note(current_payload: dict[str, Any], forecast_payload: dict[str, Any]) -> str:
+    current_source = _source_note(current_payload)
+    forecast_source = _source_note(forecast_payload)
+    if current_source == forecast_source:
+        return current_source
+    return f"Current source: {_value(current_payload.get('provider'))}; retrieved_at {_value(current_payload.get('retrieved_at'))}\nForecast source: {_value(forecast_payload.get('provider'))}; retrieved_at {_value(forecast_payload.get('retrieved_at'))}"
+
+
+def _merge_weather_payloads(current_payload: dict[str, Any], forecast_payload: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(current_payload)
+    if isinstance(forecast_payload.get("forecast"), list):
+        merged["forecast"] = forecast_payload["forecast"]
+    return merged
 
 
 def _format_forecast(payload: dict[str, Any]) -> str:
@@ -51,6 +158,16 @@ def _format_forecast(payload: dict[str, Any]) -> str:
             _source_note(payload),
         ]
     )
+    return "\n".join(line for line in lines if line)
+
+
+def _format_alerts(payload: dict[str, Any]) -> str:
+    lines = [
+        f"Weather alerts for {_value(payload.get('location'))}",
+        _alerts_summary(payload),
+        "Limitations: Alerts are reported only from the selected provider; verify urgent conditions with official local guidance.",
+        _source_note(payload),
+    ]
     return "\n".join(line for line in lines if line)
 
 

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import os
 import re
 from dataclasses import dataclass, field
 from typing import Any
 
 from agent.safety.policy import RiskLevel
+from agent.tools.weather.preferences import configured_default_location
 
 
 @dataclass(frozen=True)
@@ -59,6 +59,39 @@ class Router:
         "jacket",
         "coat",
         "alerts",
+        "storm",
+        "hurricane",
+        "closures",
+        "delayed",
+        "delays",
+    )
+    WEATHER_WEB_CONTEXT_PATTERNS = (
+        "flight",
+        "flights",
+        "airport",
+        "delayed",
+        "delay",
+        "delays",
+        "closures",
+        "closure",
+        "school",
+        "schools",
+        "latest",
+        "update",
+        "affecting",
+        "impacting",
+        "hurricane",
+        "storm",
+    )
+    WEATHER_ALERT_CONTEXT_PATTERNS = (
+        "alert",
+        "alerts",
+        "storm",
+        "hurricane",
+        "warning",
+        "watch",
+        "latest",
+        "update",
     )
     WEATHER_NON_TOOL_PHRASES = (
         "how weather forecasting works",
@@ -75,7 +108,7 @@ class Router:
         "architect ",
     )
     WEATHER_LOCATION_PATTERN = re.compile(
-        r"\b(?:in|for|near|around)\s+([a-z][a-z .,'-]*?)(?:\s+(?:today|tomorrow|tonight|this weekend|weekend|this week|next week))?[?.!]*$",
+        r"\b(?:in|for|near|around|at)\s+([a-z][a-z .,'-]*?)(?:\s+(?:today|tomorrow|tonight|this weekend|weekend|this week|next week))?[?.!]*$",
         re.IGNORECASE,
     )
     WEATHER_PERSONAL_LOCATION_PHRASES = (
@@ -133,7 +166,8 @@ class Router:
         requested_period = self._weather_period(normalized)
         location = self._extract_weather_location(user_message)
         user_location_detected = bool(location)
-        default_location = os.getenv("WEATHER_DEFAULT_LOCATION", "").strip()
+        default_location_config = configured_default_location()
+        default_location = default_location_config.location if default_location_config else ""
         uses_default_location = False
 
         if not location and default_location:
@@ -145,14 +179,30 @@ class Router:
             "requested_period": requested_period,
             "location_detected": user_location_detected,
             "default_location_used": uses_default_location,
+            "web_context_needed": self._weather_needs_web(normalized),
+            "weather_alerts_needed": self._weather_needs_alerts(normalized),
         }
 
-        if not location:
+        if not location and not metadata["web_context_needed"]:
             return RouteDecision(
                 name="chat.weather_missing_location",
                 use_tools=False,
                 risk_level=RiskLevel.SAFE,
                 metadata={**metadata, "missing_location": True},
+            )
+
+        if metadata["web_context_needed"]:
+            tool_names = {"web.search"}
+            if location:
+                tool_names.update({"weather.current", "weather.forecast"})
+            if metadata["weather_alerts_needed"]:
+                tool_names.add("weather.alerts")
+            return RouteDecision(
+                name="tool.weather_research",
+                use_tools=True,
+                tool_names=tool_names,
+                risk_level=RiskLevel.LOW,
+                metadata={**metadata, "location": location, "missing_location": not bool(location)},
             )
 
         return RouteDecision(
@@ -176,6 +226,12 @@ class Router:
         if "today" in normalized or "tonight" in normalized:
             return "today"
         return "unspecified"
+
+    def _weather_needs_web(self, normalized: str) -> bool:
+        return any(pattern in normalized for pattern in self.WEATHER_WEB_CONTEXT_PATTERNS)
+
+    def _weather_needs_alerts(self, normalized: str) -> bool:
+        return any(pattern in normalized for pattern in self.WEATHER_ALERT_CONTEXT_PATTERNS)
 
     def _extract_weather_location(self, user_message: str) -> str | None:
         normalized = user_message.casefold()

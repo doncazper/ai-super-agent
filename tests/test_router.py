@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+import pytest
+
 from agent.core.router import Router
+
+
+@pytest.fixture(autouse=True)
+def isolate_weather_preferences(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHER_PREFERENCES_PATH", str(tmp_path / "weather_preferences.json"))
 
 
 def test_router_preserves_normal_chat_without_tools() -> None:
@@ -57,6 +64,26 @@ def test_router_detects_weather_intent_with_location() -> None:
     assert route.use_tools is True
     assert route.tool_names == {"weather.current", "weather.forecast"}
     assert route.metadata["location"] == "Phoenix"
+
+
+def test_router_weather_impact_routes_to_weather_and_web() -> None:
+    route = Router().route("Are flights delayed due to weather at LAX?")
+
+    assert route.name == "tool.weather_research"
+    assert route.use_tools is True
+    assert {"weather.current", "weather.forecast", "web.search"}.issubset(route.tool_names)
+    assert route.metadata["web_context_needed"] is True
+    assert route.metadata["location"] == "LAX"
+
+
+def test_router_latest_hurricane_routes_to_alerts_and_web_without_location_inference() -> None:
+    route = Router().route("What is the latest hurricane update?")
+
+    assert route.name == "tool.weather_research"
+    assert route.use_tools is True
+    assert route.tool_names == {"weather.alerts", "web.search"}
+    assert route.metadata["missing_location"] is True
+    assert route.metadata["location_detected"] is False
 
 
 def test_router_detects_weather_rain_tomorrow_with_location() -> None:

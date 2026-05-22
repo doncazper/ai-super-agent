@@ -1814,3 +1814,374 @@ Do not disable audit logging."
   - Secret scan showed only placeholders, docs, or test fixtures; no live API keys were found.
 - Remaining follow-up work:
   - Commit the weather hardening changes.
+
+## Run: 2026-05-22 13:37 PDT Feature Maturity Tracking
+
+- Date/time: 2026-05-22 13:37 PDT, feature maturity tracking pass.
+- Phase attempted: Create feature maturity tracking and validation.
+- Scope:
+  - Created the feature maturity model, maturity levels, readiness scoring guidance, and initial conservative maturity assessment.
+  - Created the feature registry with maturity fields, readiness scores, hardening status, live validation status, UX/docs status, last hardening pass, and next work needed.
+  - Created project state maturity summaries for most mature features, least mature features, features needing hardening, live validation, docs, and tests.
+  - Created a feature roadmap focused on maturity before breadth.
+  - Created a reusable feature maturity template.
+  - Updated `AGENTS.md` so future Codex runs must read and update maturity tracking after feature work.
+  - Added docs validation tests for maturity tracking.
+  - Added `CHANGELOG.md` entry for user-visible tracking docs.
+- Approval gates checked:
+  - No runtime feature, connector, policy behavior, personal-data tool, write/send action, or memory behavior was changed.
+  - Maturity ratings were conservative and do not mark stubs as mature.
+  - Prompt count was included only as context, not proof of maturity.
+- Files created:
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/templates/feature_maturity_template.md`
+  - `CHANGELOG.md`
+  - `tests/test_feature_maturity_docs.py`
+- Files changed:
+  - `docs/FEATURE_MATURITY.md`
+  - `AGENTS.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - `git status --short`
+  - `ls -la docs`
+  - `rg -n "FEATURE|maturity|roadmap|project state|ToolBroker|Weather|Calendar|Email" SPEC.md AGENTS.md docs CHANGELOG.md tests -g '!logs/**'`
+  - Read `docs/FEATURE_MATURITY.md`, `AGENTS.md`, `docs/SDLC.md`, `pyproject.toml`, workflow tests, release gate tests, and test plan snippets.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `git diff --check`
+- Tests run:
+  - Feature maturity docs validation: 6 passed in 0.01s.
+  - Full suite: 252 passed in 2.47s.
+  - Startup policy validation: startup policy ok.
+  - Diff whitespace check: clean.
+- Results:
+  - Most mature features: ToolBroker / PolicyEngine / AuditLogger, Weather connector, LM Studio no-tool chat, Web search/fetch/research, Workspace file assistant, and Memory.
+  - Least mature features: Meeting prep, Email triage, Messages draft-only, and Agent dashboard.
+  - Features needing hardening: Calendar read-only, Contacts read-only, Email draft-only, Messages draft-only, and Agent dashboard.
+  - Features needing live validation: LM Studio no-tool chat, Web search/fetch/research, Calendar read-only, Contacts read-only, and Email draft-only.
+  - Current recommended work up next: live LM Studio no-tool smoke with the configured model, then document the result.
+- Remaining follow-up work:
+  - Run live LM Studio no-tool smoke with the configured model and update maturity/live-validation status based on the result.
+
+## Run: 2026-05-22 13:40 PDT Weather-Only Daily Briefing
+
+- Date/time: 2026-05-22 13:40 PDT, weather-only daily briefing workflow.
+- Phase attempted: Build first daily briefing workflow using only weather.
+- Scope:
+  - Added `python smart_agent.py briefing daily --weather "Phoenix, AZ"`.
+  - Added `python smart_agent.py briefing daily --weather-default`, requiring explicit `WEATHER_DEFAULT_LOCATION`.
+  - Added weather-only briefing workflow that calls `weather.current` and `weather.forecast` through `ToolBroker`.
+  - Added briefing formatting for current weather, today's high/low, precipitation/rain, wind, alerts if present, clothing/umbrella suggestion, provider/source, `retrieved_at`, and limitations.
+  - Updated README, maturity tracking, feature registry, project state, feature roadmap, and changelog.
+- Approval gates checked:
+  - No calendar, contacts, email, messages, browser history, inferred location, write/send action, or memory write was added.
+  - Weather calls remain brokered, policy-checked, audited, and rate-limited.
+  - `--weather-default` does not infer location; it uses only explicitly configured `WEATHER_DEFAULT_LOCATION`.
+- Files changed:
+  - `agent/workflows/daily_briefing.py`
+  - `agent/tools/weather/formatter.py`
+  - `smart_agent.py`
+  - `tests/test_workflows.py`
+  - `README.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `CHANGELOG.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read maturity docs, project state, feature registry, daily briefing workflow, workflow runner, weather CLI, weather tests, and workflow tests.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_workflows.py tests/test_weather.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_workflows.py tests/test_weather.py tests/test_feature_maturity_docs.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `git diff --check`
+- Tests run:
+  - Initial workflow/weather targeted tests after implementation: 57 passed in 0.27s.
+  - Workflow, weather, and maturity docs targeted tests: 63 passed in 0.26s.
+  - Full suite: 257 passed in 2.77s.
+  - Startup policy validation: startup policy ok.
+  - Diff whitespace check: clean.
+- Results:
+  - Explicit weather location briefing works with a mock provider.
+  - Missing default location returns a clear error before any tool call.
+  - Alerts are summarized when provider payloads include alerts.
+  - Audit logs contain only `weather.current` and `weather.forecast` for the briefing.
+  - Memory database remains empty and no memory tool is called.
+  - Personal tools are not invoked.
+- Remaining follow-up work:
+  - Run full suite and startup policy validation, then optionally live-smoke `WEB_ACCESS_ENABLED=true WEATHER_PROVIDER=open_meteo python smart_agent.py briefing daily --weather "Phoenix, AZ"`.
+
+## Run: 2026-05-22 14:05 PDT NWS Weather Provider
+
+- Date/time: 2026-05-22 14:05 PDT, NOAA/National Weather Service provider pass.
+- Phase attempted: Add NWS as a U.S.-only no-key weather provider.
+- Scope:
+  - Added `NWSProvider` with Open-Meteo geocoding, NWS points/grid forecast flow, hourly forecast use, and active alerts lookup.
+  - Added `weather.alerts` as a LOW-risk, default-enabled, rate-limited, audited, ToolBroker-only capability.
+  - Added per-request `--provider nws` CLI override for weather current/forecast/alerts.
+  - Added NWS normalization into the existing `WeatherResult`, `WeatherCurrent`, `WeatherDaily`, `WeatherHourly`, and `WeatherAlert` schemas.
+  - Added readable alert formatting and README setup examples.
+- Approval gates checked:
+  - No personal-data connector, write/send action, device location, IP geolocation, memory write, browser automation, or policy weakening was added.
+  - NWS calls remain brokered through `weather.current`, `weather.forecast`, and `weather.alerts`, with PolicyEngine checks and AuditLogger network-domain metadata.
+  - Non-U.S. geocoded locations return structured unsupported-location errors.
+- Files changed:
+  - `agent/tools/weather/provider.py`
+  - `agent/tools/weather/formatter.py`
+  - `smart_agent.py`
+  - `config/capabilities.yaml`
+  - `tests/test_weather.py`
+  - `README.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `CHANGELOG.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read weather provider, weather models, weather formatter, CLI, capability manifest, weather tests, and maturity/risk/threat docs.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `git diff --check`
+  - `rg -n "current_weather\(|forecast\(|alerts\(" agent smart_agent.py tests -g '*.py'`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py -q`
+- Tests run:
+  - Weather targeted tests: 47 passed in 0.28s.
+  - Full suite after final docs polish: 263 passed in 2.30s.
+  - Startup policy validation: startup policy ok.
+  - Diff whitespace check: clean.
+  - Feature maturity docs validation: 6 passed in 0.01s.
+- Results:
+  - U.S. NWS provider flow is covered with mocked geocoding, points/grid, forecast, hourly, and alerts responses.
+  - Non-U.S. location, timeout, malformed/missing grid, normalized forecast, normalized alerts, CLI alerts, and audit-domain behavior are covered without live network dependency.
+  - Search for direct weather provider calls found only provider internals and test doubles; CLI/workflow surfaces still call weather through ToolBroker.
+  - Weather maturity and project state now reflect Open-Meteo plus NWS provider support.
+- Remaining follow-up work:
+  - Run optional live smoke with `python smart_agent.py weather current "Los Angeles, CA" --provider nws` and `python smart_agent.py weather alerts "Los Angeles, CA" --provider nws` when network access is desired.
+
+## Run: 2026-05-22 14:30 PDT Safe Weather Preferences
+
+- Date/time: 2026-05-22 14:30 PDT, safe weather preferences pass.
+- Phase attempted: Add explicit weather preferences for default location, units, provider, and cache behavior.
+- Scope:
+  - Added `agent/tools/weather/preferences.py` for explicit weather preference loading from env or `config/weather_preferences.json`.
+  - Added support for `WEATHER_DEFAULT_LOCATION`, `WEATHER_DEFAULT_LATITUDE`, `WEATHER_DEFAULT_LONGITUDE`, `WEATHER_UNITS`, `WEATHER_PROVIDER=auto`, `WEATHER_CACHE_ENABLED`, and `WEATHER_CACHE_TTL_SECONDS`.
+  - Added `python smart_agent.py weather config show`, `weather config set-default "Phoenix, AZ"`, and `weather config clear-default`.
+  - Updated router and weather-only briefing to use the centralized opt-in default-location resolver.
+  - Updated weather tool audit summaries when an explicitly configured default location is used.
+- Approval gates checked:
+  - No macOS Location Services, IP geolocation, device location, personal connector, write/send action, or automatic memory storage was added.
+  - Default location remains opt-in only through env/config/CLI.
+  - Weather location values remain redacted from audit args; audit summaries record the default-location source.
+- Files changed:
+  - `agent/tools/weather/preferences.py`
+  - `agent/tools/weather/provider.py`
+  - `agent/core/router.py`
+  - `agent/workflows/daily_briefing.py`
+  - `smart_agent.py`
+  - `tests/test_weather.py`
+  - `README.md`
+  - `.env.example`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `CHANGELOG.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read weather cache/provider/router/briefing/CLI/tests and weather docs.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py tests/test_router.py tests/test_workflows.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `git diff --check`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py -q`
+- Tests run:
+  - Weather/router/workflow targeted tests: 87 passed in 0.37s.
+  - Full suite: 270 passed in 2.37s.
+  - Startup policy validation: startup policy ok.
+  - Diff whitespace check: clean.
+  - Feature maturity docs validation: 6 passed in 0.01s.
+- Results:
+  - No default weather location exists by default.
+  - Explicit default location can be used and is audited by source without logging the location value.
+  - `WEATHER_UNITS` applies to weather tool calls.
+  - `WEATHER_CACHE_ENABLED=false` disables cache persistence.
+  - CLI config show/set-default/clear-default works against the dedicated preferences file.
+  - Direct CLI weather commands can use the explicitly configured default when no location argument is supplied.
+  - Default-location weather calls do not write long-term memory automatically.
+- Remaining follow-up work:
+  - Optional live weather preference smoke: set a default with `python smart_agent.py weather config set-default "Phoenix, AZ"`, run `python smart_agent.py weather current --json`, then clear it with `python smart_agent.py weather config clear-default`.
+
+## Run: 2026-05-22 14:55 PDT Weather-Aware Web Research
+
+- Date/time: 2026-05-22 14:55 PDT, weather-aware web research integration.
+- Phase attempted: Integrate weather with web research only when needed.
+- Scope:
+  - Updated deterministic router behavior so simple weather prompts attach only weather tools.
+  - Added weather-impact routing for delays, closures, airports, storms, hurricanes, and latest/update prompts.
+  - Added `weather_web_research()` workflow that executes weather and web tools through ToolBroker and returns separate `weather` and `web` sections.
+  - Added source/limitation summary behavior so current closures/delays are not claimed without returned web sources.
+  - Filtered prompt-injection-like web snippets from weather-impact workflow summaries.
+- Approval gates checked:
+  - No personal-data access, browser automation, write/send action, location inference, policy weakening, or audit bypass was added.
+  - Web content remains `UNTRUSTED_WEB`.
+  - Weather provider data and web search results remain separated in workflow output.
+- Files changed:
+  - `agent/core/router.py`
+  - `agent/workflows/research.py`
+  - `tests/test_router.py`
+  - `tests/test_workflows.py`
+  - `tests/test_lmstudio_loop.py`
+  - `README.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `CHANGELOG.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read router, research workflow, web search tool, registry, LM Studio loop tests, router tests, and workflow tests.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_router.py tests/test_workflows.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_router.py tests/test_workflows.py tests/test_lmstudio_loop.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py -q`
+  - `git diff --check`
+- Tests run:
+  - Initial router/workflow targeted tests found two expectation/config issues and were corrected.
+  - Router/workflow/LM Studio loop targeted tests: 53 passed in 0.19s.
+  - Full suite: 277 passed in 2.36s.
+  - Startup policy validation: startup policy ok.
+  - Feature maturity docs validation: 6 passed in 0.01s.
+  - Diff whitespace check: clean.
+- Results:
+  - "What's the weather in Phoenix?" routes to weather only.
+  - Delay/closure/storm/hurricane current-context prompts route to weather plus web when useful.
+  - Missing location for latest hurricane/storm style prompts does not infer personal location; alerts/web can still return limitations.
+  - Provider errors and web-disabled policy denials become explicit limitations.
+  - Audit logs cover weather and web calls for the integrated workflow.
+- Remaining follow-up work:
+  - Optional live smoke with configured web search: ask a weather-impact question such as "Are flights delayed due to weather at LAX?" and verify returned URLs before making any delay claim.
+
+## Run: 2026-05-22 15:15 PDT WeatherKit Decision And Stub
+
+- Date/time: 2026-05-22 15:15 PDT, WeatherKit connector decision and stub.
+- Phase attempted: Create WeatherKit connector decision record and optional provider stub.
+- Scope:
+  - Created `docs/decisions/weatherkit_provider.md` covering data access, Apple APIs, credentials, Apple Developer requirements, JWT/signing requirements, risk, config, optionality, and comparison with Open-Meteo/NWS.
+  - Added `WeatherKitProvider` stub with provider name `weatherkit`.
+  - Added credential presence checks for `WEATHERKIT_TEAM_ID`, `WEATHERKIT_SERVICE_ID`, `WEATHERKIT_KEY_ID`, and `WEATHERKIT_PRIVATE_KEY_PATH`.
+  - Added WeatherKit env placeholders to `.env.example` and README.
+  - Added tests for not-configured behavior, env presence, secret non-disclosure, status behavior, and opt-in provider selection.
+- Approval gates checked:
+  - Full WeatherKit JWT signing was not implemented.
+  - The stub does not read private key contents and does not call Apple APIs.
+  - No hard-coded credentials, personal-data access, device location, IP geolocation, write/send action, memory storage, policy weakening, or audit bypass was added.
+- Files changed:
+  - `docs/decisions/weatherkit_provider.md`
+  - `agent/tools/weather/provider.py`
+  - `.env.example`
+  - `tests/test_weather.py`
+  - `README.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/DECISION_LOG.md`
+  - `CHANGELOG.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Browsed official Apple WeatherKit REST API and authentication/account docs.
+  - Read weather provider, tests, env example, README, and weather docs.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py -q`
+  - `git diff --check`
+  - `rg -n "SECRETTEAM|SECRETKEY|AuthKey_SECRETKEY|com.secret.weather|WEATHERKIT_PRIVATE_KEY_PATH=.*[^=]" --glob '!logs/**' --glob '!data/**'`
+- Tests run:
+  - Initial weather test run found one WeatherKit not-configured error specificity issue; fixed in `_configuration_error`.
+  - Weather targeted tests: 58 passed in 0.24s.
+  - Full suite: 282 passed in 2.65s.
+  - Startup policy validation: startup policy ok.
+  - Feature maturity docs validation: 6 passed in 0.01s.
+  - Diff whitespace check: clean.
+- Results:
+  - `WEATHER_PROVIDER=weatherkit` can select the stub, but it returns clear structured errors until credentials are present.
+  - If credentials are present, the stub still reports that JWT signing is not implemented until the decision record is approved.
+  - WeatherKit credential values are not returned in status output and are not written to audit logs.
+  - Secret search found only deliberate test fixture strings and assertions, no committed real credentials.
+  - Open-Meteo remains the default provider unless WeatherKit is explicitly selected.
+- Remaining follow-up work:
+  - Review `docs/decisions/weatherkit_provider.md` before any future WeatherKit JWT/signing implementation.
+
+## Run: 2026-05-22 15:40 PDT Post-Connector SDLC Release Gate
+
+- Date/time: 2026-05-22 15:40 PDT, post-connector release gate and next-batch preparation.
+- Phase attempted: Release gate after the completed Weather connector pattern and roadmap-tracking updates.
+- Scope:
+  - Verified branch, recent commits, working tree, full tests, startup policy validation, focused release/safety tests, docs validation, whitespace, direct-execution paths, capability manifest posture, and secret scan.
+  - Confirmed M0-M11 remain complete in `docs/MILESTONE_QUEUE.md`.
+  - Prepared post-baseline state docs for the next broader roadmap batch without adding runtime features.
+- Approval gates checked:
+  - No new feature, connector, personal-data path, write/send action, policy weakening, approval bypass, or audit bypass was added during this release-gate task.
+  - Personal-data tools remain disabled by default in `config/capabilities.yaml`.
+  - HIGH actions remain approval-required.
+  - CRITICAL actions remain per-action approval only with `approval_reuse_allowed: false`.
+- Files changed:
+  - `docs/COMPLETION_REPORT.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RELEASE_CHECKLIST.md`
+- Commands run:
+  - `git status --short --branch`
+  - `git branch --show-current`
+  - `git log --oneline -5`
+  - `sed -n '1,220p' docs/MILESTONE_QUEUE.md`
+  - `tail -n 120 docs/COMPLETION_REPORT.md`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_release_gate.py tests/test_safety_control_plane.py tests/test_approved_write_actions.py tests/test_tool_broker.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py -q`
+  - `rg -n "\.handler\(|handler\(\*\*|current_weather\(|forecast\(|alerts\(|search\(|fetch_url\(|read_selected|send_approved|create_event|update_event|delete_event" agent smart_agent.py -g '*.py'`
+  - `rg -n "default_enabled:\s*true|approval_required|risk_level:\s*(HIGH|CRITICAL)|email\.|messages\.|contacts\.|calendar\." config/capabilities.yaml`
+  - `sed -n '450,900p' config/capabilities.yaml`
+  - `rg -n "(sk-[A-Za-z0-9]{20,}|password\s*=\s*[^\s#<]|api[_-]?key\s*=\s*[^\s#<]|Authorization:\s*Bearer\s+[^\s<]|WEATHERKIT_PRIVATE_KEY_PATH=.+|BRAVE_SEARCH_API_KEY=.+|IMAP_PASSWORD=.+)" --glob '!logs/**' --glob '!data/**' --glob '!**/__pycache__/**' --glob '!.git/**'`
+  - `git diff --check`
+- Tests run:
+  - Full suite: 282 passed in 2.50s.
+  - Startup policy validation: startup policy ok.
+  - Focused release/safety tests: 23 passed in 0.12s.
+  - Feature maturity docs validation: 6 passed in 0.01s.
+  - Diff whitespace check: clean.
+- Results:
+  - Release gate: PASS.
+  - ToolBroker remains the central tool execution path. The only generic handler invocation found is inside `agent/core/tool_broker.py`; CLI and workflows route tool names through broker execution paths.
+  - Unknown tools and capabilities remain deny-by-default and are covered by release/safety tests.
+  - Personal-data tools remain disabled by default.
+  - HIGH and CRITICAL approval behavior is enforced by manifest and tests, including no CRITICAL approval reuse.
+  - Audit coverage includes denials, approvals, executions, failures, dry runs, and provider metadata in the relevant tests.
+  - Secret scan found only placeholders, documented env examples, and deliberate redaction test fixtures; no real API keys or credentials were identified.
+  - `.DS_Store` files remain untracked local filesystem noise and were not included in release-gate changes.
+- Remaining follow-up work:
+  - Commit the completed post-connector batch if staging excludes `.DS_Store` files and tests remain green.
+  - Next build batch order: finish connector foundation, polish UX/approvals, build web research, build memory, build selected-scope calendar/contacts, build email drafts, build text drafts, build useful workflows, and only then approved writes/sends.

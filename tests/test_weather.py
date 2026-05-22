@@ -12,7 +12,7 @@ from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
 from agent.tools.weather.formatter import format_weather_answer
 from agent.tools.weather.models import convert_temperature
-from agent.tools.weather.provider import OpenMeteoProvider
+from agent.tools.weather.provider import NWSProvider, OpenMeteoProvider, WeatherKitProvider, provider_from_env
 from smart_agent import _run_weather_command
 
 
@@ -47,6 +47,16 @@ class StaticWeatherProvider:
                 for index in range(days)
             ],
             "hourly": [{"time": "2026-05-22T12:00", "temperature": 72}] if include_hourly else None,
+        }
+
+    def alerts(self, location: str, locale: str | None = None) -> dict[str, object]:
+        return {
+            "status": "ok",
+            "provider": self.name,
+            "location": f"Resolved {location}",
+            "trust_level": "UNTRUSTED_WEB",
+            "retrieved_at": "2026-05-22T12:00:00Z",
+            "alerts": [],
         }
 
 
@@ -85,8 +95,21 @@ class CountingWeatherProvider(StaticWeatherProvider):
 @pytest.fixture(autouse=True)
 def isolate_weather_cache(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("WEATHER_CACHE_PATH", str(tmp_path / "weather_cache.json"))
+    monkeypatch.setenv("WEATHER_PREFERENCES_PATH", str(tmp_path / "weather_preferences.json"))
     monkeypatch.delenv("WEATHER_CURRENT_CACHE_TTL_SECONDS", raising=False)
     monkeypatch.delenv("WEATHER_FORECAST_CACHE_TTL_SECONDS", raising=False)
+    monkeypatch.delenv("WEATHER_CACHE_TTL_SECONDS", raising=False)
+    monkeypatch.delenv("WEATHER_CACHE_ENABLED", raising=False)
+    monkeypatch.delenv("WEATHER_DEFAULT_LOCATION", raising=False)
+    monkeypatch.delenv("WEATHER_DEFAULT_LATITUDE", raising=False)
+    monkeypatch.delenv("WEATHER_DEFAULT_LONGITUDE", raising=False)
+    monkeypatch.delenv("WEATHER_UNITS", raising=False)
+    monkeypatch.delenv("WEATHER_DEFAULT_UNITS", raising=False)
+    monkeypatch.delenv("WEATHER_PROVIDER", raising=False)
+    monkeypatch.delenv("WEATHERKIT_TEAM_ID", raising=False)
+    monkeypatch.delenv("WEATHERKIT_SERVICE_ID", raising=False)
+    monkeypatch.delenv("WEATHERKIT_KEY_ID", raising=False)
+    monkeypatch.delenv("WEATHERKIT_PRIVATE_KEY_PATH", raising=False)
 
 
 def weather_capabilities(rate_limit: int | None = None) -> dict[str, Capability]:
@@ -97,6 +120,7 @@ def weather_capabilities(rate_limit: int | None = None) -> dict[str, Capability]
         "weather.status": Capability("weather.status", RiskLevel.LOW),
         "weather.current": Capability("weather.current", RiskLevel.LOW, metadata=metadata),
         "weather.forecast": Capability("weather.forecast", RiskLevel.LOW, metadata=metadata),
+        "weather.alerts": Capability("weather.alerts", RiskLevel.LOW, metadata=metadata),
         "weather.cache_clear": Capability("weather.cache_clear", RiskLevel.LOW),
     }
 
@@ -132,6 +156,173 @@ def test_weather_provider_explicitly_disabled_returns_clear_error(tmp_path, monk
     assert payload["error"] == "weather provider is not configured"
     assert payload["configured"] is False
     assert payload["trust_level"] == "UNTRUSTED_WEB"
+
+
+def test_weatherkit_not_configured_returns_clear_error(tmp_path) -> None:
+    broker = make_broker(tmp_path, weather_provider=WeatherKitProvider())
+
+    result = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    assert result.allowed is True
+    payload = json.loads(result.content)
+    assert payload["status"] == "error"
+    assert payload["provider"] == "weatherkit"
+    assert payload["configured"] is False
+    assert "WEATHERKIT_TEAM_ID" in payload["error"]
+
+
+def test_weatherkit_env_presence_check_works(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHERKIT_TEAM_ID", "TEAM123456")
+    monkeypatch.setenv("WEATHERKIT_SERVICE_ID", "com.example.weather")
+    monkeypatch.setenv("WEATHERKIT_KEY_ID", "KEY123456")
+    monkeypatch.setenv("WEATHERKIT_PRIVATE_KEY_PATH", str(tmp_path / "AuthKey_KEY123456.p8"))
+
+    provider = WeatherKitProvider()
+
+    assert provider.is_configured() is True
+
+
+def test_weatherkit_secrets_not_logged_or_returned(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHERKIT_TEAM_ID", "SECRETTEAM")
+    monkeypatch.setenv("WEATHERKIT_SERVICE_ID", "com.secret.weather")
+    monkeypatch.setenv("WEATHERKIT_KEY_ID", "SECRETKEY")
+    monkeypatch.setenv("WEATHERKIT_PRIVATE_KEY_PATH", "/secret/AuthKey_SECRETKEY.p8")
+    broker = make_broker(tmp_path, weather_provider=WeatherKitProvider())
+
+    result = broker.execute(call("weather.status", {}))
+
+    assert result.allowed is True
+    content = result.content
+    audit_text = (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
+    assert "SECRETTEAM" not in content
+    assert "SECRETKEY" not in content
+    assert "com.secret.weather" not in content
+    assert "/secret/AuthKey_SECRETKEY.p8" not in content
+    assert "SECRETTEAM" not in audit_text
+    assert "SECRETKEY" not in audit_text
+
+
+def test_weatherkit_status_reports_not_configured_without_secret_values(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHER_PROVIDER", "weatherkit")
+    broker = make_broker(tmp_path)
+
+    result = broker.execute(call("weather.status", {}))
+
+    payload = json.loads(result.content)
+    assert payload["provider"] == "weatherkit"
+    assert payload["configured"] is False
+    assert "WEATHERKIT_TEAM_ID" in payload["error"]
+    assert "WEATHERKIT_PRIVATE_KEY_PATH" in payload["error"]
+
+
+def test_weatherkit_provider_not_used_unless_selected(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHERKIT_TEAM_ID", "TEAM123456")
+    monkeypatch.setenv("WEATHERKIT_SERVICE_ID", "com.example.weather")
+    monkeypatch.setenv("WEATHERKIT_KEY_ID", "KEY123456")
+    monkeypatch.setenv("WEATHERKIT_PRIVATE_KEY_PATH", str(tmp_path / "AuthKey_KEY123456.p8"))
+
+    assert provider_from_env().name == "open_meteo"
+    monkeypatch.setenv("WEATHER_PROVIDER", "weatherkit")
+    assert provider_from_env().name == "weatherkit"
+
+
+def test_weather_has_no_default_location_by_default(tmp_path) -> None:
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    result = broker.execute(call("weather.current", {}))
+
+    assert result.allowed is True
+    payload = json.loads(result.content)
+    assert payload["status"] == "error"
+    assert payload["error"] == "location is required"
+
+
+def test_weather_default_location_used_when_configured_and_audited(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHER_DEFAULT_LOCATION", "Phoenix, AZ")
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    result = broker.execute(call("weather.current", {}))
+
+    assert result.allowed is True
+    payload = json.loads(result.content)
+    assert payload["status"] == "ok"
+    assert payload["location"] == "Resolved Phoenix, AZ"
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert events[0]["result_summary"] == "weather cache miss; weather default location used from env:WEATHER_DEFAULT_LOCATION"
+    assert events[0]["sanitized_args"] == {}
+    assert "Phoenix" not in (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
+
+
+def test_weather_current_cli_uses_configured_default_location(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.setenv("WEATHER_DEFAULT_LOCATION", "Phoenix, AZ")
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    exit_code = _run_weather_command(["current", "--json"], broker)
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "ok"
+    assert payload["location"] == "Resolved Phoenix, AZ"
+
+
+def test_weather_units_preference_applied(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHER_UNITS", "imperial")
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    result = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    payload = json.loads(result.content)
+    assert payload["status"] == "ok"
+    assert payload["units"] == "imperial"
+    assert payload["current"]["condition"] == "clear:imperial:None"
+
+
+def test_weather_cache_can_be_disabled_by_preference(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHER_CACHE_ENABLED", "false")
+    provider = CountingWeatherProvider()
+    broker = make_broker(tmp_path, weather_provider=provider)
+
+    first = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+    second = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    assert first.allowed is True
+    assert second.allowed is True
+    assert provider.current_calls == 2
+    assert json.loads(first.content)["cached"] is False
+    assert json.loads(second.content)["cached"] is False
+    assert not (tmp_path / "weather_cache.json").exists()
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [event["result_summary"] for event in events] == ["weather cache disabled", "weather cache disabled"]
+
+
+def test_weather_config_cli_set_show_and_clear_default(tmp_path, capsys) -> None:
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    set_code = _run_weather_command(["config", "set-default", "Phoenix, AZ"], broker)
+    capsys.readouterr()
+    show_code = _run_weather_command(["config", "show"], broker)
+    show_payload = json.loads(capsys.readouterr().out)
+    clear_code = _run_weather_command(["config", "clear-default"], broker)
+    clear_payload = json.loads(capsys.readouterr().out)
+
+    assert set_code == 0
+    assert show_code == 0
+    assert clear_code == 0
+    assert show_payload["default_location"] == "Phoenix, AZ"
+    assert show_payload["default_location_configured"] is True
+    assert show_payload["stored_in_memory"] is False
+    assert clear_payload["default_location_configured"] is False
+
+
+def test_weather_default_location_does_not_write_memory(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHER_DEFAULT_LOCATION", "Phoenix, AZ")
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    result = broker.execute(call("weather.current", {}))
+
+    assert result.allowed is True
+    with sqlite3.connect(tmp_path / "memory.sqlite3") as conn:
+        assert conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0] == 0
 
 
 def test_open_meteo_is_default_no_key_provider(monkeypatch) -> None:
@@ -363,7 +554,7 @@ def test_weather_provider_timeout_returns_structured_error(tmp_path) -> None:
 def test_unknown_weather_capability_denied(tmp_path) -> None:
     broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
 
-    result = broker.execute(call("weather.alerts", {"location": "San Francisco"}))
+    result = broker.execute(call("weather.radar", {"location": "San Francisco"}))
 
     assert result.allowed is False
     assert json.loads(result.content)["error"] == "unknown tool denied"
@@ -372,6 +563,11 @@ def test_unknown_weather_capability_denied(tmp_path) -> None:
 def open_meteo_provider(handler) -> OpenMeteoProvider:
     transport = httpx.MockTransport(handler)
     return OpenMeteoProvider(client_factory=lambda timeout: httpx.Client(transport=transport, timeout=timeout))
+
+
+def nws_provider(handler) -> NWSProvider:
+    transport = httpx.MockTransport(handler)
+    return NWSProvider(client_factory=lambda timeout: httpx.Client(transport=transport, timeout=timeout))
 
 
 def geocoding_payload() -> dict[str, object]:
@@ -383,6 +579,102 @@ def geocoding_payload() -> dict[str, object]:
                 "country": "United States",
                 "latitude": 37.7749,
                 "longitude": -122.4194,
+            }
+        ]
+    }
+
+
+def nws_geocoding_payload(country_code: str = "US") -> dict[str, object]:
+    country = "United States" if country_code == "US" else "France"
+    return {
+        "results": [
+            {
+                "name": "Los Angeles",
+                "admin1": "California",
+                "country": country,
+                "country_code": country_code,
+                "latitude": 34.0522,
+                "longitude": -118.2437,
+                "timezone": "America/Los_Angeles",
+            }
+        ]
+    }
+
+
+def nws_points_payload() -> dict[str, object]:
+    return {
+        "properties": {
+            "forecast": "https://api.weather.gov/gridpoints/LOX/154,44/forecast",
+            "forecastHourly": "https://api.weather.gov/gridpoints/LOX/154,44/forecast/hourly",
+            "timeZone": "America/Los_Angeles",
+            "relativeLocation": {"properties": {"city": "Los Angeles", "state": "CA"}},
+        }
+    }
+
+
+def nws_forecast_payload() -> dict[str, object]:
+    return {
+        "properties": {
+            "periods": [
+                {
+                    "name": "Today",
+                    "startTime": "2026-05-22T06:00:00-07:00",
+                    "endTime": "2026-05-22T18:00:00-07:00",
+                    "isDaytime": True,
+                    "temperature": 72,
+                    "temperatureUnit": "F",
+                    "windSpeed": "5 to 10 mph",
+                    "windDirection": "SW",
+                    "shortForecast": "Sunny",
+                    "probabilityOfPrecipitation": {"value": 5, "unitCode": "wmoUnit:percent"},
+                },
+                {
+                    "name": "Tonight",
+                    "startTime": "2026-05-22T18:00:00-07:00",
+                    "endTime": "2026-05-23T06:00:00-07:00",
+                    "isDaytime": False,
+                    "temperature": 58,
+                    "temperatureUnit": "F",
+                    "windSpeed": "5 mph",
+                    "windDirection": "S",
+                    "shortForecast": "Mostly Clear",
+                    "probabilityOfPrecipitation": {"value": 10, "unitCode": "wmoUnit:percent"},
+                },
+            ]
+        }
+    }
+
+
+def nws_hourly_payload() -> dict[str, object]:
+    return {
+        "properties": {
+            "periods": [
+                {
+                    "startTime": "2026-05-22T12:00:00-07:00",
+                    "temperature": 70,
+                    "temperatureUnit": "F",
+                    "windSpeed": "8 mph",
+                    "windDirection": "SW",
+                    "shortForecast": "Sunny",
+                    "probabilityOfPrecipitation": {"value": 5, "unitCode": "wmoUnit:percent"},
+                }
+            ]
+        }
+    }
+
+
+def nws_alerts_payload() -> dict[str, object]:
+    return {
+        "features": [
+            {
+                "properties": {
+                    "event": "Heat Advisory",
+                    "severity": "Moderate",
+                    "onset": "2026-05-22T11:00:00-07:00",
+                    "ends": "2026-05-22T20:00:00-07:00",
+                    "senderName": "NWS Los Angeles/Oxnard",
+                    "description": "Hot conditions expected.",
+                }
             }
         ]
     }
@@ -721,6 +1013,143 @@ def test_open_meteo_malformed_response_returns_structured_error(tmp_path) -> Non
 
     assert result.allowed is True
     assert json.loads(result.content)["error"] == "weather provider returned malformed current weather"
+
+
+def test_nws_current_maps_us_location_to_points_and_hourly_calls(tmp_path) -> None:
+    urls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        urls.append(str(request.url))
+        if request.url.host == "geocoding-api.open-meteo.com":
+            assert request.url.params["name"] == "Los Angeles, CA"
+            return httpx.Response(200, json=nws_geocoding_payload())
+        if request.url.path.startswith("/points/"):
+            assert request.url.path == "/points/34.0522,-118.2437"
+            return httpx.Response(200, json=nws_points_payload())
+        if request.url.path.endswith("/forecast/hourly"):
+            return httpx.Response(200, json=nws_hourly_payload())
+        return httpx.Response(404, json={})
+
+    broker = make_broker(tmp_path, weather_provider=nws_provider(handler))
+
+    result = broker.execute(call("weather.current", {"location": "Los Angeles, CA", "provider": "nws"}))
+
+    payload = json.loads(result.content)
+    assert result.allowed is True
+    assert payload["status"] == "ok"
+    assert payload["provider"] == "nws"
+    assert payload["location"] == "Los Angeles, CA, United States"
+    assert payload["current"]["temperature"] == 70
+    assert payload["current"]["condition"] == "Sunny"
+    assert payload["current"]["wind_speed"] == 8
+    assert any("geocoding-api.open-meteo.com" in url for url in urls)
+    assert any("api.weather.gov/points" in url for url in urls)
+    assert any("forecast/hourly" in url for url in urls)
+
+
+def test_nws_non_us_location_returns_unsupported(tmp_path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=nws_geocoding_payload(country_code="FR"))
+
+    broker = make_broker(tmp_path, weather_provider=nws_provider(handler))
+
+    result = broker.execute(call("weather.current", {"location": "Paris, France", "provider": "nws"}))
+
+    payload = json.loads(result.content)
+    assert result.allowed is True
+    assert payload["status"] == "error"
+    assert payload["provider"] == "nws"
+    assert payload["error"] == "unsupported location: NWS supports U.S. locations only"
+
+
+def test_nws_forecast_normalized(tmp_path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "geocoding-api.open-meteo.com":
+            return httpx.Response(200, json=nws_geocoding_payload())
+        if request.url.path.startswith("/points/"):
+            return httpx.Response(200, json=nws_points_payload())
+        if request.url.path.endswith("/forecast/hourly"):
+            return httpx.Response(200, json=nws_hourly_payload())
+        if request.url.path.endswith("/forecast"):
+            return httpx.Response(200, json=nws_forecast_payload())
+        return httpx.Response(404, json={})
+
+    broker = make_broker(tmp_path, weather_provider=nws_provider(handler))
+
+    result = broker.execute(
+        call("weather.forecast", {"location": "Los Angeles, CA", "provider": "nws", "days": 1, "include_hourly": True})
+    )
+
+    payload = json.loads(result.content)
+    assert result.allowed is True
+    assert payload["status"] == "ok"
+    assert payload["provider"] == "nws"
+    assert payload["units"] == "imperial"
+    assert payload["forecast"][0]["date"] == "2026-05-22"
+    assert payload["forecast"][0]["temperature_max"] == 72
+    assert payload["forecast"][0]["temperature_min"] == 58
+    assert payload["forecast"][0]["precipitation_probability_max"] == 10
+    assert payload["forecast"][0]["wind_speed_max"] == 10
+    assert payload["hourly"][0]["precipitation_probability"] == 5
+
+
+def test_nws_alerts_normalized_and_cli(tmp_path, capsys) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "geocoding-api.open-meteo.com":
+            return httpx.Response(200, json=nws_geocoding_payload())
+        if request.url.path.startswith("/points/"):
+            return httpx.Response(200, json=nws_points_payload())
+        if request.url.path == "/alerts/active":
+            assert request.url.params["point"] == "34.0522,-118.2437"
+            return httpx.Response(200, json=nws_alerts_payload())
+        return httpx.Response(404, json={})
+
+    broker = make_broker(tmp_path, weather_provider=nws_provider(handler))
+
+    exit_code = _run_weather_command(["alerts", "Los Angeles, CA", "--provider", "nws"], broker)
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert "Weather alerts for Los Angeles, CA, United States" in output
+    assert "Heat Advisory (Moderate; 2026-05-22T11:00:00-07:00 to 2026-05-22T20:00:00-07:00)" in output
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert events[0]["tool_name"] == "weather.alerts"
+    assert events[0]["network_domains"] == ["geocoding-api.open-meteo.com", "api.weather.gov"]
+
+
+def test_nws_timeout_returns_retryable_structured_error(tmp_path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "geocoding-api.open-meteo.com":
+            return httpx.Response(200, json=nws_geocoding_payload())
+        raise httpx.TimeoutException("too slow", request=request)
+
+    broker = make_broker(tmp_path, weather_provider=nws_provider(handler))
+
+    result = broker.execute(call("weather.current", {"location": "Los Angeles, CA", "provider": "nws"}))
+
+    payload = json.loads(result.content)
+    assert result.allowed is True
+    assert payload["status"] == "error"
+    assert payload["retryable"] is True
+    assert payload["error"] == "retryable weather provider error: NWS request timed out"
+
+
+def test_nws_missing_grid_data_handled_gracefully(tmp_path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "geocoding-api.open-meteo.com":
+            return httpx.Response(200, json=nws_geocoding_payload())
+        if request.url.path.startswith("/points/"):
+            return httpx.Response(200, json={"properties": {"timeZone": "America/Los_Angeles"}})
+        return httpx.Response(404, json={})
+
+    broker = make_broker(tmp_path, weather_provider=nws_provider(handler))
+
+    result = broker.execute(call("weather.forecast", {"location": "Los Angeles, CA", "provider": "nws"}))
+
+    payload = json.loads(result.content)
+    assert result.allowed is True
+    assert payload["status"] == "error"
+    assert payload["error"] == "missing NWS grid data for daily forecast"
 
 
 def test_weather_doctor_defaults_to_open_meteo_when_no_provider_configured(tmp_path, monkeypatch, capsys) -> None:
