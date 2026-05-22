@@ -229,6 +229,14 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     parser = argparse.ArgumentParser(prog="smart_agent.py weather", description="Weather lookups for user-provided locations.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
+    subparsers.add_parser("doctor", help="Check weather provider configuration without fetching weather data.")
+
+    smoke_parser = subparsers.add_parser("smoke", help="Run current and forecast checks for a user-provided location.")
+    smoke_parser.add_argument("location", nargs="+", help="City, ZIP/postal code, or other user-provided location.")
+    smoke_parser.add_argument("--days", type=int, default=3)
+    smoke_parser.add_argument("--units", choices=["metric", "imperial"], default=None)
+    smoke_parser.add_argument("--locale", default=None)
+
     current_parser = subparsers.add_parser("current", help="Fetch current weather for a user-provided location.")
     current_parser.add_argument("location", nargs="+", help="City, ZIP/postal code, or other user-provided location.")
     current_parser.add_argument("--units", choices=["metric", "imperial"], default=None)
@@ -244,6 +252,65 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     except SystemExit as exc:
         return int(exc.code)
 
+    if parsed.command == "doctor":
+        try:
+            result = _execute_weather_tool(broker, "weather.status", {}, debug=debug)
+        except AuditLogError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        payload = json.loads(result.content)
+        payload["capabilities"] = _weather_capability_status(broker)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0 if result.allowed else 2
+
+    if parsed.command == "smoke":
+        location = " ".join(parsed.location)
+        base_args: dict[str, object] = {"location": location}
+        if parsed.units is not None:
+            base_args["units"] = parsed.units
+        if parsed.locale is not None:
+            base_args["locale"] = parsed.locale
+        forecast_args = dict(base_args)
+        forecast_args["days"] = parsed.days
+        try:
+            status_result = _execute_weather_tool(broker, "weather.status", {}, debug=debug)
+            status_payload = json.loads(status_result.content)
+            report: dict[str, object] = {
+                "status": "ok",
+                "provider": status_payload.get("provider"),
+                "configured": status_payload.get("configured"),
+                "provider_status": status_payload,
+                "capabilities": _weather_capability_status(broker),
+                "checks": [],
+            }
+            if not status_payload.get("configured"):
+                report["status"] = "error"
+                report["error"] = status_payload.get("error") or "weather provider is not configured"
+                print(json.dumps(report, indent=2, sort_keys=True))
+                return 2
+            current_result = _execute_weather_tool(broker, "weather.current", base_args, debug=debug)
+            forecast_result = _execute_weather_tool(broker, "weather.forecast", forecast_args, debug=debug)
+        except AuditLogError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        current_payload = json.loads(current_result.content)
+        forecast_payload = json.loads(forecast_result.content)
+        checks = [
+            {"name": "weather.current", "allowed": current_result.allowed, "status": current_payload.get("status")},
+            {"name": "weather.forecast", "allowed": forecast_result.allowed, "status": forecast_payload.get("status")},
+        ]
+        ok = all(check["allowed"] and check["status"] == "ok" for check in checks)
+        report.update(
+            {
+                "status": "ok" if ok else "error",
+                "checks": checks,
+                "current": current_payload,
+                "forecast": forecast_payload,
+            }
+        )
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0 if ok else 2
+
     tool_name = "weather.current" if parsed.command == "current" else "weather.forecast"
     arguments: dict[str, object] = {"location": " ".join(parsed.location)}
     if parsed.units is not None:
@@ -252,6 +319,22 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
         arguments["locale"] = parsed.locale
     if parsed.command == "forecast" and parsed.days is not None:
         arguments["days"] = parsed.days
+    try:
+        result = _execute_weather_tool(broker, tool_name, arguments, debug=debug)
+    except AuditLogError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
+    return 0 if result.allowed else 2
+
+
+def _execute_weather_tool(
+    broker: ToolBroker,
+    tool_name: str,
+    arguments: dict[str, object],
+    *,
+    debug: bool = False,
+):
     tool_call = {
         "id": f"cli_{tool_name.replace('.', '_')}",
         "type": "function",
@@ -260,17 +343,24 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
             "arguments": json.dumps(arguments),
         },
     }
-    try:
-        result = broker.execute(tool_call)
-    except AuditLogError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
+    result = broker.execute(tool_call)
     if debug and result.debug:
         from agent.core.orchestrator import format_debug_payload
 
         print("[debug] " + format_debug_payload({"event": "tool_broker", **result.debug}), file=sys.stderr)
-    print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
-    return 0 if result.allowed else 2
+    return result
+
+
+def _weather_capability_status(broker: ToolBroker) -> dict[str, dict[str, object]]:
+    statuses: dict[str, dict[str, object]] = {}
+    for capability_name in ("weather.status", "weather.current", "weather.forecast"):
+        policy = broker.policy_engine.evaluate(capability_name)
+        statuses[capability_name] = {
+            "decision": policy.decision.value,
+            "risk_level": policy.capability.risk_level.value if policy.capability else "FORBIDDEN",
+            "reason": policy.reason,
+        }
+    return statuses
 
 
 def _run_calendar_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:

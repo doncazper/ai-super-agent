@@ -1396,3 +1396,98 @@ Do not disable audit logging."
   - Add weather to the smoke harness as an opt-in live check.
   - Consider weather forecast formatting polish.
   - Do not add device location, IP geolocation, personal-data joins, writes, or memory storage without a new decision record and approval gate.
+
+## Run: 2026-05-22 12:20 PDT Connector Status Dashboard
+
+- Date/time: 2026-05-22 12:20:13 PDT, post-baseline implementation.
+- Phase attempted: Add read-only connector health/status dashboard for CLI.
+- Scope:
+  - Added `python smart_agent.py connectors list`.
+  - Added `python smart_agent.py connectors doctor`.
+  - Added `python smart_agent.py connectors status weather|web|calendar|contacts|email|messages`.
+  - Added weather provider status metadata via a brokered `weather.status` tool.
+  - Status output includes connector name, configured/enabled state, provider, risk level, approval requirement, last audited success/error, rate-limit state, cache state, and setup hints.
+- Approval gates checked:
+  - No personal-data reads were added.
+  - Personal connector status checks inspect configuration only.
+  - No secrets are printed in connector status output.
+  - No policy, approval, or audit restrictions were weakened.
+  - Weather network tools still require `WEB_ACCESS_ENABLED=true`; `weather.status` is brokered and audited but does not touch the network.
+- Files changed:
+  - Added `agent/ui/connectors.py`.
+  - Added `tests/test_connectors.py`.
+  - Updated `agent/ui/cli_commands.py`.
+  - Updated `agent/core/tool_broker.py`.
+  - Updated `agent/tools/weather/provider.py`.
+  - Updated `config/capabilities.yaml`.
+  - Updated `smart_agent.py`.
+  - Updated `tests/test_weather.py`.
+  - Updated `README.md`, `docs/TEST_PLAN.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read current weather CLI, weather provider, tests, doctor/CLI command modules, memory tools, README, and completion report.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_connectors.py tests/test_weather.py tests/test_policy.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py connectors status web`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py connectors doctor`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; WEATHER_PROVIDER=open-meteo $PY smart_agent.py connectors status weather`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+- Tests run:
+  - Connector/weather/policy targeted tests: 36 passed in 0.61s.
+  - Full suite: 210 passed in 2.42s.
+  - Startup policy validation: startup policy ok.
+- Results:
+  - Weather configured status works with `WEATHER_PROVIDER=open-meteo`.
+  - Web missing-provider status reports a setup hint.
+  - Calendar, contacts, email, and messages remain disabled by default.
+  - Secret values are not present in connector status output.
+  - Non-secret provider booleans such as `api_key_configured` remain visible for diagnostics.
+  - Successful dry-run audit entries are not reported as connector errors.
+  - Connector doctor does not create audit records or access personal-data sources.
+- Remaining follow-up work:
+  - Commit this connector dashboard change after review, then choose the next connector only through a decision record and approval gate.
+
+## Run: 2026-05-22 12:36 PDT Weather H1 Review And Commit Readiness
+
+- Date/time: 2026-05-22 12:36 PDT, post-baseline review.
+- Phase attempted: Review the completed Weather H1/provider work currently in the working tree before commit.
+- Files reviewed:
+  - `agent/tools/weather/provider.py`
+  - `config/capabilities.yaml`
+  - `smart_agent.py`
+  - `agent/core/tool_broker.py`
+  - `agent/ui/connectors.py`
+  - `agent/ui/cli_commands.py`
+  - `tests/test_weather.py`
+  - `tests/test_connectors.py`
+  - `tests/test_web.py`
+  - `README.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - `git status --short`
+  - `git log --oneline -5`
+  - `git diff --stat`
+  - `git diff --name-only`
+  - Reviewed changed diffs and untracked connector-dashboard files.
+  - Searched for committed secret patterns in changed files.
+  - Searched for weather/current/forecast direct execution paths outside `ToolBroker`.
+  - Checked personal connector default-enabled state from `config/capabilities.yaml`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `git diff --check`
+- Tests run:
+  - Full suite: 210 passed in 2.38s.
+  - Startup policy validation: startup policy ok.
+  - Whitespace diff check: clean.
+- Results:
+  - `weather.current` and `weather.forecast` remain ToolBroker-only runtime capabilities.
+  - Weather capability decisions still go through `PolicyEngine`.
+  - Weather capabilities are LOW risk and do not require approval; ApprovalManager rules were not weakened.
+  - Weather executions and denials are audited through `AuditLogger`.
+  - `weather.status` is LOW-risk, brokered when invoked as a tool, and does not make network calls.
+  - Removed an unused provider-level alerts surface so no weather-alert feature is introduced by this review.
+  - No personal-data tools are default-enabled.
+  - No API keys or real secrets were found in changed files; only placeholders and redaction-test fixtures are present.
+- Remaining follow-up work:
+  - Create the commit after final status review.

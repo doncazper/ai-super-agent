@@ -64,6 +64,25 @@ tools:
     - network_domains
     rate_limit:
       requests_per_minute: 30
+  weather.status:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+    trust_level: UNTRUSTED_WEB
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
   weather.current:
     risk_level: LOW
     default_enabled: true

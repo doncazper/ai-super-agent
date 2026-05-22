@@ -276,7 +276,8 @@ class ToolBroker:
                 debug=self._debug_from_audit(audit),
             )
 
-        if tool.capability.startswith(("web.", "weather.")) and not env_bool("WEB_ACCESS_ENABLED", default=True):
+        requires_web_access = bool(policy.capability and policy.capability.metadata.get("requires_web_access"))
+        if requires_web_access and not env_bool("WEB_ACCESS_ENABLED", default=True):
             audit = self._log(
                 tool_name=tool_name,
                 capability=tool.capability,

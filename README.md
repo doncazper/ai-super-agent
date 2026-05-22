@@ -141,6 +141,21 @@ python smart_agent.py weather forecast "San Francisco" --days 3
 
 The weather tools do not use macOS Location Services, IP geolocation, personal data, writes, or long-term memory storage. Location arguments are redacted from audit logs by default. Open-Meteo geocoding and forecast responses are treated as `UNTRUSTED_WEB`.
 
+Connector status dashboard:
+
+```bash
+python smart_agent.py connectors list
+python smart_agent.py connectors doctor
+python smart_agent.py connectors status weather
+python smart_agent.py connectors status web
+python smart_agent.py connectors status calendar
+python smart_agent.py connectors status contacts
+python smart_agent.py connectors status email
+python smart_agent.py connectors status messages
+```
+
+The connector dashboard is read-only. It reports configuration, enabled state, default provider, risk level, approval requirement, rate-limit configuration, last audited success/error, cache state, and setup hints. It does not reveal secrets and does not perform personal-data reads; personal connectors are checked from configuration only.
+
 Calendar read-only selected-range access:
 
 ```bash

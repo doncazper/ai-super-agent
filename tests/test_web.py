@@ -34,9 +34,10 @@ class StaticSearchProvider:
 
 
 def web_capabilities() -> dict[str, Capability]:
+    metadata = {"requires_web_access": True}
     return {
-        "web.search": Capability("web.search", RiskLevel.LOW),
-        "web.fetch_url": Capability("web.fetch_url", RiskLevel.MEDIUM),
+        "web.search": Capability("web.search", RiskLevel.LOW, metadata=metadata),
+        "web.fetch_url": Capability("web.fetch_url", RiskLevel.MEDIUM, metadata=metadata),
     }
 
 
@@ -45,7 +46,7 @@ def rate_limited_web_capabilities() -> dict[str, Capability]:
         "web.search": Capability(
             "web.search",
             RiskLevel.LOW,
-            metadata={"rate_limit": {"requests_per_minute": 1}},
+            metadata={"requires_web_access": True, "rate_limit": {"requests_per_minute": 1}},
         ),
     }
 

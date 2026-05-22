@@ -74,6 +74,14 @@
 - Provider timeouts/errors return structured error payloads.
 - Unknown weather tools are denied.
 
+## Connector Dashboard Tests
+
+- Weather configured status reports provider and enabled state without network calls.
+- Web missing-provider status reports setup hints without hallucinating configuration.
+- Personal connectors remain disabled by default.
+- Connector status output does not reveal API keys, passwords, or tokens.
+- Connector doctor does not access personal data or audit noisy personal checks.
+
 ## Live Smoke Tests
 
 - `python smart_agent.py smoke --lmstudio` verifies no-tool chat, debug events, and the safe time-tool path when `LMSTUDIO_MODEL` and LM Studio are available.

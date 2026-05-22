@@ -204,6 +204,9 @@ def provider_from_env() -> WeatherProvider:
 def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any]:
     active_provider = provider or provider_from_env()
 
+    def status() -> dict[str, Any]:
+        return weather_provider_status(active_provider)
+
     def current(location: str, units: str | None = None, locale: str | None = None) -> dict[str, Any]:
         location_error = _validate_location(location)
         if location_error:
@@ -224,6 +227,8 @@ def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any
             "units": resolved_units,
             "trust_level": "UNTRUSTED_WEB",
             "retrieved_at": retrieved_at,
+            "timezone": raw.get("timezone") if isinstance(raw, dict) else None,
+            "provider_timestamp": raw.get("provider_timestamp") if isinstance(raw, dict) else None,
             "current": _normalize_mapping(raw.get("current", raw)),
             "_audit": {"network_domains": _provider_domains(active_provider.name)},
         }
@@ -265,13 +270,39 @@ def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any
             "days": clamped_days,
             "trust_level": "UNTRUSTED_WEB",
             "retrieved_at": retrieved_at,
+            "timezone": raw.get("timezone") if isinstance(raw, dict) else None,
             "forecast": [_normalize_mapping(item) for item in periods[:clamped_days] if isinstance(item, dict)],
             "_audit": {"network_domains": _provider_domains(active_provider.name)},
         }
 
     return {
+        "weather.status": status,
         "weather.current": current,
         "weather.forecast": forecast,
+    }
+
+
+def weather_provider_status(provider: WeatherProvider | None = None) -> dict[str, Any]:
+    active_provider = provider or provider_from_env()
+    configured = _provider_configured(active_provider)
+    supported = active_provider.name not in {"disabled"} and not active_provider.name.startswith("unsupported:")
+    error = None
+    if active_provider.name == "disabled":
+        error = "weather provider is not configured"
+    elif active_provider.name.startswith("unsupported:"):
+        error = "configured weather provider is not supported by this build"
+        if not os.getenv("WEATHER_API_KEY", "").strip():
+            error += "; WEATHER_API_KEY is not set if this provider requires one"
+    return {
+        "status": "ok" if configured and supported else "error",
+        "provider": active_provider.name,
+        "configured": configured,
+        "supported": supported,
+        "requires_api_key": False if active_provider.name == "open-meteo" else active_provider.name.startswith("unsupported:"),
+        "api_key_configured": bool(os.getenv("WEATHER_API_KEY", "").strip()),
+        "web_access_enabled": os.getenv("WEB_ACCESS_ENABLED", "true").strip().casefold() not in {"0", "false", "no", "off"},
+        "trust_level": "UNTRUSTED_WEB",
+        "error": error,
     }
 
 
@@ -435,6 +466,18 @@ def _daily_value(daily: dict[str, Any], key: str, index: int) -> Any:
 
 
 WEATHER_SCHEMAS = {
+    "weather.status": {
+        "type": "function",
+        "function": {
+            "name": "weather.status",
+            "description": "Report configured weather provider status without making network calls.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
+        },
+    },
     "weather.current": {
         "type": "function",
         "function": {

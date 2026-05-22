@@ -11,6 +11,7 @@ from agent.tools.registry import default_registry
 from agent.ui.approvals_ui import print_request, print_requests
 from agent.ui.audit_viewer import tail_audit
 from agent.ui.config_viewer import config_as_json
+from agent.ui.connectors import connector_status, connectors_doctor, format_connectors_json, list_connectors
 from agent.ui.doctor import doctor_exit_code, format_doctor, run_doctor
 from agent.ui.memory_viewer import delete_memory, list_memory
 from agent.ui.permissions_dashboard import PermissionStore
@@ -37,6 +38,8 @@ def dispatch_cli(argv: list[str], *, project_root: str | Path = ".") -> int | No
         return _memory(argv[1:])
     if command == "config":
         return _config(argv[1:])
+    if command == "connectors":
+        return _connectors(argv[1:])
     if command == "setup":
         print("Set LMSTUDIO_MODEL, start LM Studio at http://localhost:1234/v1, then run tests.")
         return 0
@@ -47,6 +50,24 @@ def dispatch_cli(argv: list[str], *, project_root: str | Path = ".") -> int | No
     if command == "smoke":
         return _smoke(argv[1:])
     return None
+
+
+def _connectors(argv: list[str]) -> int:
+    if not argv or argv[0] == "list":
+        print(format_connectors_json({"connectors": list_connectors()}))
+        return 0
+    if argv[0] == "doctor":
+        print(format_connectors_json(connectors_doctor()))
+        return 0
+    if argv[0] == "status" and len(argv) == 2:
+        try:
+            print(format_connectors_json(connector_status(argv[1])))
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        return 0
+    print("usage: connectors list|doctor|status <connector>", file=sys.stderr)
+    return 2
 
 
 def _permissions(argv: list[str]) -> int:

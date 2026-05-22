@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 
 import httpx
 
@@ -9,6 +10,7 @@ from agent.safety.audit import AuditLogger
 from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
 from agent.tools.weather.provider import OpenMeteoProvider
+from smart_agent import _run_weather_command
 
 
 class StaticWeatherProvider:
@@ -45,8 +47,11 @@ class TimeoutWeatherProvider(StaticWeatherProvider):
 
 
 def weather_capabilities(rate_limit: int | None = None) -> dict[str, Capability]:
-    metadata = {"rate_limit": {"requests_per_minute": rate_limit}} if rate_limit is not None else {}
+    metadata: dict[str, object] = {"requires_web_access": True}
+    if rate_limit is not None:
+        metadata["rate_limit"] = {"requests_per_minute": rate_limit}
     return {
+        "weather.status": Capability("weather.status", RiskLevel.LOW),
         "weather.current": Capability("weather.current", RiskLevel.LOW, metadata=metadata),
         "weather.forecast": Capability("weather.forecast", RiskLevel.LOW, metadata=metadata),
     }
@@ -62,7 +67,7 @@ def call(tool_name: str, arguments: dict[str, object]) -> dict[str, object]:
 
 def make_broker(tmp_path, weather_provider=None, capabilities: dict[str, Capability] | None = None) -> ToolBroker:
     return ToolBroker(
-        default_registry(project_root=tmp_path, weather_provider=weather_provider),
+        default_registry(project_root=tmp_path, weather_provider=weather_provider, memory_path=tmp_path / "memory.sqlite3"),
         PolicyEngine(capabilities or weather_capabilities()),
         AuditLogger(tmp_path / "audit.jsonl"),
         session_id="test-session",
@@ -319,3 +324,85 @@ def test_open_meteo_malformed_response_returns_structured_error(tmp_path) -> Non
 
     assert result.allowed is True
     assert json.loads(result.content)["error"] == "weather provider returned malformed current weather"
+
+
+def test_weather_doctor_with_no_provider_configured(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.delenv("WEATHER_PROVIDER", raising=False)
+    broker = make_broker(tmp_path)
+
+    exit_code = _run_weather_command(["doctor"], broker)
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["provider"] == "disabled"
+    assert payload["configured"] is False
+    assert payload["error"] == "weather provider is not configured"
+    assert payload["capabilities"]["weather.current"]["decision"] == "ALLOW"
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert events[0]["tool_name"] == "weather.status"
+
+
+def test_weather_doctor_with_mocked_provider_configured(tmp_path, capsys) -> None:
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    exit_code = _run_weather_command(["doctor"], broker)
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["provider"] == "static-weather"
+    assert payload["configured"] is True
+    assert payload["status"] == "ok"
+
+
+def test_weather_doctor_reports_unsupported_provider_and_missing_api_key(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.setenv("WEATHER_PROVIDER", "weatherapi")
+    monkeypatch.delenv("WEATHER_API_KEY", raising=False)
+    broker = make_broker(tmp_path)
+
+    exit_code = _run_weather_command(["doctor"], broker)
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["provider"] == "unsupported:weatherapi"
+    assert payload["configured"] is False
+    assert "not supported" in payload["error"]
+    assert "WEATHER_API_KEY is not set" in payload["error"]
+
+
+def test_weather_smoke_success_using_mocked_provider(tmp_path, capsys) -> None:
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    exit_code = _run_weather_command(["smoke", "Phoenix, AZ", "--days", "3"], broker)
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "ok"
+    assert payload["provider"] == "static-weather"
+    assert payload["configured"] is True
+    assert [check["name"] for check in payload["checks"]] == ["weather.current", "weather.forecast"]
+    assert payload["current"]["status"] == "ok"
+    assert payload["forecast"]["status"] == "ok"
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [event["tool_name"] for event in events] == ["weather.status", "weather.current", "weather.forecast"]
+
+
+def test_bad_location_handled(tmp_path) -> None:
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    result = broker.execute(call("weather.current", {"location": ""}))
+
+    assert result.allowed is True
+    payload = json.loads(result.content)
+    assert payload["status"] == "error"
+    assert payload["error"] == "location is required"
+
+
+def test_weather_does_not_store_memory_by_default(tmp_path) -> None:
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    result = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    assert result.allowed is True
+    with sqlite3.connect(tmp_path / "memory.sqlite3") as conn:
+        count = conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
+    assert count == 0
