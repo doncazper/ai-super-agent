@@ -17,6 +17,7 @@ from agent.safety.validation import validate_startup_policy
 from agent.tools.registry import default_registry
 from agent.ui.cli_commands import dispatch_cli
 from agent.ui.interactive import InteractiveState, run_interactive
+from agent.workflows.research import source_grounded_research
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -62,6 +63,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.message and args.message[0] == "web":
         return _run_web_search_command(args.message[1:], broker, debug=debug_enabled)
+    if args.message and args.message[0] == "research":
+        return _run_research_command(args.message[1:], broker)
 
     try:
         client = LMStudioClient(config)
@@ -164,6 +167,37 @@ def _run_web_search_command(argv: list[str], broker: ToolBroker, *, debug: bool 
         print("[debug] " + format_debug_payload({"event": "tool_broker", **result.debug}), file=sys.stderr)
     print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
     return 0 if result.allowed else 2
+
+
+def _run_research_command(argv: list[str], broker: ToolBroker) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py research", description="Run source-grounded web research.")
+    parser.add_argument("query", nargs="*", help="Research query.")
+    parser.add_argument("--max-results", type=int, default=3, help="Number of search results to use, 1-5.")
+    parser.add_argument("--no-fetch", action="store_true", help="Use search snippets only; do not fetch result pages.")
+    parser.add_argument("--locale", default=None, help="Optional search locale, such as en-US or es.")
+    parser.add_argument("--summary-language", default="en", help="Summary language label; defaults to en.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    query = " ".join(parsed.query).strip()
+    if not query:
+        print('usage: smart_agent.py research "query"', file=sys.stderr)
+        return 2
+    try:
+        report = source_grounded_research(
+            broker,
+            query,
+            max_results=parsed.max_results,
+            fetch_pages=not parsed.no_fetch,
+            locale=parsed.locale,
+            summary_language=parsed.summary_language,
+        )
+    except AuditLogError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0 if report.get("status") == "ok" else 2
 
 
 def _print_debug_events(result: OrchestratorResult) -> None:

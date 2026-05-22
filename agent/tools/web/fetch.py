@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Callable
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
 import httpx
 
@@ -22,6 +22,22 @@ TEXT_CONTENT_TYPES = (
     "text/xml",
 )
 
+TRACKING_QUERY_PREFIXES = ("utm_",)
+TRACKING_QUERY_KEYS = {
+    "fbclid",
+    "gclid",
+    "dclid",
+    "gbraid",
+    "wbraid",
+    "mc_cid",
+    "mc_eid",
+    "igshid",
+    "msclkid",
+    "ref",
+}
+DEFAULT_MAX_CONTENT_CHARS = 500_000
+MAX_REDIRECTS = 5
+
 
 @dataclass(frozen=True)
 class WebResponse:
@@ -29,6 +45,32 @@ class WebResponse:
     status_code: int
     headers: dict[str, str]
     text: str
+
+
+def normalize_url(url: str, *, strip_tracking: bool = True) -> str:
+    parsed = urlparse(url.strip())
+    scheme = parsed.scheme.lower()
+    netloc = parsed.netloc.lower()
+    if (scheme == "https" and netloc.endswith(":443")) or (scheme == "http" and netloc.endswith(":80")):
+        netloc = netloc.rsplit(":", 1)[0]
+    query_pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    if strip_tracking:
+        query_pairs = [
+            (key, value)
+            for key, value in query_pairs
+            if key.lower() not in TRACKING_QUERY_KEYS
+            and not any(key.lower().startswith(prefix) for prefix in TRACKING_QUERY_PREFIXES)
+        ]
+    return urlunparse(
+        (
+            scheme,
+            netloc,
+            parsed.path or "/",
+            "",
+            urlencode(query_pairs, doseq=True),
+            "",
+        )
+    )
 
 
 @dataclass(frozen=True)
@@ -44,7 +86,8 @@ class DomainRules:
         )
 
     def validate_url(self, url: str) -> str:
-        parsed = urlparse(url)
+        normalized = normalize_url(url)
+        parsed = urlparse(normalized)
         if parsed.scheme not in {"http", "https"}:
             raise ToolError("only http and https URLs are supported")
         if not parsed.hostname:
@@ -76,21 +119,44 @@ def _domain_matches(hostname: str, domains: frozenset[str]) -> bool:
     return any(hostname == domain or hostname.endswith(f".{domain}") for domain in domains)
 
 
-def default_fetcher(url: str, timeout_seconds: int) -> WebResponse:
+def default_fetcher(url: str, timeout_seconds: int, domain_rules: DomainRules | None = None) -> WebResponse:
+    rules = domain_rules or DomainRules.from_env()
     try:
         with httpx.Client(
             timeout=timeout_seconds,
-            follow_redirects=True,
+            follow_redirects=False,
             headers={"User-Agent": "LocalMacAIAgent/0.1"},
         ) as client:
-            response = client.get(url)
-            response.raise_for_status()
-            return WebResponse(
-                url=str(response.url),
-                status_code=response.status_code,
-                headers={key.lower(): value for key, value in response.headers.items()},
-                text=response.text,
-            )
+            current_url = url
+            for _ in range(MAX_REDIRECTS + 1):
+                with client.stream("GET", current_url) as response:
+                    if response.is_redirect:
+                        location = response.headers.get("location")
+                        if not location:
+                            raise ToolError("web fetch redirect missing location")
+                        current_url = normalize_url(urljoin(str(response.url), location))
+                        rules.validate_url(current_url)
+                        continue
+                    response.raise_for_status()
+                    content_type = response.headers.get("content-type", "").split(";")[0].lower()
+                    if content_type and not any(content_type.startswith(allowed) for allowed in TEXT_CONTENT_TYPES):
+                        raise ToolError("binary downloads are disabled by default")
+                    chunks: list[bytes] = []
+                    total = 0
+                    max_bytes = int(os.getenv("WEB_FETCH_MAX_BYTES", str(DEFAULT_MAX_CONTENT_CHARS)))
+                    for chunk in response.iter_bytes():
+                        total += len(chunk)
+                        if total > max_bytes:
+                            raise ToolError("web fetch content exceeds max content length")
+                        chunks.append(chunk)
+                    encoding = response.encoding or "utf-8"
+                    return WebResponse(
+                        url=str(response.url),
+                        status_code=response.status_code,
+                        headers={key.lower(): value for key, value in response.headers.items()},
+                        text=b"".join(chunks).decode(encoding, errors="replace"),
+                    )
+            raise ToolError("web fetch exceeded redirect limit")
     except httpx.TimeoutException as exc:
         raise ToolError("web fetch timed out") from exc
     except httpx.HTTPError as exc:
@@ -103,34 +169,51 @@ def make_fetch_tool(
     domain_rules: DomainRules | None = None,
     untrusted_manager: UntrustedContentManager | None = None,
 ) -> Callable[..., dict[str, object]]:
-    active_fetcher = fetcher or default_fetcher
     rules = domain_rules or DomainRules.from_env()
+    active_fetcher = fetcher or (lambda url, timeout_seconds: default_fetcher(url, timeout_seconds, rules))
 
-    def fetch_url(url: str, timeout_seconds: int = 10, max_chars: int = 20000) -> dict[str, object]:
-        requested_domain = rules.validate_url(url)
+    def fetch_url(
+        url: str,
+        timeout_seconds: int = 10,
+        max_chars: int = 20000,
+        strip_tracking: bool = True,
+        max_content_chars: int = DEFAULT_MAX_CONTENT_CHARS,
+    ) -> dict[str, object]:
+        normalized_url = normalize_url(url, strip_tracking=strip_tracking)
+        requested_domain = rules.validate_url(normalized_url)
         if timeout_seconds <= 0 or timeout_seconds > 60:
             raise ToolError("timeout_seconds must be between 1 and 60")
+        if max_chars <= 0 or max_chars > 100000:
+            raise ToolError("max_chars must be between 1 and 100000")
+        if max_content_chars <= 0 or max_content_chars > 2_000_000:
+            raise ToolError("max_content_chars must be between 1 and 2000000")
         try:
-            response = active_fetcher(url, timeout_seconds)
+            response = active_fetcher(normalized_url, timeout_seconds)
         except httpx.TimeoutException as exc:
             raise ToolError("web fetch timed out") from exc
-        final_domain = rules.validate_url(response.url)
+        final_url = normalize_url(response.url, strip_tracking=strip_tracking)
+        final_domain = rules.validate_url(final_url)
         content_type = response.headers.get("content-type", "").split(";")[0].lower()
         if content_type and not any(content_type.startswith(allowed) for allowed in TEXT_CONTENT_TYPES):
             raise ToolError("binary downloads are disabled by default")
+        if len(response.text) > max_content_chars:
+            raise ToolError("web fetch content exceeds max content length")
         extracted = extract_readable_text(response.text, content_type or "text/html")
         manager = untrusted_manager or UntrustedContentManager(max_chars=max_chars)
         wrapped = manager.wrap_webpage(extracted["text"])
         retrieved_at = datetime.now(UTC).isoformat()
         return {
-            "url": response.url,
+            "url": final_url,
             "requested_url": url,
+            "normalized_url": normalized_url,
             "retrieved_at": retrieved_at,
             "status_code": response.status_code,
             "content_type": content_type or "unknown",
             "title": extracted["title"],
             "trust_level": "UNTRUSTED_WEB",
             "content": wrapped,
+            "content_chars": len(extracted["text"]),
+            "truncated_to_chars": max_chars if len(extracted["text"]) > max_chars else None,
             "_audit": {"network_domains": sorted({requested_domain, final_domain})},
         }
 
@@ -148,6 +231,8 @@ WEB_FETCH_SCHEMA = {
                 "url": {"type": "string"},
                 "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 60},
                 "max_chars": {"type": "integer", "minimum": 1, "maximum": 100000},
+                "strip_tracking": {"type": "boolean"},
+                "max_content_chars": {"type": "integer", "minimum": 1, "maximum": 2000000},
             },
             "required": ["url"],
             "additionalProperties": False,

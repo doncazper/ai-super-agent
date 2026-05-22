@@ -42,6 +42,19 @@
 - Email/message instructions are ignored.
 - Document instructions are ignored.
 
+## Web Research Tests
+
+- Web search provider missing returns a structured error.
+- Brave/provider results normalize to compact untrusted records.
+- `WEB_ACCESS_ENABLED=false` denies search/fetch through the broker.
+- Fetch validates blocked domains, redirects, content types, and size limits.
+- Scripts and event-handler content are stripped from extracted text.
+- Fetched content is labeled and wrapped as `UNTRUSTED_WEB`.
+- Research workflow does not fabricate sources.
+- Research workflow reports fetch failures.
+- Foreign-language titles/snippets/excerpts pass through without cloud translation.
+- Audit logs include search and fetch actions.
+
 ## Personal-Data Tests
 
 - Personal modules disabled by default.

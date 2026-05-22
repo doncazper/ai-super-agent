@@ -600,3 +600,68 @@ Do not disable audit logging."
   - Live Brave Search requires the user to export `BRAVE_SEARCH_API_KEY`.
 - Next recommended action:
   - Run live Brave Search smoke with `WEB_SEARCH_PROVIDER=brave` and `BRAVE_SEARCH_API_KEY` configured, then consider a readable result formatter without fetching pages automatically.
+
+## Run: 2026-05-22 Phase B2 Fetch Hardening and Research Workflow
+
+- Date/time: 2026-05-22, post-baseline web hardening.
+- Phase attempted: Phase B2 harden `web.fetch_url` and add source-grounded research workflow.
+- Files changed:
+  - Updated `agent/tools/web/fetch.py` with URL normalization, tracking-parameter stripping, manual redirect validation, content-type checks before reading streamed bodies, max content-size limits, final URL normalization, and fetch metadata.
+  - Updated `agent/workflows/research.py` with `source_grounded_research`, safe excerpts, simple language hints, fetch-failure reporting, and source-only summaries.
+  - Updated `smart_agent.py` with `python smart_agent.py research "query"`.
+  - Updated `.env.example` with `WEB_FETCH_MAX_BYTES`.
+  - Updated `tests/test_web.py` and `tests/test_workflows.py`.
+  - Updated `README.md`, `docs/THREAT_MODEL.md`, `docs/TEST_PLAN.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read current web tools, workflows, CLI, registry, and tests with `sed`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy()`.
+  - `WEB_SEARCH_PROVIDER= BRAVE_SEARCH_API_KEY= $PY smart_agent.py research "local ai news"`
+- Tests run:
+  - Final command: `$PY -m pytest -q`
+  - Result: 118 passed in 1.27s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Every fetched page remains wrapped and labeled as `UNTRUSTED_WEB`.
+  - Fetch follows redirects manually and validates each target before continuing.
+  - Fetch strips common tracking parameters and fragments from requested/final URLs.
+  - Fetch refuses non-text content types and enforces max body/extraction limits.
+  - Research uses only `web.search` and optional `web.fetch_url` through `ToolBroker`.
+  - Research reports search/fetch errors and does not fabricate citations.
+  - Foreign-language titles, snippets, and excerpts pass through with a simple language hint.
+  - Webpage instruction-injection text is not used as a summary instruction.
+  - No personal-data connectors, browser automation, form submission, binary downloads by default, MCP defaults, or send/write actions were added.
+- Known limitations:
+  - Research uses a deterministic source-aware summary, not an LLM synthesis step.
+  - Language detection is intentionally simple and local.
+  - Live Brave Search was not run because no API key is configured in this shell.
+- Next recommended action:
+  - Run live Brave Search plus research smoke with `BRAVE_SEARCH_API_KEY` configured, then consider an optional LLM synthesis pass that receives fetched content only as untrusted data and cites source URLs.
+
+## Run: 2026-05-22 Phase B2 Checkpoint and Smoke Readiness
+
+- Date/time: 2026-05-22, post-baseline B2 checkpoint.
+- Phase attempted: Verify, document, and commit completed Phase B2 fetch hardening and source-grounded research workflow.
+- Files changed:
+  - No new product capability was added in this pass.
+  - Updated `docs/COMPLETION_REPORT.md` with this checkpoint and smoke-readiness record.
+- Commands run:
+  - Read required governance docs, risk/threat/test/release docs, and completion history with `sed`.
+  - Checked `git status --short`, recent commits, changed files, and environment variables for `BRAVE_SEARCH_API_KEY` and `LMSTUDIO_MODEL`.
+  - Planned validation commands:
+    - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+    - Startup policy validation with `validate_startup_policy()`.
+    - Disabled-provider research smoke: `WEB_SEARCH_PROVIDER= BRAVE_SEARCH_API_KEY= $PY smart_agent.py research "local ai news"`.
+- Tests run:
+  - Final command: `$PY -m pytest -q`
+  - Result: 118 passed in 1.66s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - `BRAVE_SEARCH_API_KEY` is not set in this shell, so a live Brave Search research smoke test cannot run honestly here.
+  - `LMSTUDIO_MODEL` is not set in this shell, but deterministic `smart_agent.py research` smoke checks do not require model prompts.
+  - Disabled-provider research smoke returned a structured `provider not configured` report without fabricating sources.
+  - Approval gates checked: no personal-data tools, browser automation, form submission, binary downloads by default, MCP defaults, or send/write actions are being enabled.
+- Known limitations:
+  - Live Brave Search and live research smoke require the user to export `BRAVE_SEARCH_API_KEY`.
+- Next recommended action:
+  - Run live Brave Search plus research smoke with `BRAVE_SEARCH_API_KEY` configured before adding optional LLM synthesis.

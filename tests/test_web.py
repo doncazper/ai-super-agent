@@ -8,8 +8,9 @@ from agent.core.tool_broker import ToolBroker
 from agent.safety.audit import AuditLogger
 from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
+from agent.tools.errors import ToolError
 from agent.tools.web.extraction import extract_readable_text
-from agent.tools.web.fetch import DomainRules, WebResponse, make_fetch_tool
+from agent.tools.web.fetch import DomainRules, WebResponse, make_fetch_tool, normalize_url
 from agent.tools.web.search import BraveSearchProvider, normalize_brave_results
 from agent.tools.web.untrusted_content import UNTRUSTED_WEB_WARNING
 
@@ -201,6 +202,32 @@ def test_timeout_handled() -> None:
         assert str(exc) == "web fetch timed out"
     else:
         raise AssertionError("expected timeout")
+
+
+def test_tracking_parameters_are_stripped() -> None:
+    assert (
+        normalize_url("HTTPS://Example.COM:443/page?utm_source=x&keep=yes&fbclid=abc#section")
+        == "https://example.com/page?keep=yes"
+    )
+
+
+def test_max_content_length_enforced() -> None:
+    def fetcher(url: str, timeout_seconds: int) -> WebResponse:
+        return WebResponse(
+            url=url,
+            status_code=200,
+            headers={"content-type": "text/html"},
+            text="<html><body>" + ("x" * 50) + "</body></html>",
+        )
+
+    fetch_url = make_fetch_tool(fetcher=fetcher, domain_rules=DomainRules())
+
+    try:
+        fetch_url("https://example.com", max_content_chars=10)
+    except ToolError as exc:
+        assert str(exc) == "web fetch content exceeds max content length"
+    else:
+        raise AssertionError("expected max content length failure")
 
 
 def test_scripts_are_stripped() -> None:

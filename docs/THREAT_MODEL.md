@@ -15,8 +15,10 @@
 |---|---|
 | Model hallucination | Keep harness thin; model final answers are not proof of action; actions must have tool results. |
 | Prompt injection from web pages | Mark fetched content `UNTRUSTED_WEB`; wrap it as data; strip scripts; do not follow page instructions; audit fetched domains. |
+| Unsafe redirects or tracking URLs | Normalize URLs, strip common tracking parameters, validate redirect targets before following them, and block private/local hosts. |
 | Search-provider query leakage | Keep search provider opt-in; allow `WEB_ACCESS_ENABLED=false`; redact `web.search` queries in audit logs by default; do not persist search history unless explicitly enabled. |
 | Search-provider manipulation or outage | Treat search results as `UNTRUSTED_WEB`; normalize provider errors; return structured errors instead of hallucinated results. |
+| Fabricated research citations | Research workflow builds summaries only from returned search/fetch data, includes source URLs, reports fetch failures, and avoids claiming unsupported current facts. |
 | Prompt injection from email | Mark email `UNTRUSTED_EMAIL`; selected-scope only; never follow embedded instructions. |
 | Prompt injection from messages | Mark messages `UNTRUSTED_MESSAGE`; selected-scope only; no sends before approvals. |
 | Malicious documents | Mark documents `UNTRUSTED_DOCUMENT`; no macro execution; web fetch refuses binary downloads by default. |

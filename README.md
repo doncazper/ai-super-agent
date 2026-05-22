@@ -82,6 +82,7 @@ Web tools:
 python smart_agent.py --debug "Read this URL https://example.com"
 python smart_agent.py --debug "Look up local AI news"
 python smart_agent.py web "local AI news"
+python smart_agent.py research "local AI news"
 ```
 
 `web.search` returns a clear error until a supported provider is configured. With Brave Search:
@@ -95,7 +96,17 @@ python smart_agent.py web "local AI news"
 
 The direct `web` command executes `web.search` through `ToolBroker`, `PolicyEngine`, rate limits, and audit logging. It returns search-result metadata only; it does not fetch full pages. Search results are labeled `UNTRUSTED_WEB`, and search queries are redacted from audit logs by default unless `WEB_SEARCH_AUDIT_QUERIES=true` is explicitly set.
 
-`web.fetch_url` treats fetched pages as untrusted data and refuses binary downloads by default.
+`web.fetch_url` treats fetched pages as untrusted data and refuses binary downloads by default. It validates public HTTP(S) URLs, validates redirect targets before following them, strips common tracking parameters, enforces content-type and size limits, extracts readable text, strips scripts/styles, and wraps page text with the untrusted-web warning.
+
+Source-grounded research:
+
+```bash
+python smart_agent.py research "local AI news"
+python smart_agent.py research --max-results 2 --no-fetch "local AI news"
+python smart_agent.py research --locale es --summary-language en "últimas noticias de IA"
+```
+
+The research command runs `web.search` and optional `web.fetch_url` calls through `ToolBroker`, then returns a source-aware JSON report. It does not fabricate citations; if search or fetch fails, the report says so. Foreign-language titles, snippets, and excerpts are preserved, with a simple language hint when available.
 
 Memory tools:
 
@@ -162,6 +173,7 @@ WEB_SEARCH_TIMEOUT_SECONDS=10
 WEB_SEARCH_MAX_RESULTS=8
 WEB_SAFE_SEARCH=true
 WEB_SEARCH_AUDIT_QUERIES=false
+WEB_FETCH_MAX_BYTES=500000
 ```
 
 `TOOL_MODE` may be `auto`, `no-tools`, or `force-time`. The older `LMSTUDIO_TEMPERATURE`, `LMSTUDIO_TOP_P`, `LMSTUDIO_MAX_TOKENS`, and `AGENT_AUDIT_LOG` names are still accepted as fallbacks.
