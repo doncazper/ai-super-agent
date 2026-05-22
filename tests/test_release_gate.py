@@ -12,6 +12,7 @@ from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
 from agent.workflows.self_improvement import SelfImprovementManager
 from agent.tools.errors import ToolError
+from agent.tools.low_risk.workspace_files import DENIED_FILENAMES, DENIED_HOME_PATHS
 
 
 def call(tool_name: str, arguments: dict[str, object] | None = None) -> dict[str, object]:
@@ -76,6 +77,20 @@ def test_release_gate_path_and_denied_file_blocked(tmp_path) -> None:
 
     assert json.loads(traversal.content)["error"] == "path traversal is blocked"
     assert json.loads(denied.content)["error"] == "access to denied filename is blocked"
+
+
+def test_release_gate_sensitive_path_denylist_is_complete() -> None:
+    assert {
+        "~/.ssh",
+        "~/.gnupg",
+        "~/Library/Keychains",
+        "~/Library/Messages",
+        "~/Library/Mail",
+        "~/Library/Application Support",
+        "~/.aws",
+        "~/.config",
+    }.issubset(set(DENIED_HOME_PATHS))
+    assert ".env" in DENIED_FILENAMES
 
 
 def test_release_gate_write_actions_require_approval(tmp_path) -> None:

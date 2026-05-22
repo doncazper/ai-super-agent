@@ -4,7 +4,19 @@ tools:
     default_enabled: true
     approval_required: false
     stores_data: false
-
+    trust_level: MODEL_OUTPUT
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   web.search:
     risk_level: LOW
     default_enabled: true
@@ -13,7 +25,20 @@ tools:
     requires_web_access: true
     rate_limit:
       requests_per_minute: 10
-
+    trust_level: UNTRUSTED_WEB
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
   web.fetch_url:
     risk_level: MEDIUM
     default_enabled: true
@@ -23,122 +48,332 @@ tools:
     timeout_seconds: 10
     blocked_domains: []
     allowed_domains: []
-
+    trust_level: UNTRUSTED_WEB
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    rate_limit:
+      requests_per_minute: 30
   filesystem.list:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
     allowed_roots:
-      - .
-      - ./workspace
-      - ./agent
-      - ./tests
-
+    - .
+    - ./workspace
+    - ./agent
+    - ./tests
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
   filesystem.read:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
     allowed_roots:
-      - .
-      - ./workspace
-      - ./agent
-      - ./tests
-
+    - .
+    - ./workspace
+    - ./agent
+    - ./tests
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
   filesystem.write:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
     allowed_roots:
-      - .
-      - ./workspace
-      - ./agent
-      - ./tests
-
+    - .
+    - ./workspace
+    - ./agent
+    - ./tests
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
   filesystem.patch:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
     allowed_roots:
-      - .
-      - ./workspace
-      - ./agent
-      - ./tests
-
+    - .
+    - ./workspace
+    - ./agent
+    - ./tests
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
   filesystem.delete:
     risk_level: HIGH
     default_enabled: true
     approval_required: true
     stores_data: false
     allowed_roots:
-      - .
-      - ./workspace
-      - ./agent
-      - ./tests
-
+    - .
+    - ./workspace
+    - ./agent
+    - ./tests
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
   git.status:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - commands_run
   git.diff:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - commands_run
   git.branch:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - commands_run
   git.commit:
     risk_level: HIGH
     default_enabled: true
     approval_required: true
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - commands_run
   code.run_tests:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - commands_run
   memory.store:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: true
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   memory.store_personal:
     risk_level: HIGH
     default_enabled: true
     approval_required: true
     stores_data: true
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   memory.search:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   memory.export:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   memory.delete:
     risk_level: LOW
     default_enabled: true
     approval_required: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   email.read_selected_thread:
     risk_level: HIGH
     default_enabled: false
@@ -148,7 +383,18 @@ tools:
     trust_level: UNTRUSTED_EMAIL
     stores_body: false
     stores_data: false
-
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   contacts.search:
     risk_level: HIGH
     default_enabled: false
@@ -157,7 +403,19 @@ tools:
     compact_results_only: true
     max_results: 5
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   contacts.read_selected:
     risk_level: HIGH
     default_enabled: false
@@ -169,7 +427,19 @@ tools:
     notes_included: false
     addresses_included: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   calendar.read_date_range:
     risk_level: HIGH
     default_enabled: false
@@ -178,7 +448,19 @@ tools:
     selected_date_range_only: true
     max_range_days: 31
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   calendar.find_availability:
     risk_level: HIGH
     default_enabled: false
@@ -188,7 +470,19 @@ tools:
     max_range_days: 31
     returns_event_details: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   email.list_metadata:
     risk_level: HIGH
     default_enabled: false
@@ -197,7 +491,19 @@ tools:
     body_included: false
     max_results: 10
     stores_data: false
-
+    trust_level: UNTRUSTED_EMAIL
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   email.summarize_thread:
     risk_level: HIGH
     default_enabled: false
@@ -205,7 +511,19 @@ tools:
     selected_scope_only: true
     stores_body: false
     stores_data: false
-
+    trust_level: UNTRUSTED_EMAIL
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   email.draft_reply:
     risk_level: HIGH
     default_enabled: false
@@ -214,7 +532,19 @@ tools:
     draft_only: true
     sending_implemented: false
     stores_data: false
-
+    trust_level: UNTRUSTED_EMAIL
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   messages.read_selected_thread:
     risk_level: HIGH
     default_enabled: false
@@ -224,7 +554,18 @@ tools:
     trust_level: UNTRUSTED_MESSAGE
     stores_body: false
     stores_data: false
-
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   messages.summarize_thread:
     risk_level: HIGH
     default_enabled: false
@@ -234,7 +575,18 @@ tools:
     trust_level: UNTRUSTED_MESSAGE
     stores_body: false
     stores_data: false
-
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   messages.draft_reply:
     risk_level: HIGH
     default_enabled: false
@@ -245,69 +597,204 @@ tools:
     draft_only: true
     sending_implemented: false
     stores_data: false
-
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   browser.read_selected_tab:
     risk_level: HIGH
     default_enabled: false
     approval_required: true
     selected_scope_only: true
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   email.send:
     risk_level: CRITICAL
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
-
+    trust_level: MODEL_OUTPUT
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    stores_data: false
   messages.send:
     risk_level: CRITICAL
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
-
+    trust_level: MODEL_OUTPUT
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    stores_data: false
   calendar.create_event:
     risk_level: CRITICAL
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   calendar.update_event:
     risk_level: CRITICAL
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   calendar.delete_event:
     risk_level: CRITICAL
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   contacts.update_selected:
     risk_level: CRITICAL
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   email.send_approved:
     risk_level: CRITICAL
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-
+    trust_level: MODEL_OUTPUT
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   messages.send_approved:
     risk_level: CRITICAL
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-
+    trust_level: MODEL_OUTPUT
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
   secrets.read:
     risk_level: FORBIDDEN
     default_enabled: false
     approval_required: false
+    trust_level: LOCAL_PRIVATE_DATA
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    stores_data: false

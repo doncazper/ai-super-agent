@@ -24,6 +24,7 @@
 - HIGH actions ask approval.
 - CRITICAL actions require per-action approval.
 - FORBIDDEN actions denied.
+- Capability manifest validation requires default state, approval requirement, storage flag, trust level, audit fields, and network rate limits where applicable.
 
 ## Approval Tests
 
@@ -45,6 +46,7 @@
 - Webpage instructions are ignored.
 - Email/message instructions are ignored.
 - Document instructions are ignored.
+- Regression phrases include attempts to ignore instructions, reveal secrets, change policy, call tools, send email/text, disable audit logs, and store private data.
 
 ## Web Research Tests
 

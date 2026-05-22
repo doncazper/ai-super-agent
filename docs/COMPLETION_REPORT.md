@@ -1116,3 +1116,85 @@ Do not disable audit logging."
   - Checkpoint validation passed and is ready to commit.
 - Next recommended action:
   - After this checkpoint commit, run live local smoke only after intentionally configuring LM Studio and/or Brave Search, then continue workflow hardening before any send/write enablement.
+
+## Run: 2026-05-21 20:51 PDT Phase G Hardening Regression Pass
+
+- Date/time: 2026-05-21 20:51:51 PDT, post-baseline security/reliability hardening.
+- Phase attempted: Phase G focused hardening regression pass after real connectors and smoke harness.
+- Scope:
+  - Policy-bypass review across orchestrator, CLI, workflows, registry, tools, and smoke harness.
+  - Capability manifest review and stricter startup validation.
+  - Sensitive path denylist verification.
+  - Prompt-injection regression expansion across web, email, messages, and workspace-file content.
+  - Memory and approval regression confirmation through existing and new tests.
+- Files changed:
+  - Updated `agent/config/schema.py` to require `default_enabled`, `approval_required`, `stores_data`, `trust_level`, `audit_fields`, and web rate limits where applicable.
+  - Updated `config/capabilities.yaml` with trust levels and audit fields for every capability, plus a rate limit for `web.fetch_url`.
+  - Updated `agent/tools/personal/email.py`, `agent/tools/personal/messages.py`, and `agent/workflows/research.py` to filter broader prompt-injection phrases from summaries/draft instructions.
+  - Updated `tests/test_policy.py`, `tests/test_release_gate.py`, `tests/test_personal_modules.py`, and `tests/test_workflows.py`.
+  - Updated `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/TEST_PLAN.md`, `docs/RELEASE_CHECKLIST.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read required governance docs, completion history, capability manifest, policy schema, workflow code, memory code, web tests, personal tests, and release-gate tests.
+  - Bypass scans with `rg` for direct handler/tool/connector/filesystem/network usage outside `ToolBroker`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_policy.py tests/test_release_gate.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_personal_modules.py tests/test_workflows.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `git diff --check`.
+- Tests run:
+  - Policy/release targeted tests: 16 passed in 0.13s.
+  - Personal/workflow targeted tests: 62 passed in 0.56s.
+  - Full suite: 183 passed in 1.84s.
+  - Startup policy validation result: `startup policy ok`.
+- Bypasses found/fixed:
+  - No direct workflow/orchestrator/CLI tool execution bypass was found; tool actions continue through `ToolBroker`.
+  - No approval bypass was found for HIGH/CRITICAL actions.
+  - No audit bypass was found for brokered tool execution.
+  - Fixed manifest completeness drift by making startup validation reject capabilities without trust/audit/storage metadata.
+  - Fixed prompt-injection filtering gaps for broader phrases such as change policy, call tools, send email/text, disable audit logs, and store private data.
+- Results:
+  - Sensitive path denylist now has release-gate coverage for SSH, GPG, Keychain, Messages, Mail, Application Support, AWS, config, and `.env`.
+  - Prompt-injection regressions cover web page content, email body, message body, and workspace-file/manual text input.
+  - Memory regressions continue to verify no secrets and no email/message bodies are stored by default, and personal memory requires approval.
+  - Approval regressions continue to verify HIGH approval, CRITICAL per-action approval, denial behavior, and audit lifecycle.
+- Remaining risks:
+  - Audit-log tampering remains partially mitigated by hash chaining; deeper verification tooling is still a future hardening target.
+  - Live connector smoke tests remain opt-in and were not run in this phase.
+- Next recommended action:
+  - Checkpoint/commit Phase G, then consider audit-log verification tooling or workflow hardening before any send/write enablement.
+
+## Run: 2026-05-21 20:54 PDT Phase G Checkpoint Validation
+
+- Date/time: 2026-05-21 20:54:34 PDT, post-baseline checkpoint.
+- Phase attempted: Validate and commit Phase G hardening work without adding new capabilities.
+- Scope:
+  - Manifest metadata validation, prompt-injection regression expansion, sensitive path release-gate coverage, and bypass scan confirmation.
+  - No web provider changes, no personal-data enablement, and no send/write connector enablement.
+- Approval gates checked:
+  - Personal-data tools remain disabled by default.
+  - HIGH/CRITICAL approval policy was not weakened.
+  - No approval reuse was added for critical actions.
+  - Audit logging remains enabled and brokered tool execution remains audited.
+- Commands run:
+  - Read required governance docs, milestone queue, completion report, risk register, threat model, test plan, and release checklist.
+  - Bypass-oriented `rg` scans for ToolBroker, approval, audit, direct filesystem, network, connector, and process execution paths.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_policy.py tests/test_release_gate.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_personal_modules.py tests/test_workflows.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `git diff --check`.
+- Tests run:
+  - Policy/release targeted tests: 17 passed in 0.11s.
+  - Personal/workflow targeted tests: 62 passed in 0.50s.
+  - Full suite: 183 passed in 1.88s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Checkpoint validation passed.
+  - No direct workflow/orchestrator/CLI tool execution bypass was found.
+  - Direct network/filesystem/process calls remain limited to tool implementations, diagnostics/smoke paths, tests, or the gated self-improvement manager.
+  - No new personal-data, write, send, browser automation, or web-provider capabilities were added in this checkpoint.
+- Remaining risks:
+  - Audit-log tamper verification tooling remains the next practical hardening target.
+  - Live connector smoke tests remain opt-in and were not run in this checkpoint.
+- Next recommended action:
+  - Commit Phase G, then continue with audit-log verification tooling before any send/write enablement.

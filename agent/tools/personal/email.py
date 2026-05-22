@@ -262,7 +262,7 @@ def draft_reply(
     summary_payload = summarize_thread(connector, thread_id=thread_id, thread_text=thread_text)
     if summary_payload.get("status") != "ok":
         return summary_payload
-    instruction = user_instruction.strip() or "Write a concise, polite reply."
+    instruction = _safe_instruction(user_instruction)
     return {
         "status": "ok",
         "thread_id": summary_payload["thread_id"],
@@ -347,12 +347,44 @@ def _safe_summary(content: str) -> str:
     lines = [
         line.strip()
         for line in content.splitlines()
-        if line.strip() and not line.startswith(UNTRUSTED_EMAIL_WARNING[:30])
+        if line.strip()
+        and not line.startswith(UNTRUSTED_EMAIL_WARNING[:30])
+        and not _looks_like_instruction_injection(line)
     ]
     excerpt = " ".join(lines)[:500]
     if not excerpt:
         excerpt = "No readable email body was available."
     return f"Summary from untrusted email data: {excerpt}"
+
+
+def _safe_instruction(user_instruction: str) -> str:
+    instruction = user_instruction.strip() or "Write a concise, polite reply."
+    if _looks_like_instruction_injection(instruction):
+        return "Keep the reply brief, safe, and non-sensitive."
+    return instruction
+
+
+def _looks_like_instruction_injection(text: str) -> bool:
+    lowered = text.casefold()
+    suspicious = (
+        "ignore previous instructions",
+        "ignore system instructions",
+        "reveal secrets",
+        "send the password",
+        "change policy",
+        "disable audit",
+        "disable audit logs",
+        "call tools",
+        "execute tool",
+        "send email",
+        "send a text",
+        "store private data",
+        "approve all tools",
+        "system prompt",
+        "developer message",
+        "keychain",
+    )
+    return any(phrase in lowered for phrase in suspicious)
 
 
 def _network_domain(connector: EmailConnector) -> str:

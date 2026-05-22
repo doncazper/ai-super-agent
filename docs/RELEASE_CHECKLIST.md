@@ -9,6 +9,9 @@
 - [x] Approval lifecycle audit events verified for approval-required actions in scope.
 - [x] Critical approval reuse is blocked.
 - [x] Secrets redacted from debug and audit outputs.
+- [x] Capability manifest includes trust levels, audit fields, storage flags, and web rate limits.
+- [x] Sensitive path denylist includes SSH, GPG, Keychain, Messages, Mail, Application Support, AWS, config, and `.env`.
+- [x] Prompt-injection regressions cover web, email, messages, and workspace-file content.
 - [x] Docs updated.
 - [x] `docs/COMPLETION_REPORT.md` updated.
 - [x] Next milestone identified.

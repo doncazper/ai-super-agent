@@ -185,10 +185,17 @@ def _looks_like_instruction_injection(text: str) -> bool:
     lowered = text.casefold()
     suspicious = (
         "ignore previous instructions",
+        "ignore system instructions",
         "reveal secrets",
         "system prompt",
         "developer message",
         "execute tool",
+        "call tools",
         "change policy",
+        "disable audit",
+        "disable audit logs",
+        "send email",
+        "send a text",
+        "store private data",
     )
     return any(phrase in lowered for phrase in suspicious)
