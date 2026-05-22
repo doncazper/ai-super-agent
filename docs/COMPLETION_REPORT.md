@@ -920,3 +920,83 @@ Do not disable audit logging."
   - Live Calendar.app and Contacts.app connectors still require an intentional local smoke test after explicitly enabling the relevant disabled read-only capabilities.
 - Next recommended action:
   - After this checkpoint commit, run live calendar/contacts smoke tests only if the user explicitly chooses to enable those read-only capabilities. Do not start email/messages yet.
+
+## Run: 2026-05-22 Phase E1 Email Metadata, Selected Thread, Summary, and Draft-Only
+
+- Date/time: 2026-05-22, post-baseline email assistant.
+- Phase attempted: Phase E1 email assistant with metadata listing, selected-thread read, summary, and draft-only reply.
+- Adapter strategy:
+  - Added an email adapter interface with a safe not-configured adapter by default.
+  - Added an optional `EMAIL_CONNECTOR=imap` adapter using Python `imaplib` with externally supplied environment credentials.
+  - No credentials are hard-coded or stored by the agent.
+  - No Apple Mail private database scraping, broad Full Disk Access requirement, sending, deleting, moving, archiving, or bulk inbox ingestion was added.
+- Files changed:
+  - Added `agent/tools/personal/email.py`.
+  - Updated `agent/tools/personal/read_only.py` to route `email.list_metadata`, `email.read_selected_thread`, `email.summarize_thread`, and `email.draft_reply` through the email adapter.
+  - Updated `agent/tools/registry.py` to support injected email connectors for tests.
+  - Updated `smart_agent.py` with `python smart_agent.py email metadata`, `email read`, `email summarize`, and `email draft-reply`.
+  - Updated `agent/core/tool_broker.py` so approval request previews use broker-level personal-content redaction.
+  - Updated `agent/safety/action_preview.py`, `config/capabilities.yaml`, `.env.example`, `README.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/TEST_PLAN.md`, `docs/DECISION_LOG.md`, and `docs/COMPLETION_REPORT.md`.
+  - Updated `tests/test_personal_modules.py`.
+- Commands run:
+  - Read current personal email stubs, policy config, registry, tool broker, docs, and personal tests with `sed` and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_personal_modules.py -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Disabled email CLI smoke:
+    - `$PY smart_agent.py email metadata`
+    - `$PY smart_agent.py email read "thread-1"`
+    - `$PY smart_agent.py email draft-reply "thread-1"`
+  - Searched config/tool/tests for send surfaces with `rg`.
+- Tests run:
+  - Targeted personal tests: 38 passed in 0.28s after tightening approval-audit redaction and updating draft-only assertions.
+  - Full suite: 159 passed in 1.58s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - `email.list_metadata` is HIGH risk, disabled by default, approval-required, and returns metadata only with no body.
+  - `email.read_selected_thread` is HIGH risk, disabled by default, approval-required, selected-thread only, and wraps body content as `UNTRUSTED_EMAIL`.
+  - `email.summarize_thread` treats email content as untrusted data and does not store body text.
+  - `email.draft_reply` is HIGH risk, disabled by default, approval-required, draft-only, and never sends.
+  - Bulk-style thread ids such as `all` are denied.
+  - Email body text is redacted from audit arguments and approval lifecycle previews.
+  - Disabled email CLI smoke commands safely returned `capability disabled`.
+  - No email send implementation, deletion, moving, archiving, messages connector, Full Disk Access requirement, or private database scraping was added.
+- Known limitations:
+  - Live IMAP was not exercised in this environment.
+  - OAuth Gmail/Microsoft adapters and Keychain credential lookup remain future work.
+- Next recommended action:
+  - Stop before messages or send/write actions. Next safe step is an E1 checkpoint commit, followed by optional live IMAP smoke only if the user explicitly configures IMAP and enables the disabled email read-only/draft capabilities.
+
+## Run: 2026-05-21 20:31 PDT Phase E1 Checkpoint Validation
+
+- Date/time: 2026-05-21 20:31:11 PDT, post-baseline checkpoint.
+- Phase attempted: Validate and commit Phase E1 email assistant work without adding new capabilities.
+- Scope:
+  - Email metadata, selected-thread read, summary, and draft-only reply adapter.
+  - Disabled-by-default email capabilities with approval requirements.
+  - Audit redaction for email body/thread text in approval and execution records.
+- Approval gates checked:
+  - Email tools remain disabled by default.
+  - No email send implementation was added.
+  - No messages connector was added.
+  - No delete, move, archive, or bulk inbox ingestion was added.
+  - No private Apple Mail database scraping or Full Disk Access dependency was added.
+  - No policy weakening or audit disabling was introduced.
+- Files changed:
+  - Phase E1 code, tests, config, and documentation changes listed in the previous Phase E1 entry.
+- Commands run:
+  - Read required governance docs, release checklist, threat model, risk register, test plan, milestone queue, and completion history.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - Disabled email CLI smoke: `$PY smart_agent.py email metadata`.
+  - `git diff --check`.
+- Tests run:
+  - Full suite: 159 passed in 1.53s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Disabled email CLI smoke safely returned `capability disabled`.
+  - Checkpoint validation passed and is ready to commit.
+- Known limitations:
+  - Live IMAP smoke was not run because email capabilities remain disabled by default and no live connector setup was requested for this checkpoint.
+- Next recommended action:
+  - Optional live IMAP smoke only after explicit user configuration and intentional enabling of the disabled read-only/draft email capabilities; otherwise continue to the next safe read-only connector or workflow hardening step.

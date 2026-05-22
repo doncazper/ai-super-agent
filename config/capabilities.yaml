@@ -144,6 +144,9 @@ tools:
     default_enabled: false
     approval_required: true
     selected_scope_only: true
+    bulk_read_allowed: false
+    trust_level: UNTRUSTED_EMAIL
+    stores_body: false
     stores_data: false
 
   contacts.search:
@@ -191,6 +194,8 @@ tools:
     default_enabled: false
     approval_required: true
     selected_scope_only: true
+    body_included: false
+    max_results: 10
     stores_data: false
 
   email.summarize_thread:
@@ -198,13 +203,16 @@ tools:
     default_enabled: false
     approval_required: true
     selected_scope_only: true
+    stores_body: false
     stores_data: false
 
   email.draft_reply:
-    risk_level: MEDIUM
+    risk_level: HIGH
     default_enabled: false
-    approval_required: false
+    approval_required: true
     selected_scope_only: true
+    draft_only: true
+    sending_implemented: false
     stores_data: false
 
   messages.read_selected_thread:

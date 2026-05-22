@@ -224,7 +224,7 @@ class ToolBroker:
                 per_action=risk is RiskLevel.CRITICAL,
                 session_id=self.session_id,
                 trust_level=self._trust_level_for_tool(tool_name),
-                args_preview=preview.to_dict()["sanitized_args"],
+                args_preview=self._sanitize_args(tool_name, args),
                 rollback_available=preview.rollback_available,
             )
             approval_result = self.approval_manager.request_approval(approval_request)

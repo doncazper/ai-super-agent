@@ -11,6 +11,7 @@ from agent.tools.low_risk.workspace_files import FILESYSTEM_SCHEMAS, make_filesy
 from agent.memory.tools import MEMORY_SCHEMAS, make_memory_tools
 from agent.tools.personal.calendar import CalendarConnector
 from agent.tools.personal.contacts import ContactsConnector
+from agent.tools.personal.email import EmailConnector
 from agent.tools.personal.read_only import PERSONAL_SCHEMAS, make_personal_tools
 from agent.tools.personal.write_actions import WRITE_ACTION_SCHEMAS, make_write_action_tools
 from agent.tools.web.fetch import WEB_FETCH_SCHEMA, DomainRules, WebResponse, make_fetch_tool
@@ -50,6 +51,7 @@ def default_registry(
     memory_path: str | Path | None = None,
     calendar_connector: CalendarConnector | None = None,
     contacts_connector: ContactsConnector | None = None,
+    email_connector: EmailConnector | None = None,
 ) -> ToolRegistry:
     registry = ToolRegistry()
     registry.register(
@@ -88,6 +90,7 @@ def default_registry(
     for name, handler in make_personal_tools(
         calendar_connector=calendar_connector,
         contacts_connector=contacts_connector,
+        email_connector=email_connector,
     ).items():
         registry.register(ToolSpec(name=name, capability=name, schema=PERSONAL_SCHEMAS[name], handler=handler))
     for name, handler in make_write_action_tools().items():

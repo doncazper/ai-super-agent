@@ -28,6 +28,7 @@ M0-M11 are complete:
 - Read-only personal module interfaces are present but disabled by default.
 - Calendar read-only selected-range connector support is present but disabled by default.
 - Contacts read-only selected-scope connector support is present but disabled by default.
+- Email metadata, selected-thread read, summary, and draft-only connector support is present but disabled by default.
 - Email/message reply drafting is draft-only and never sends.
 - Assistant workflows compose existing tools only through `ToolBroker`.
 - Workflow action reports show each step and result.
@@ -150,6 +151,26 @@ export CONTACTS_CONNECTOR=applescript
 
 This adapter uses macOS Contacts/Automation privacy prompts. It does not scrape private AddressBook databases and does not require Full Disk Access. Search returns compact candidates only: name, organization, job title, counts/flags, and a selected-scope token. It does not return email addresses or phone numbers from search results. Reading a selected contact returns only requested fields; notes are never returned, and email, phone, and address values are redacted unless their explicit config gates are enabled.
 
+Email assistant metadata, selected-thread, and draft-only access:
+
+```bash
+python smart_agent.py email metadata
+python smart_agent.py email read "<thread_id>"
+python smart_agent.py email summarize "<thread_id>"
+python smart_agent.py email draft-reply "<thread_id>"
+```
+
+Email tools are disabled by default and approval-gated. The optional first adapter is IMAP:
+
+```bash
+export EMAIL_CONNECTOR=imap
+export IMAP_HOST="imap.example.com"
+export IMAP_USERNAME="you@example.com"
+export IMAP_PASSWORD="use-an-app-password-or-external-secret"
+```
+
+Credentials are read from the environment or an external secret setup; the agent does not store passwords. Metadata listing returns headers only and no body. Selected thread reads are single-thread only, wrapped as `UNTRUSTED_EMAIL`, and not stored in long-term memory. Summaries treat email body as data, not instructions. Draft replies are marked draft-only and never send, delete, move, or archive email.
+
 Memory tools:
 
 ```bash
@@ -232,6 +253,15 @@ CONTACTS_MAX_SEARCH_RESULTS=5
 CONTACTS_INCLUDE_EMAILS=false
 CONTACTS_INCLUDE_PHONES=false
 CONTACTS_INCLUDE_ADDRESSES=false
+EMAIL_CONNECTOR=
+EMAIL_METADATA_MAX_RESULTS=10
+EMAIL_METADATA_SNIPPETS=false
+EMAIL_THREAD_MAX_CHARS=12000
+IMAP_HOST=
+IMAP_PORT=993
+IMAP_USERNAME=
+IMAP_PASSWORD=
+IMAP_MAILBOX=INBOX
 ```
 
 `TOOL_MODE` may be `auto`, `no-tools`, or `force-time`. The older `LMSTUDIO_TEMPERATURE`, `LMSTUDIO_TOP_P`, `LMSTUDIO_MAX_TOKENS`, and `AGENT_AUDIT_LOG` names are still accepted as fallbacks.
@@ -306,6 +336,7 @@ The model writes final answers. The harness executes only validated tool calls t
 - Personal modules are disabled by default and selected-scope only.
 - Calendar read-only access is selected-range only, approval-gated, and uses macOS privacy prompts when configured.
 - Contacts read-only access is selected-scope only, approval-gated, compact in search mode, and uses macOS privacy prompts when configured.
+- Email selected-thread access is approval-gated, wraps body content as `UNTRUSTED_EMAIL`, and never sends, deletes, moves, archives, or stores body text by default.
 - Email/message drafts do not send.
 - Approved send/write actions are disabled by default and require per-action approval.
 - Other personal-data and write/send modules remain locked until later approval gates.
