@@ -117,7 +117,7 @@ def test_capability_manifest_has_required_hardening_metadata() -> None:
         assert "audit_fields" in entry
         assert "tool_name" in entry["audit_fields"]
         assert "policy_decision" in entry["audit_fields"]
-        if name.startswith("web."):
+        if name.startswith(("web.", "weather.")):
             assert "network_domains" in entry["audit_fields"]
         if entry.get("requires_web_access"):
             assert entry["rate_limit"]["requests_per_minute"] > 0

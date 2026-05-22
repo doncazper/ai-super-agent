@@ -61,6 +61,19 @@
 - Foreign-language titles/snippets/excerpts pass through without cloud translation.
 - Audit logs include search and fetch actions.
 
+## Weather Tests
+
+- Weather provider missing returns a structured error.
+- `WEB_ACCESS_ENABLED=false` denies weather calls through the broker.
+- Weather capabilities are LOW risk, rate-limited, audited, and labeled `UNTRUSTED_WEB`.
+- Configured mock providers return normalized current weather and forecast data.
+- Open-Meteo provider tests mock geocoding and forecast endpoints; live internet is not required for unit tests.
+- Open-Meteo tests cover current normalization, forecast normalization, malformed responses, timeouts, geocoding failures, and audit domains.
+- Forecast days are capped by `WEATHER_MAX_FORECAST_DAYS`.
+- Location arguments are redacted from audit logs and are not persisted as history by default.
+- Provider timeouts/errors return structured error payloads.
+- Unknown weather tools are denied.
+
 ## Live Smoke Tests
 
 - `python smart_agent.py smoke --lmstudio` verifies no-tool chat, debug events, and the safe time-tool path when `LMSTUDIO_MODEL` and LM Studio are available.

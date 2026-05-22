@@ -1255,3 +1255,144 @@ Do not disable audit logging."
   - Next safe step is either commit this decision record or explicitly approve the Weather API provider-abstraction implementation.
 - Next recommended action:
   - Commit Phase H planning docs, then continue only after an explicit connector implementation goal is supplied.
+
+## Run: 2026-05-22 12:03 PDT Phase H1 Weather Provider Abstraction
+
+- Date/time: 2026-05-22 12:03:03 PDT, post-baseline implementation.
+- Phase attempted: Implement Weather API provider abstraction only.
+- Scope:
+  - Added `weather.current` and `weather.forecast` provider abstraction with disabled/unsupported-provider behavior.
+  - Added LOW-risk, default-enabled, audited, rate-limited capability manifest entries.
+  - Added direct `python smart_agent.py weather current ...` and `python smart_agent.py weather forecast ...` CLI commands that execute through `ToolBroker`.
+  - Added tests for provider-missing behavior, mock configured providers, `WEB_ACCESS_ENABLED=false`, rate limits, audit redaction, timeout/provider errors, `UNTRUSTED_WEB` labeling, and unknown weather tool denial.
+- Approval gates checked:
+  - No device location, IP geolocation, personal-data connector, write/send action, browser automation, or memory storage was added.
+  - Weather locations must be user-provided.
+  - Weather calls remain subject to `WEB_ACCESS_ENABLED`, capability policy, broker rate limits, and audit logging.
+  - ToolBroker, PolicyEngine, ApprovalManager, and AuditLogger were not bypassed or weakened.
+- Files changed:
+  - Added `agent/tools/weather/__init__.py`.
+  - Added `agent/tools/weather/provider.py`.
+  - Added `tests/test_weather.py`.
+  - Updated `agent/tools/registry.py`, `agent/core/tool_broker.py`, `smart_agent.py`, `config/capabilities.yaml`, `agent/config/schema.py`, `tests/test_policy.py`, `.env.example`, `README.md`, `docs/TEST_PLAN.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/DECISION_LOG.md`, `docs/decisions/2026-05-22_weather_api_connector.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read the weather connector decision record, registry, broker, web provider patterns, runtime config, README, env example, policy tests, and web tests.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py tests/test_policy.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m compileall -q agent smart_agent.py`
+  - `WEATHER_PROVIDER= $PY smart_agent.py weather current "San Francisco"`
+  - `WEB_ACCESS_ENABLED=false WEATHER_PROVIDER= $PY smart_agent.py weather forecast "San Francisco" --days 3`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+- Tests run:
+  - Weather/policy targeted tests: 18 passed in 0.20s.
+  - Full suite: 191 passed in 1.85s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Missing weather provider returns structured `weather provider is not configured` JSON.
+  - `WEB_ACCESS_ENABLED=false` denies weather calls through the broker.
+  - Mock configured providers normalize current and forecast data as `UNTRUSTED_WEB`.
+  - Location arguments are redacted from audit logs and no weather history is persisted.
+  - No live weather provider was added in this phase.
+- Next recommended action:
+  - If approved, add one real weather provider, preferably Open-Meteo after checking provider terms, while keeping user-provided locations only and preserving all broker/policy/audit safeguards.
+
+## Run: 2026-05-22 12:09 PDT Phase H2 Open-Meteo Weather Provider
+
+- Date/time: 2026-05-22 12:09:55 PDT, post-baseline implementation.
+- Phase attempted: Add Open-Meteo as the first real Weather API provider.
+- Scope:
+  - Added `OpenMeteoProvider` behind `WEATHER_PROVIDER=open-meteo`.
+  - Implemented user-provided-location geocoding through `geocoding-api.open-meteo.com`.
+  - Implemented current weather and forecast retrieval through `api.open-meteo.com`.
+  - Normalized current weather and daily forecast payloads into compact structured results.
+  - Preserved LOW-risk `weather.current` and `weather.forecast` ToolBroker-only execution, broker rate limits, `WEB_ACCESS_ENABLED`, audit logging, and `UNTRUSTED_WEB` trust labels.
+- Approval gates checked:
+  - No device location, IP geolocation, personal-data connector, write/send action, browser automation, or memory storage was added.
+  - Weather locations remain user-provided strings.
+  - Weather location arguments remain redacted from audit logs.
+  - ToolBroker, PolicyEngine, ApprovalManager, and AuditLogger were not bypassed or weakened.
+- Files changed:
+  - Updated `agent/tools/weather/provider.py`.
+  - Updated `tests/test_weather.py`.
+  - Updated `.env.example`, `README.md`, `docs/TEST_PLAN.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/DECISION_LOG.md`, `docs/decisions/2026-05-22_weather_api_connector.md`, and `docs/COMPLETION_REPORT.md`.
+  - This work builds on the uncommitted Phase H1 weather abstraction files already listed in the previous entry.
+- Commands run:
+  - Checked official Open-Meteo Geocoding and Weather Forecast API documentation.
+  - Read current weather provider abstraction, weather tests, docs, and repository status.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py tests/test_policy.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m compileall -q agent smart_agent.py`
+  - Disabled-provider smoke: `WEATHER_PROVIDER= $PY smart_agent.py weather current "San Francisco"`.
+  - Web-disabled smoke: `WEB_ACCESS_ENABLED=false WEATHER_PROVIDER=open-meteo $PY smart_agent.py weather current "San Francisco"`.
+  - Live Open-Meteo smoke: `WEB_ACCESS_ENABLED=true WEATHER_PROVIDER=open-meteo $PY smart_agent.py weather current "San Francisco"`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `git diff --check`.
+- Tests run:
+  - Weather-only tests: 13 passed in 0.09s.
+  - Weather/policy targeted tests: 23 passed in 0.12s.
+  - Full suite: 196 passed in 1.91s.
+  - Startup policy validation result: `startup policy ok`.
+  - `git diff --check`: clean.
+- Results:
+  - Open-Meteo current weather and forecast are normalized from mocked geocoding/forecast responses.
+  - Tests cover malformed responses, timeouts, geocoding failures, and audit domains.
+  - Missing provider still returns structured `weather provider is not configured` JSON.
+  - `WEB_ACCESS_ENABLED=false` denies weather calls through the broker before provider execution.
+  - Live Open-Meteo smoke for public user-provided location `San Francisco` returned `status: ok`.
+- Next recommended action:
+  - Checkpoint/commit Phase H1-H2 weather work, then consider adding weather to the smoke harness as an opt-in live check. Do not add device location, IP geolocation, personal-data joins, writes, or memory storage.
+
+## Run: 2026-05-22 12:11 PDT Phase H Weather Commit Checkpoint
+
+- Date/time: 2026-05-22 12:11:46 PDT, post-baseline checkpoint.
+- Phase attempted: Validate and commit completed Weather provider abstraction work.
+- Scope:
+  - Phase H1 weather provider abstraction.
+  - Existing Phase H2 Open-Meteo provider work already present in the working tree.
+  - No new features were added during this checkpoint.
+- Files changed:
+  - `.env.example`
+  - `README.md`
+  - `agent/config/schema.py`
+  - `agent/core/tool_broker.py`
+  - `agent/tools/registry.py`
+  - `agent/tools/weather/__init__.py`
+  - `agent/tools/weather/provider.py`
+  - `config/capabilities.yaml`
+  - `docs/COMPLETION_REPORT.md`
+  - `docs/DECISION_LOG.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/decisions/2026-05-22_weather_api_connector.md`
+  - `smart_agent.py`
+  - `tests/test_policy.py`
+  - `tests/test_weather.py`
+- Commands run:
+  - `git status --short`
+  - `git diff --stat`
+  - `git diff --name-only`
+  - `git ls-files --others --exclude-standard`
+  - Reviewed safety-relevant diffs for `agent/core/tool_broker.py`, `agent/tools/registry.py`, `agent/tools/weather/provider.py`, `smart_agent.py`, and `config/capabilities.yaml`.
+  - Searched for API keys, passwords, tokens, private-key material, and secret-looking literals.
+  - Searched weather paths for `ToolBroker`, `PolicyEngine`, `ApprovalManager`, and `AuditLogger` usage.
+  - Checked personal capability defaults from `config/capabilities.yaml`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+- Tests run:
+  - Full suite: 196 passed in 1.86s.
+  - Startup policy validation result: `startup policy ok`.
+- Safety confirmations:
+  - Weather CLI commands call `ToolBroker.execute()` and do not execute provider handlers directly.
+  - Weather capabilities are evaluated by `PolicyEngine`, require `WEB_ACCESS_ENABLED=true`, and use broker rate limits.
+  - Weather capabilities are LOW risk, so ApprovalManager is not required for normal weather calls.
+  - Weather execution and denials are audited by `AuditLogger` through the broker.
+  - Weather results are labeled `UNTRUSTED_WEB`.
+  - Weather location arguments are redacted from audit logs.
+  - No personal-data tools were enabled by default.
+  - No API keys or secrets were committed; only empty/example env placeholders and redaction-test fixtures were found.
+- Remaining follow-up work:
+  - Add weather to the smoke harness as an opt-in live check.
+  - Consider weather forecast formatting polish.
+  - Do not add device location, IP geolocation, personal-data joins, writes, or memory storage without a new decision record and approval gate.

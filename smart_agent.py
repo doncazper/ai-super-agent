@@ -78,6 +78,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_web_search_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "research":
         return _run_research_command(args.message[1:], broker)
+    if args.message and args.message[0] == "weather":
+        return _run_weather_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "calendar":
         return _run_calendar_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "contacts":
@@ -221,6 +223,54 @@ def _run_research_command(argv: list[str], broker: ToolBroker) -> int:
         return 2
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report.get("status") == "ok" else 2
+
+
+def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py weather", description="Weather lookups for user-provided locations.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    current_parser = subparsers.add_parser("current", help="Fetch current weather for a user-provided location.")
+    current_parser.add_argument("location", nargs="+", help="City, ZIP/postal code, or other user-provided location.")
+    current_parser.add_argument("--units", choices=["metric", "imperial"], default=None)
+    current_parser.add_argument("--locale", default=None)
+
+    forecast_parser = subparsers.add_parser("forecast", help="Fetch a forecast for a user-provided location.")
+    forecast_parser.add_argument("location", nargs="+", help="City, ZIP/postal code, or other user-provided location.")
+    forecast_parser.add_argument("--days", type=int, default=None)
+    forecast_parser.add_argument("--units", choices=["metric", "imperial"], default=None)
+    forecast_parser.add_argument("--locale", default=None)
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    tool_name = "weather.current" if parsed.command == "current" else "weather.forecast"
+    arguments: dict[str, object] = {"location": " ".join(parsed.location)}
+    if parsed.units is not None:
+        arguments["units"] = parsed.units
+    if parsed.locale is not None:
+        arguments["locale"] = parsed.locale
+    if parsed.command == "forecast" and parsed.days is not None:
+        arguments["days"] = parsed.days
+    tool_call = {
+        "id": f"cli_{tool_name.replace('.', '_')}",
+        "type": "function",
+        "function": {
+            "name": tool_name,
+            "arguments": json.dumps(arguments),
+        },
+    }
+    try:
+        result = broker.execute(tool_call)
+    except AuditLogError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    if debug and result.debug:
+        from agent.core.orchestrator import format_debug_payload
+
+        print("[debug] " + format_debug_payload({"event": "tool_broker", **result.debug}), file=sys.stderr)
+    print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
+    return 0 if result.allowed else 2
 
 
 def _run_calendar_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:

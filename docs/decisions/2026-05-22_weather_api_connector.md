@@ -166,6 +166,24 @@ Implement a provider abstraction first, then add Open-Meteo as the first real pr
 
 If provider terms are unclear or unavailable at implementation time, implement only the interface and clear "provider not configured" behavior.
 
+## Implementation Status
+
+Phase H1 implemented the provider abstraction and clear disabled/unsupported-provider behavior only.
+
+- Added `weather.current` and `weather.forecast` as LOW-risk capabilities.
+- Calls route through `ToolBroker`, `PolicyEngine`, broker rate limits, and `AuditLogger`.
+- Results are labeled `UNTRUSTED_WEB`.
+- Location arguments are redacted from audit logs.
+- No live weather provider, device location, IP geolocation, personal-data access, writes, or memory storage was added.
+
+Phase H2 added Open-Meteo as the first real provider.
+
+- `WEATHER_PROVIDER=open-meteo` enables Open-Meteo geocoding plus current/forecast calls.
+- Tests mock both `geocoding-api.open-meteo.com` and `api.open-meteo.com`.
+- Error handling covers timeout, HTTP/provider failure, malformed JSON/shape, and location-not-found cases.
+- Audit domain metadata includes both Open-Meteo API domains.
+- The provider still uses only user-provided location strings and does not use device location, IP geolocation, personal data, writes, or memory storage.
+
 ## Alternatives Rejected
 
 - Precise macOS Location Services integration: rejected for the initial implementation because it turns a low-risk external lookup into sensitive personal-location access.

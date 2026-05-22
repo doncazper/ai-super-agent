@@ -121,6 +121,26 @@ python smart_agent.py research --locale es --summary-language en "últimas notic
 
 The research command runs `web.search` and optional `web.fetch_url` calls through `ToolBroker`, then returns a source-aware JSON report. It does not fabricate citations; if search or fetch fails, the report says so. Foreign-language titles, snippets, and excerpts are preserved, with a simple language hint when available.
 
+Weather provider abstraction:
+
+```bash
+python smart_agent.py weather current "San Francisco"
+python smart_agent.py weather forecast "San Francisco" --days 3
+```
+
+`weather.current` and `weather.forecast` are LOW-risk, audited, rate-limited, ToolBroker-only capabilities for user-provided locations. If `WEATHER_PROVIDER` is not configured, the commands return structured `weather provider is not configured` JSON.
+
+Open-Meteo is the first supported provider:
+
+```bash
+export WEB_ACCESS_ENABLED=true
+export WEATHER_PROVIDER=open-meteo
+python smart_agent.py weather current "San Francisco"
+python smart_agent.py weather forecast "San Francisco" --days 3
+```
+
+The weather tools do not use macOS Location Services, IP geolocation, personal data, writes, or long-term memory storage. Location arguments are redacted from audit logs by default. Open-Meteo geocoding and forecast responses are treated as `UNTRUSTED_WEB`.
+
 Calendar read-only selected-range access:
 
 ```bash
@@ -256,6 +276,10 @@ WEB_SEARCH_MAX_RESULTS=8
 WEB_SAFE_SEARCH=true
 WEB_SEARCH_AUDIT_QUERIES=false
 WEB_FETCH_MAX_BYTES=500000
+WEATHER_PROVIDER=open-meteo
+WEATHER_TIMEOUT_SECONDS=10
+WEATHER_MAX_FORECAST_DAYS=7
+WEATHER_DEFAULT_UNITS=metric
 CALENDAR_CONNECTOR=
 CALENDAR_MAX_RANGE_DAYS=31
 CALENDAR_INCLUDE_LOCATIONS=false

@@ -17,6 +17,7 @@ from agent.tools.personal.read_only import PERSONAL_SCHEMAS, make_personal_tools
 from agent.tools.personal.write_actions import WRITE_ACTION_SCHEMAS, make_write_action_tools
 from agent.tools.web.fetch import WEB_FETCH_SCHEMA, DomainRules, WebResponse, make_fetch_tool
 from agent.tools.web.search import SearchProvider, WEB_SEARCH_SCHEMA, make_search_tool
+from agent.tools.weather.provider import WEATHER_SCHEMAS, WeatherProvider, make_weather_tools
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ def default_registry(
     web_search_provider: SearchProvider | None = None,
     web_fetcher: Callable[[str, int], WebResponse] | None = None,
     web_domain_rules: DomainRules | None = None,
+    weather_provider: WeatherProvider | None = None,
     memory_path: str | Path | None = None,
     calendar_connector: CalendarConnector | None = None,
     contacts_connector: ContactsConnector | None = None,
@@ -87,6 +89,8 @@ def default_registry(
             handler=make_fetch_tool(fetcher=web_fetcher, domain_rules=web_domain_rules),
         )
     )
+    for name, handler in make_weather_tools(weather_provider).items():
+        registry.register(ToolSpec(name=name, capability=name, schema=WEATHER_SCHEMAS[name], handler=handler))
     for name, handler in make_memory_tools(memory_path).items():
         registry.register(ToolSpec(name=name, capability=name, schema=MEMORY_SCHEMAS[name], handler=handler))
     for name, handler in make_personal_tools(

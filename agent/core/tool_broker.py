@@ -276,7 +276,7 @@ class ToolBroker:
                 debug=self._debug_from_audit(audit),
             )
 
-        if tool.capability.startswith("web.") and not env_bool("WEB_ACCESS_ENABLED", default=True):
+        if tool.capability.startswith(("web.", "weather.")) and not env_bool("WEB_ACCESS_ENABLED", default=True):
             audit = self._log(
                 tool_name=tool_name,
                 capability=tool.capability,
@@ -435,6 +435,8 @@ class ToolBroker:
             default=False,
         ):
             sanitized["query"] = "[WEB_SEARCH_QUERY_REDACTED]"
+        if tool_name.startswith("weather.") and "location" in sanitized:
+            sanitized["location"] = "[WEATHER_LOCATION_REDACTED]"
         if tool_name.startswith("memory.") and "content" in sanitized:
             sanitized["content"] = "[MEMORY_CONTENT_REDACTED]"
         if tool_name.startswith(("email.", "messages.")):
@@ -450,7 +452,7 @@ class ToolBroker:
             return TrustLevel.UNTRUSTED_EMAIL
         if tool_name.startswith("messages."):
             return TrustLevel.UNTRUSTED_MESSAGE
-        if tool_name.startswith("web."):
+        if tool_name.startswith(("web.", "weather.")):
             return TrustLevel.UNTRUSTED_WEB
         if tool_name.startswith(("contacts.", "browser.")):
             return TrustLevel.LOCAL_PRIVATE_DATA

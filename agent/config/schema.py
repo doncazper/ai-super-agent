@@ -47,7 +47,7 @@ def validate_capabilities_config(config: dict[str, Any]) -> None:
         if bool(entry.get("requires_web_access")):
             rate_limit = entry.get("rate_limit")
             if not isinstance(rate_limit, dict) or not isinstance(rate_limit.get("requests_per_minute"), int):
-                raise CapabilityConfigError(f"{name}: web capabilities require requests_per_minute rate limits")
+                raise CapabilityConfigError(f"{name}: network capabilities require requests_per_minute rate limits")
         if risk is RiskLevel.FORBIDDEN and default_enabled:
             raise CapabilityConfigError(f"{name}: forbidden capabilities cannot be enabled")
         if risk is RiskLevel.CRITICAL:
