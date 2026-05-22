@@ -19,6 +19,8 @@
 | Search-provider query leakage | Keep search provider opt-in; allow `WEB_ACCESS_ENABLED=false`; redact `web.search` queries in audit logs by default; do not persist search history unless explicitly enabled. |
 | Search-provider manipulation or outage | Treat search results as `UNTRUSTED_WEB`; normalize provider errors; return structured errors instead of hallucinated results. |
 | Fabricated research citations | Research workflow builds summaries only from returned search/fetch data, includes source URLs, reports fetch failures, and avoids claiming unsupported current facts. |
+| Approval confusion or click-through | Approval previews show request ID, risk, trust level, summary, redacted args, rollback availability, expiration, and allowed choices before approval. |
+| Critical approval reuse | Critical actions are per-action only; approve-all/reuse choices are denied and tests verify reuse does not authorize a second critical action. |
 | Prompt injection from email | Mark email `UNTRUSTED_EMAIL`; selected-scope only; never follow embedded instructions. |
 | Prompt injection from messages | Mark messages `UNTRUSTED_MESSAGE`; selected-scope only; no sends before approvals. |
 | Malicious documents | Mark documents `UNTRUSTED_DOCUMENT`; no macro execution; web fetch refuses binary downloads by default. |

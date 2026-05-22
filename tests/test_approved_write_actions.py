@@ -107,7 +107,7 @@ def test_no_approval_reuse_for_critical_actions(tmp_path) -> None:
     )
 
     assert first.allowed is True
-    assert second.allowed is True
+    assert second.allowed is False
     assert len(approvals.requests) == 2
     assert all(request.per_action for request in approvals.requests)
 
@@ -136,7 +136,13 @@ def test_audit_logs_approval_and_execution(tmp_path) -> None:
     assert payload["sent"] is False
     assert payload["executed"] is False
     events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
-    assert events[0]["tool_name"] == "messages.send_approved"
-    assert events[0]["policy_decision"] == "ALLOW"
-    assert events[0]["approval_result"] == "approved"
-    assert events[0]["sanitized_args"]["body"] == "[PERSONAL_CONTENT_REDACTED]"
+    assert [event["tool_name"] for event in events][:4] == [
+        "approval.requested",
+        "approval.approved",
+        "approval.used",
+        "messages.send_approved",
+    ]
+    execution = events[-1]
+    assert execution["policy_decision"] == "ALLOW"
+    assert execution["approval_result"] == "approved"
+    assert execution["sanitized_args"]["body"] == "[PERSONAL_CONTENT_REDACTED]"

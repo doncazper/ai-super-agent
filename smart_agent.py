@@ -12,6 +12,7 @@ from agent.core.orchestrator import Orchestrator, OrchestratorResult, new_sessio
 from agent.core.tool_broker import ToolBroker
 from agent.config.loader import load_capabilities_config
 from agent.safety.audit import AuditLogError, AuditLogger
+from agent.safety.approvals import ApprovalManager, ApprovalStore
 from agent.safety.policy import PolicyEngine
 from agent.safety.validation import validate_startup_policy
 from agent.tools.registry import default_registry
@@ -58,6 +59,7 @@ def main(argv: list[str] | None = None) -> int:
         session_id=session_id,
         model=config.model,
         route="cli",
+        approval_manager=ApprovalManager(store=ApprovalStore()),
     )
     debug_enabled = args.debug or runtime_config.debug
 

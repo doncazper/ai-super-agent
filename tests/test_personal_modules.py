@@ -204,7 +204,9 @@ def test_personal_access_audited(tmp_path) -> None:
 
     broker.execute(call("contacts.read_selected", {"selected_scope_token": "selected"}))
 
-    event = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    events = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
+    assert [entry["tool_name"] for entry in events[:2]] == ["approval.requested", "approval.denied"]
+    event = events[-1]
     assert event["tool_name"] == "contacts.read_selected"
     assert event["policy_decision"] == "DENY"
     assert event["approval_result"] == "denied"

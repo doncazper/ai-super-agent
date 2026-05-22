@@ -5,7 +5,9 @@ import sys
 from pathlib import Path
 
 from agent.config.loader import load_capabilities_config
+from agent.safety.approvals import ApprovalStatus, ApprovalStore
 from agent.tools.registry import default_registry
+from agent.ui.approvals_ui import print_request, print_requests
 from agent.ui.audit_viewer import tail_audit
 from agent.ui.config_viewer import config_as_json
 from agent.ui.doctor import doctor_exit_code, format_doctor, run_doctor
@@ -23,6 +25,8 @@ def dispatch_cli(argv: list[str], *, project_root: str | Path = ".") -> int | No
         return 0
     if command == "permissions":
         return _permissions(argv[1:])
+    if command == "approvals":
+        return _approvals(argv[1:])
     if command == "audit" and len(argv) >= 2 and argv[1] == "tail":
         limit = int(argv[2]) if len(argv) > 2 else 20
         print(json.dumps(tail_audit(limit=limit), indent=2, sort_keys=True))
@@ -53,6 +57,36 @@ def _permissions(argv: list[str]) -> int:
         print(json.dumps({"grants": store.revoke(argv[1])}, indent=2))
         return 0
     print("usage: permissions show|grant <capability>|revoke <capability>", file=sys.stderr)
+    return 2
+
+
+def _approvals(argv: list[str]) -> int:
+    store = ApprovalStore()
+    if not argv or argv[0] == "list":
+        print_requests(store.list())
+        return 0
+    if argv[0] == "show" and len(argv) == 2:
+        request = store.get(argv[1])
+        if request is None:
+            print("approval request not found", file=sys.stderr)
+            return 1
+        print_request(request)
+        return 0
+    if argv[0] == "approve" and len(argv) == 2:
+        request = store.update_status(argv[1], ApprovalStatus.APPROVED)
+        if request is None:
+            print("approval request not found", file=sys.stderr)
+            return 1
+        print(json.dumps({"request_id": request.request_id, "status": request.status.value}, indent=2))
+        return 0
+    if argv[0] == "deny" and len(argv) == 2:
+        request = store.update_status(argv[1], ApprovalStatus.DENIED)
+        if request is None:
+            print("approval request not found", file=sys.stderr)
+            return 1
+        print(json.dumps({"request_id": request.request_id, "status": request.status.value}, indent=2))
+        return 0
+    print("usage: approvals list|show <request_id>|approve <request_id>|deny <request_id>", file=sys.stderr)
     return 2
 
 

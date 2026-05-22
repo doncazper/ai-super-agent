@@ -6,9 +6,9 @@ import pytest
 
 from agent.config.runtime import RuntimeConfig
 from agent.config.schema import CapabilityConfigError, validate_capabilities_config
-from agent.safety.approvals import ApprovalRequest
+from agent.safety.approvals import ApprovalRequest, ApprovalStatus, ApprovalStore
 from agent.safety.policy import RiskLevel
-from agent.ui.approvals_ui import ConsoleApprovalPrompt
+from agent.ui.approvals_ui import ConsoleApprovalPrompt, format_approval_preview
 from agent.ui.audit_viewer import tail_audit
 from agent.ui.cli_commands import dispatch_cli
 from agent.ui.doctor import doctor_exit_code, run_doctor
@@ -37,6 +37,23 @@ def test_approval_prompt_blocks_critical_until_approved() -> None:
     assert prompt.prompt(request).value == "denied"
     assert prompt.prompt(request, response="deny").value == "denied"
     assert prompt.prompt(request, response="approve").value == "approved"
+    assert prompt.prompt(request, response="approve all").value == "denied"
+
+
+def test_approval_preview_redacts_secrets() -> None:
+    request = ApprovalRequest(
+        capability="calendar.create_event",
+        tool_name="calendar.create_event",
+        risk_level=RiskLevel.CRITICAL,
+        summary="preflight",
+        per_action=True,
+        args_preview={"title": "Planning", "api_key": "sk-verysecretvalue123456"},
+    )
+
+    preview = format_approval_preview(request)
+
+    assert "sk-verysecretvalue123456" not in preview
+    assert "[REDACTED]" in preview
 
 
 def test_audit_viewer_displays_entries(tmp_path) -> None:
@@ -161,3 +178,26 @@ def test_cli_memory_list_command_works(tmp_path, monkeypatch, capsys) -> None:
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["records"] == []
+
+
+def test_cli_approvals_list_show_approve_deny(tmp_path, monkeypatch, capsys) -> None:
+    monkeypatch.chdir(tmp_path)
+    store = ApprovalStore()
+    request = ApprovalRequest(
+        capability="git.commit",
+        tool_name="git.commit",
+        risk_level=RiskLevel.HIGH,
+        summary="Commit changes",
+        args_preview={"message": "safe"},
+    )
+    store.add(request)
+
+    assert dispatch_cli(["approvals", "list"]) == 0
+    assert dispatch_cli(["approvals", "show", request.request_id]) == 0
+    assert dispatch_cli(["approvals", "approve", request.request_id]) == 0
+    assert ApprovalStore().get(request.request_id).status is ApprovalStatus.APPROVED
+    assert dispatch_cli(["approvals", "deny", request.request_id]) == 0
+    assert ApprovalStore().get(request.request_id).status is ApprovalStatus.DENIED
+
+    output = capsys.readouterr().out
+    assert request.request_id in output

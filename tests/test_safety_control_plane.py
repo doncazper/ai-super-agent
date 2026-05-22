@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 
 from agent.core.tool_broker import ToolBroker
-from agent.safety.approvals import ApprovalManager, ApprovalResult
+from agent.safety.approvals import ApprovalManager, ApprovalRequest, ApprovalResult
 from agent.safety.audit import AuditLogger
 from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.safety.redaction import SecretRedactor
@@ -65,7 +66,9 @@ def test_high_action_requests_approval_and_denial_is_audited(tmp_path) -> None:
     assert result.allowed is False
     assert len(approvals.requests) == 1
     assert approvals.requests[0].risk_level is RiskLevel.HIGH
-    event = json.loads(audit_path.read_text(encoding="utf-8").splitlines()[0])
+    events = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
+    assert [event["tool_name"] for event in events[:2]] == ["approval.requested", "approval.denied"]
+    event = events[-1]
     assert event["approval_result"] == ApprovalResult.DENIED.value
     assert event["policy_decision"] == "DENY"
 
@@ -101,6 +104,42 @@ def test_critical_action_requests_per_action_approval(tmp_path) -> None:
     assert result.allowed is False
     assert len(approvals.requests) == 1
     assert approvals.requests[0].per_action is True
+
+
+def test_approval_lifecycle_audits_display_approve_use_and_expire(tmp_path) -> None:
+    audit_path = tmp_path / "audit.jsonl"
+    approvals = ApprovalManager(
+        decision_provider=lambda request: ApprovalResult.APPROVED,
+        audit_logger=AuditLogger(audit_path),
+        session_id="test-session",
+        route="test",
+    )
+    request = ApprovalRequest(
+        capability="git.commit",
+        tool_name="git.commit",
+        risk_level=RiskLevel.HIGH,
+        summary="Commit changes",
+    )
+
+    assert approvals.request_approval(request) is ApprovalResult.APPROVED
+    approvals.mark_used(request)
+
+    expired = ApprovalRequest(
+        capability="filesystem.delete",
+        tool_name="filesystem.delete",
+        risk_level=RiskLevel.HIGH,
+        summary="Delete file",
+        expires_at=(datetime.now(UTC) - timedelta(seconds=1)).isoformat(),
+    )
+    assert approvals.request_approval(expired) is ApprovalResult.EXPIRED
+
+    events = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
+    tool_names = [event["tool_name"] for event in events]
+    assert "approval.requested" in tool_names
+    assert "approval.displayed" in tool_names
+    assert "approval.approved" in tool_names
+    assert "approval.used" in tool_names
+    assert "approval.expired" in tool_names
 
 
 def test_secrets_are_redacted_from_audit_logs(tmp_path) -> None:

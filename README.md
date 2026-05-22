@@ -12,7 +12,7 @@ M0-M11 are complete:
 - Safe `time.get_current_time` tool.
 - `ToolBroker` enforcement.
 - Manifest-backed `PolicyEngine`.
-- Approval manager that denies approval-gated actions by default until a user UI exists.
+- Approval manager with request IDs, preview formatting, audit lifecycle logging, and conservative non-interactive denial.
 - Hash-chained audit JSONL.
 - Deterministic router so normal chat attaches no tools by default.
 - Redacted debug payload formatting.
@@ -122,6 +122,10 @@ Inspection commands:
 python smart_agent.py tools list
 python smart_agent.py doctor
 python smart_agent.py permissions show
+python smart_agent.py approvals list
+python smart_agent.py approvals show <request_id>
+python smart_agent.py approvals approve <request_id>
+python smart_agent.py approvals deny <request_id>
 python smart_agent.py audit tail
 python smart_agent.py memory list
 python smart_agent.py config show
@@ -129,6 +133,8 @@ python smart_agent.py setup
 ```
 
 The `doctor` command does not send prompts to the model or access personal data. It checks Python, imports, runtime config, LM Studio reachability, `/v1/models`, selected model availability, startup policy, audit path writability, tool registry loading, and whether personal-data tools are disabled by default.
+
+Approval commands inspect and update the local approval queue at `data/approvals.json`. Approval-required tool calls still execute only through `ToolBroker`; approving a queued request does not replay or execute an old tool call. In non-interactive mode, approval-required actions are denied safely and audited. Critical actions are per-action only and do not support approval reuse.
 
 Interactive mode:
 
@@ -239,8 +245,9 @@ The model writes final answers. The harness executes only validated tool calls t
 - Unknown tools are denied.
 - Unknown capabilities are denied.
 - Forbidden actions are denied.
-- Higher-risk actions require approval in later milestones.
+- Higher-risk actions require approval and are denied safely in non-interactive mode.
 - Tool calls and denials are audited.
+- Approval lifecycle events are audited: requested, displayed, approved, denied, expired/aborted, used, and final execution/denial.
 - Webpage content is wrapped as untrusted data.
 - Long-term memory refuses secrets and personal content by default.
 - Personal modules are disabled by default and selected-scope only.

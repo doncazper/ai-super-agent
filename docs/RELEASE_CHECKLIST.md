@@ -6,6 +6,8 @@
 - [x] Audit logs verified.
 - [x] Policy behavior verified.
 - [x] Approval behavior verified for high/critical actions in scope.
+- [x] Approval lifecycle audit events verified for approval-required actions in scope.
+- [x] Critical approval reuse is blocked.
 - [x] Secrets redacted from debug and audit outputs.
 - [x] Docs updated.
 - [x] `docs/COMPLETION_REPORT.md` updated.

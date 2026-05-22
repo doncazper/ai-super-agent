@@ -665,3 +665,65 @@ Do not disable audit logging."
   - Live Brave Search and live research smoke require the user to export `BRAVE_SEARCH_API_KEY`.
 - Next recommended action:
   - Run live Brave Search plus research smoke with `BRAVE_SEARCH_API_KEY` configured before adding optional LLM synthesis.
+
+## Run: 2026-05-22 Phase C CLI Approval Interface
+
+- Date/time: 2026-05-22, post-baseline approval UX hardening.
+- Phase attempted: Phase C proper CLI approval interface.
+- Files changed:
+  - Updated `agent/safety/approvals.py` with richer `ApprovalRequest`, `ApprovalStatus`, session/local approval store, lifecycle audit hooks, expiration, request IDs, redacted previews, and no-reuse behavior for critical auto-approvals.
+  - Updated `agent/core/tool_broker.py` to create detailed approval requests with args preview, trust level, rollback availability, and lifecycle-aware approval IDs.
+  - Updated `agent/ui/approvals_ui.py` with readable approval previews and conservative non-interactive behavior.
+  - Updated `agent/ui/cli_commands.py` with `approvals list/show/approve/deny`.
+  - Updated `smart_agent.py` to attach a local approval queue store for CLI runs.
+  - Updated approval, safety-control-plane, personal-module, and UX tests.
+  - Updated `README.md`, `docs/THREAT_MODEL.md`, `docs/RELEASE_CHECKLIST.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read current approval manager, broker, approval UI, CLI command dispatcher, and related tests with `sed` and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy()`.
+  - `PY smart_agent.py approvals list`
+- Tests run:
+  - First run found old assertions expecting single approval audit events and reusable critical auto-approval; updated tests to match Phase C safety requirements.
+  - Final command: `$PY -m pytest -q`
+  - Result: 121 passed in 1.30s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Approval requests now include request ID, timestamp, user/session ID, tool/capability, risk, trust level, summary, args preview, rollback availability, expiration, and status.
+  - Non-interactive approval-required actions are denied safely, audited, and recorded in the local approval queue when a store is configured.
+  - Approval previews redact secrets.
+  - CLI approval commands can list, show, approve, and deny queued requests.
+  - Critical approvals are per-action only; approval reuse/approve-all behavior is denied.
+  - Approval lifecycle audit events are recorded for requested, displayed, approved, denied, expired/aborted, used, and final execution/denial paths in scope.
+  - No personal-data connectors, send/write connector enabling, or approval-rule weakening was added.
+- Known limitations:
+  - The local approval queue records request status but does not replay old tool calls. A fresh brokered action is still required for execution.
+  - Personal-data connectors and real send/write connectors remain disabled by default.
+- Next recommended action:
+  - Add an interactive approval mode for live CLI model sessions or build connector-specific approval previews before enabling any personal-data connector.
+
+## Run: 2026-05-22 Phase C Checkpoint
+
+- Date/time: 2026-05-22, post-baseline approval UX checkpoint.
+- Phase attempted: Verify and commit completed Phase C CLI approval interface.
+- Files changed:
+  - No new product capability was added in this pass.
+  - Updated `docs/COMPLETION_REPORT.md` with this checkpoint record.
+- Commands run:
+  - Read required governance docs, risk/threat/test/release docs, and completion history with `sed`.
+  - Checked `git status --short`, recent commits, and changed files.
+  - Planned validation commands:
+    - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+    - Startup policy validation with `validate_startup_policy()`.
+    - `PY smart_agent.py approvals list`
+- Tests run:
+  - Final command: `$PY -m pytest -q`
+  - Result: 121 passed in 1.46s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Approval gates checked: no personal-data tools, browser automation, send/write enabling, approval-rule weakening, or critical approval reuse is being added.
+  - `smart_agent.py approvals list` returned an empty queue successfully.
+- Known limitations:
+  - Phase C queue approvals do not replay old tool calls; execution still requires a fresh brokered action.
+- Next recommended action:
+  - Add interactive approval mode for live CLI model sessions before enabling any personal-data connector.

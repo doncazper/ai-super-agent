@@ -42,6 +42,12 @@ class ToolBroker:
         self.model = model
         self.route = route
         self.approval_manager = approval_manager or ApprovalManager()
+        self.approval_manager.configure_audit(
+            audit_logger,
+            session_id=session_id,
+            model=model,
+            route=route,
+        )
         self._rate_limiters: dict[str, RateLimiter] = {}
 
     def execute(self, tool_call: dict[str, Any]) -> ToolExecutionResult:
@@ -89,16 +95,20 @@ class ToolBroker:
         policy = self.policy_engine.evaluate(tool.capability)
         risk = policy.capability.risk_level if policy.capability else RiskLevel.FORBIDDEN
         approval_result = ApprovalResult.NOT_REQUIRED
+        approval_request: ApprovalRequest | None = None
         if policy.decision is PolicyDecision.ASK:
-            approval_result = self.approval_manager.request_approval(
-                ApprovalRequest(
-                    capability=tool.capability,
-                    tool_name=tool_name,
-                    risk_level=risk,
-                    summary=self._approval_summary(tool_name, args, risk),
-                    per_action=risk is RiskLevel.CRITICAL,
-                )
+            approval_request = ApprovalRequest(
+                capability=tool.capability,
+                tool_name=tool_name,
+                risk_level=risk,
+                summary=self._approval_summary(tool_name, args, risk),
+                per_action=risk is RiskLevel.CRITICAL,
+                session_id=self.session_id,
+                trust_level=TrustLevel.MODEL_OUTPUT,
+                args_preview=self._approval_args_preview(tool_name, args),
+                rollback_available=self._rollback_available(tool_name),
             )
+            approval_result = self.approval_manager.request_approval(approval_request)
             if approval_result is ApprovalResult.APPROVED:
                 policy_decision = PolicyDecision.ALLOW
             else:
@@ -118,9 +128,10 @@ class ToolBroker:
                     content=json.dumps(
                         {
                             "error": "approval required",
-                            "detail": "approval required but approval UI unavailable or denied",
+                            "detail": "approval required but approval UI unavailable, denied, aborted, or expired",
                             "decision": PolicyDecision.ASK.value,
                             "approval_result": approval_result.value,
+                            "approval_request_id": approval_request.request_id,
                         }
                     ),
                     debug=self._debug_from_audit(audit),
@@ -186,6 +197,8 @@ class ToolBroker:
             result = tool.handler(**args)
             result_payload, audit_metadata = self._split_audit_metadata(result)
             content = json.dumps(result_payload)
+            if approval_request is not None and approval_result is ApprovalResult.APPROVED:
+                self.approval_manager.mark_used(approval_request)
             audit = self._log(
                 tool_name=tool_name,
                 capability=tool.capability,
@@ -323,25 +336,38 @@ class ToolBroker:
         return limiter.allow(capability_name)
 
     def _approval_summary(self, tool_name: str, args: dict[str, Any], risk: RiskLevel) -> str:
-        sanitized = self._sanitize_args(tool_name, args)
+        preview = self._approval_args_preview(tool_name, args)
         if tool_name in {"email.send_approved", "messages.send_approved"}:
             return (
-                f"Preflight for {tool_name}: recipient={args.get('to', '')}; "
-                f"subject={args.get('subject', '')}; body={args.get('body', '')}; "
-                f"attachments={args.get('attachments', [])}; risk={risk.value}; "
+                f"Preflight for {tool_name}: recipient={preview.get('to', '')}; "
+                f"subject={preview.get('subject', '')}; body={preview.get('body', '')}; "
+                f"attachments={preview.get('attachments', [])}; risk={risk.value}; "
                 "rollback_available=False; approval_choices=approve,deny,abort"
             )
         if tool_name.startswith("calendar."):
             return (
-                f"Preflight for {tool_name}: fields={sanitized}; risk={risk.value}; "
+                f"Preflight for {tool_name}: title={preview.get('title', '')}; "
+                f"start={preview.get('start', '')}; end={preview.get('end', '')}; "
+                f"attendees={preview.get('attendees', [])}; fields={preview}; risk={risk.value}; "
                 "rollback_available=False; approval_choices=approve,deny,abort"
             )
         if tool_name == "contacts.update_selected":
             return (
-                f"Preflight for {tool_name}: fields={sanitized}; risk={risk.value}; "
+                f"Preflight for {tool_name}: fields_changed={preview.get('changes', preview)}; risk={risk.value}; "
                 "rollback_available=False; approval_choices=approve,deny,abort"
             )
         return f"Model requested {tool_name}."
+
+    def _approval_args_preview(self, tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
+        from agent.safety.redaction import SecretRedactor
+
+        preview = SecretRedactor().redact(args)
+        if tool_name == "messages.send_approved" and "body" in preview:
+            preview["exact_message"] = preview["body"]
+        return preview
+
+    def _rollback_available(self, tool_name: str) -> bool:
+        return tool_name in {"filesystem.write", "filesystem.patch"}
 
     def _debug_from_audit(self, audit: dict[str, Any]) -> dict[str, Any]:
         return {
