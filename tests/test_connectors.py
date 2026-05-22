@@ -7,7 +7,7 @@ from agent.ui.connectors import connector_status, connectors_doctor, format_conn
 
 
 def test_weather_configured_status(monkeypatch) -> None:
-    monkeypatch.setenv("WEATHER_PROVIDER", "open-meteo")
+    monkeypatch.setenv("WEATHER_PROVIDER", "open_meteo")
     monkeypatch.setenv("WEB_ACCESS_ENABLED", "true")
     monkeypatch.delenv("WEATHER_API_KEY", raising=False)
 
@@ -16,7 +16,7 @@ def test_weather_configured_status(monkeypatch) -> None:
     assert status["name"] == "weather"
     assert status["configured"] is True
     assert status["enabled"] is True
-    assert status["default_provider"] == "open-meteo"
+    assert status["default_provider"] == "open_meteo"
     assert status["risk_level"] == "LOW"
     assert status["provider_status"]["requires_api_key"] is False
     assert status["provider_status"]["api_key_configured"] is False
@@ -97,7 +97,7 @@ def test_connector_status_ignores_successful_dry_run_as_error(tmp_path) -> None:
 
 
 def test_connectors_cli_status_weather(monkeypatch, capsys) -> None:
-    monkeypatch.setenv("WEATHER_PROVIDER", "open-meteo")
+    monkeypatch.setenv("WEATHER_PROVIDER", "open_meteo")
 
     exit_code = dispatch_cli(["connectors", "status", "weather"])
 

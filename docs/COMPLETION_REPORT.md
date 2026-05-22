@@ -1491,3 +1491,326 @@ Do not disable audit logging."
   - No API keys or real secrets were found in changed files; only placeholders and redaction-test fixtures are present.
 - Remaining follow-up work:
   - Create the commit after final status review.
+
+## Run: 2026-05-22 12:52 PDT Weather Smoke Harness Documentation
+
+- Date/time: 2026-05-22 12:52 PDT, post-baseline weather smoke harness pass.
+- Phase attempted: Add and verify live weather smoke-test harness commands.
+- Scope:
+  - Confirmed `python smart_agent.py weather doctor` routes through brokered `weather.status`.
+  - Confirmed `python smart_agent.py weather smoke "Phoenix, AZ"` routes through brokered `weather.status`, `weather.current`, and `weather.forecast`.
+  - Confirmed `python smart_agent.py weather current "Phoenix, AZ"` routes through brokered `weather.current`.
+  - Confirmed `python smart_agent.py weather forecast "Phoenix, AZ" --days 3` routes through brokered `weather.forecast`.
+  - Added README examples for `weather doctor` and `weather smoke`.
+  - Added `WEATHER_API_KEY=` to `.env.example` as a blank placeholder for future API-key-backed weather providers.
+  - Added direct CLI tests for mocked `weather current` and `weather forecast`.
+- Approval gates checked:
+  - No personal-data access is required or added.
+  - No device location, IP geolocation, writes, or memory storage were added.
+  - Weather calls remain LOW-risk, ToolBroker-only, policy-checked, audited capabilities.
+  - No send/write/personal connector defaults were changed.
+- Files changed:
+  - `.env.example`
+  - `README.md`
+  - `tests/test_weather.py`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - `git status --short`
+  - Searched weather CLI, provider, env, README, completion report, and tests for weather command coverage.
+  - Reviewed `smart_agent.py`, `agent/tools/weather/provider.py`, `.env.example`, `README.md`, and `tests/test_weather.py`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+- Tests run:
+  - Full suite: 212 passed in 2.40s.
+  - Startup policy validation: startup policy ok.
+- Results:
+  - Weather doctor with no provider configured is covered.
+  - Weather doctor with mocked provider configured is covered.
+  - Current weather success using a mock provider is covered.
+  - Forecast success using a mock provider is covered.
+  - Provider timeout handling is covered.
+  - Bad location handling is covered.
+  - Audit logging of provider calls is covered.
+  - No weather query memory storage by default is covered.
+- Remaining follow-up work:
+  - Optionally run live local smoke with `WEB_ACCESS_ENABLED=true WEATHER_PROVIDER=open-meteo python smart_agent.py weather smoke "Phoenix, AZ"` when network access is desired.
+
+## Run: 2026-05-22 13:14 PDT Open-Meteo Default Provider
+
+- Date/time: 2026-05-22 13:14 PDT, post-baseline weather provider implementation.
+- Phase attempted: Implement Open-Meteo as the default no-key weather provider.
+- Scope:
+  - Changed the default weather provider to `open_meteo`; `open-meteo` and `openmeteo` remain accepted aliases.
+  - Kept `WEATHER_PROVIDER=disabled` as the explicit opt-out path.
+  - Added richer Open-Meteo geocoding with multiple-match disambiguation metadata.
+  - Added direct latitude/longitude input support, bypassing geocoding for coordinates like `33.4484,-112.0740`.
+  - Added current weather normalization for apparent temperature, precipitation, rain, wind speed/direction, weather code, condition label, coordinates, and timezone.
+  - Added forecast normalization for daily condition, high/low temperature, precipitation amount/probability, wind speed/gust/direction, and optional hourly slices.
+  - Added `--hourly` support to the weather forecast and smoke CLI paths.
+  - Updated README weather examples and `.env.example`.
+- Approval gates checked:
+  - Weather remains LOW-risk, ToolBroker-only, policy-checked, rate-limited, and audited.
+  - No API key is required for Open-Meteo.
+  - No device location, IP geolocation, personal-data connector, write action, or memory storage was added.
+  - Weather locations remain user-provided and redacted from audit args by broker policy.
+- Files changed:
+  - `agent/tools/weather/provider.py`
+  - `smart_agent.py`
+  - `agent/ui/connectors.py`
+  - `tests/test_weather.py`
+  - `tests/test_connectors.py`
+  - `.env.example`
+  - `README.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read weather provider, weather CLI, tests, connector status, README, `.env.example`, and prior completion entries.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py tests/test_connectors.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+- Tests run:
+  - Weather and connector targeted tests: 34 passed in 0.60s.
+  - Full suite: 217 passed in 2.18s.
+  - Startup policy validation: startup policy ok.
+- Results:
+  - Exact geocode normalization is covered with mocked Open-Meteo responses.
+  - Ambiguous geocode disambiguation is covered.
+  - Direct lat/lon input is covered and does not call geocoding.
+  - Current weather normalization is covered.
+  - Daily and optional hourly forecast normalization are covered.
+  - Timeout and provider API error handling are covered.
+  - Audit domain logging is covered.
+  - No secrets are required for Open-Meteo.
+- Remaining follow-up work:
+  - Run live smoke when desired with `WEB_ACCESS_ENABLED=true WEATHER_PROVIDER=open_meteo python smart_agent.py weather smoke "Phoenix, AZ"`.
+
+## Run: 2026-05-22 13:34 PDT Weather Normalization Layer
+
+- Date/time: 2026-05-22 13:34 PDT, post-baseline weather normalization pass.
+- Phase attempted: Create a provider-independent weather normalization layer.
+- Scope:
+  - Added provider-independent weather models:
+    - `WeatherLocation`
+    - `WeatherCurrent`
+    - `WeatherHourly`
+    - `WeatherDaily`
+    - `WeatherAlert`
+    - `WeatherResult`
+    - `WeatherProviderError`
+    - `UnitSystem`
+    - `WeatherCondition`
+  - Added condition mapping and temperature conversion helpers.
+  - Updated Open-Meteo normalization to emit compact `WeatherResult` JSON.
+  - Normalized temperature, apparent temperature, precipitation, rain, snow, wind speed/direction, humidity, pressure, UV index where provider data is available, condition text, and provider metadata.
+  - Kept raw provider payloads hidden by default; raw payload appears only when debug mode is enabled with `DEBUG=true`.
+  - Kept failure responses structured and provider-grounded.
+- Approval gates checked:
+  - Weather remains LOW-risk, ToolBroker-only, policy-checked, rate-limited, and audited.
+  - No personal-data connector, device location, IP geolocation, write action, send action, or memory storage was added.
+  - No API key or secret is required for Open-Meteo.
+- Files changed:
+  - Added `agent/tools/weather/models.py`.
+  - Updated `agent/tools/weather/provider.py`.
+  - Updated `tests/test_weather.py`.
+  - Updated `.env.example`, `README.md`, `agent/ui/connectors.py`, `smart_agent.py`, and `tests/test_connectors.py` from the continuing Open-Meteo default-provider pass.
+  - Updated `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read weather provider, tests, registry, connector status, README, and current git status.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+- Tests run:
+  - Weather targeted tests: 28 passed in 0.18s.
+  - Full suite: 219 passed in 2.19s.
+  - Startup policy validation: startup policy ok.
+- Results:
+  - Open-Meteo current and forecast results normalize through provider-independent models.
+  - Missing optional fields are omitted cleanly from compact JSON.
+  - Unit conversion helper is covered.
+  - Raw provider payloads are hidden by default and included only with `DEBUG=true`.
+  - Invalid provider payloads and API errors return structured errors.
+- Remaining follow-up work:
+  - Optionally add another provider behind the same normalization layer after a connector decision record.
+
+## Run: 2026-05-22 13:58 PDT Weather Cache And Rate-Limit Pass
+
+- Date/time: 2026-05-22 13:58 PDT, post-baseline weather cache pass.
+- Phase attempted: Add weather caching and rate-limit diagnostics.
+- Scope:
+  - Added a local TTL weather cache keyed by provider, location, request type, units, and request-shaping options such as forecast days/hourly.
+  - Cache keys are SHA-256 hashes rather than raw location strings.
+  - Added configurable cache path and TTL settings:
+    - `WEATHER_CACHE_PATH`
+    - `WEATHER_CURRENT_CACHE_TTL_SECONDS`, default `900`
+    - `WEATHER_FORECAST_CACHE_TTL_SECONDS`, default `3600`
+  - Added response metadata: `cached`, `cached_at`, `expires_at`, and `provider`.
+  - Added `python smart_agent.py weather current "Phoenix, AZ" --no-cache`.
+  - Added `python smart_agent.py weather cache clear`.
+  - Added `weather.cache_clear` as a LOW-risk, ToolBroker-only, audited capability.
+  - Updated connector status to report weather cache state without touching personal data.
+  - Let tool audit metadata provide sanitized summaries such as `weather cache hit`, `weather cache miss`, `weather cache bypass`, `weather cache expired refresh`, and `weather cache cleared`.
+- Approval gates checked:
+  - No personal-data access, device location, IP geolocation, writes, send actions, or memory storage was added.
+  - Weather cache is operational TTL cache only and is separate from long-term memory.
+  - Weather locations remain redacted from audit args.
+  - Broker rate-limit denial remains enforced before weather tool execution.
+- Files changed:
+  - Added `agent/tools/weather/cache.py`.
+  - Updated `agent/tools/weather/provider.py`.
+  - Updated `agent/core/tool_broker.py`.
+  - Updated `config/capabilities.yaml`.
+  - Updated `smart_agent.py`.
+  - Updated `agent/ui/connectors.py`.
+  - Updated `tests/test_weather.py`.
+  - Updated `.env.example`, `README.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read weather provider, broker audit metadata path, runtime config, audit logger, tests, README, and env example.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py tests/test_connectors.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+- Tests run:
+  - Weather and connector targeted tests: 42 passed in 0.72s.
+  - Full suite: 225 passed in 2.69s.
+  - Startup policy validation: startup policy ok.
+- Results:
+  - First request hits provider and records cache miss.
+  - Second matching request uses cache and records cache hit.
+  - Expired cache refreshes provider data.
+  - `--no-cache` bypasses cache.
+  - Cache clear works through ToolBroker.
+  - Rate limit still denies through broker policy.
+  - Audit logs cache hit/miss/bypass/clear and rate-limit denial.
+- Remaining follow-up work:
+  - Consider cache pruning or an audit viewer filter if the cache grows beyond current TTL use.
+
+## Run: 2026-05-22 13:24 PDT Weather Natural-Language Router Pass
+
+- Date/time: 2026-05-22 13:24 PDT, post-baseline weather router improvement.
+- Phase attempted: Improve deterministic router behavior for weather-related natural-language requests.
+- Scope:
+  - Added deterministic weather intent routing for questions like "What's the weather in Phoenix?", "Is it going to rain tomorrow in LA?", and "What should I wear in Seattle today?"
+  - Added explicit non-tool matches for educational, creative, and architecture prompts about weather or rain.
+  - Added missing-location handling that avoids personal location inference for prompts such as "near me".
+  - Added opt-in default location routing only when `WEATHER_DEFAULT_LOCATION` is explicitly configured.
+  - Preserved the original user message; the router still selects schemas only and does not rewrite prompts.
+- Approval gates checked:
+  - No new connector, personal-data access, device location, IP geolocation, write action, send action, or memory storage was added.
+  - Weather remains LOW-risk and ToolBroker-only when a model chooses to call attached tools.
+  - No LLM router was introduced.
+- Files changed:
+  - Updated `agent/core/router.py`.
+  - Updated `tests/test_router.py`.
+  - Updated `tests/test_lmstudio_loop.py`.
+  - Updated `.env.example`.
+  - Updated `README.md`.
+  - Updated `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read router, orchestrator, LM Studio loop tests, README weather docs, `.env.example`, and git status.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_router.py tests/test_lmstudio_loop.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `git diff --check`
+- Tests run:
+  - Router and LM Studio loop targeted tests: 29 passed in 0.10s.
+  - Full suite: 238 passed in 2.51s.
+  - Startup policy validation: startup policy ok.
+  - Diff whitespace check: clean.
+- Results:
+  - Weather intent is detected only for actionable weather questions.
+  - Educational weather explanations, creative rain prompts, and weather app architecture prompts stay normal chat.
+  - Missing location does not attach tools unless `WEATHER_DEFAULT_LOCATION` is explicitly set.
+  - No-tool mode still attaches no tools, including for weather prompts.
+- Remaining follow-up work:
+  - If desired, add a model-facing clarification path for `chat.weather_missing_location` that asks for a city without attaching tools.
+
+## Run: 2026-05-22 13:29 PDT Weather Answer Formatting Pass
+
+- Date/time: 2026-05-22 13:29 PDT, post-baseline weather answer quality pass.
+- Phase attempted: Improve final weather answer quality for direct CLI weather commands while preserving model-authored chat answers.
+- Scope:
+  - Added a reusable weather answer formatter for current conditions, daily forecast rows, umbrella recommendations, clothing recommendations, alerts availability, cache warnings, uncertainty, and source/provider notes.
+  - Changed direct `weather current` and `weather forecast` CLI output to readable text by default.
+  - Added `--json` to direct weather current/forecast commands for structured payload inspection.
+  - Kept normal chat behavior unchanged: tools return structured data, and the model writes the final answer.
+  - Added formatter guardrails so missing precipitation data is shown as unavailable instead of inventing rain chance.
+- Approval gates checked:
+  - No new connector, personal-data access, device location, IP geolocation, write action, send action, or memory storage was added.
+  - Weather remains LOW-risk, ToolBroker-only, policy-checked, rate-limited, and audited.
+  - The harness does not become a weather assistant for normal chat; it formats only direct CLI command output.
+- Files changed:
+  - Added `agent/tools/weather/formatter.py`.
+  - Updated `smart_agent.py`.
+  - Updated `tests/test_weather.py`.
+  - Updated `tests/test_lmstudio_loop.py`.
+  - Updated `README.md`.
+  - Updated `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read weather CLI, provider payload shape, weather tests, LM Studio loop tests, and README weather docs.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py tests/test_lmstudio_loop.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `git diff --check`
+- Tests run:
+  - Weather and LM Studio loop targeted tests: 52 passed in 0.31s.
+  - Full suite: 244 passed in 2.77s.
+  - Startup policy validation: startup policy ok.
+  - Diff whitespace check: clean.
+- Results:
+  - Umbrella recommendations are grounded in available precipitation probability or amount.
+  - Missing rain data is reported as unavailable.
+  - Cached results display cached/expires metadata and stale-data caution.
+  - Direct CLI formatting works and includes provider plus `retrieved_at`.
+  - Chat path still lets the model write the final answer after receiving structured tool data.
+- Remaining follow-up work:
+  - Consider adding an explicit `weather alerts` provider surface only after a separate decision record; current formatter states alert support is unavailable when alerts are absent.
+
+## Run: 2026-05-22 13:33 PDT Weather Integration Hardening Pass
+
+- Date/time: 2026-05-22 13:33 PDT, focused hardening after Weather integration.
+- Phase attempted: Review and harden weather integration before committing.
+- Scope:
+  - Searched for direct weather provider calls outside the ToolBroker path.
+  - Confirmed `weather.status`, `weather.current`, `weather.forecast`, and `weather.cache_clear` are declared in `config/capabilities.yaml`.
+  - Confirmed weather current/forecast are policy checked, rate-limited, audited, and require `WEB_ACCESS_ENABLED=true`.
+  - Confirmed weather tools return structured success and error payloads; direct CLI formatting is presentation-only.
+  - Confirmed the router does not attach weather tools for educational, creative, or architecture prompts, and no-tool mode remains clean.
+  - Confirmed weather does not infer system, IP, device, or personal location; `WEATHER_DEFAULT_LOCATION` is opt-in only.
+  - Added hardening so precise-looking street addresses and direct coordinates bypass the TTL weather cache.
+  - Updated hardening notes in the risk register, threat model, release checklist, and completion report.
+- Approval gates checked:
+  - No personal-data tools were enabled by weather features.
+  - No write/send actions, browser automation, device location, IP geolocation, or memory storage was added.
+  - Weather remains LOW-risk, ToolBroker-only, policy-checked, audited, and rate-limited.
+- Files changed:
+  - Updated `agent/tools/weather/cache.py`.
+  - Updated `agent/tools/weather/provider.py`.
+  - Updated `tests/test_weather.py`.
+  - Updated `docs/RISK_REGISTER.md`.
+  - Updated `docs/THREAT_MODEL.md`.
+  - Updated `docs/RELEASE_CHECKLIST.md`.
+  - Updated `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - `git status --short`
+  - `rg -n "\.current_weather\(|\.forecast\(|active_provider\.|OpenMeteoProvider\(|provider_from_env\(|weather_provider_status\(" agent smart_agent.py -g '!agent/tools/weather/provider.py'`
+  - `rg -n "weather\.(status|current|forecast|cache_clear)|calendar\.|contacts\.|email\.|messages\." config/capabilities.yaml`
+  - `rg -n "WEATHER_DEFAULT_LOCATION|CoreLocation|Location Services|ipinfo|geoip|near me|current location|device location|Full Disk|~/Library/Messages|~/Library/Mail" agent smart_agent.py README.md .env.example docs tests`
+  - `rg -n "BRAVE_SEARCH_API_KEY|WEATHER_API_KEY|IMAP_PASSWORD|sk-[A-Za-z0-9]|password=|api_key=|Authorization" . -g '!logs/**' -g '!data/**' -g '!**/__pycache__/**' -g '!*.pyc'`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_weather.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `git diff --check`
+- Tests run:
+  - Weather targeted tests after cache hardening: 41 passed in 0.25s.
+  - Full suite: 246 passed in 2.55s.
+  - Startup policy validation: startup policy ok.
+  - Diff whitespace check: clean.
+- Results:
+  - No direct weather current/forecast provider execution path was found outside `agent/tools/weather/provider.py`; `agent/ui/connectors.py` calls only non-network provider status metadata.
+  - Weather capability manifest entries are present and personal/send/write capabilities remain disabled by default.
+  - Provider calls are audited via ToolBroker result metadata, including network domains and cache/rate-limit summaries.
+  - Rate limits are enforced by `ToolBroker` before tool execution.
+  - Cache keys are hashed, and precise-looking street address/direct coordinate queries now skip cache persistence.
+  - Missing provider and provider errors remain structured.
+  - Unit tests use mocks for Open-Meteo HTTP behavior and do not depend on live network.
+  - Secret scan showed only placeholders, docs, or test fixtures; no live API keys were found.
+- Remaining follow-up work:
+  - Commit the weather hardening changes.

@@ -4,11 +4,14 @@ import json
 import sqlite3
 
 import httpx
+import pytest
 
 from agent.core.tool_broker import ToolBroker
 from agent.safety.audit import AuditLogger
 from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
+from agent.tools.weather.formatter import format_weather_answer
+from agent.tools.weather.models import convert_temperature
 from agent.tools.weather.provider import OpenMeteoProvider
 from smart_agent import _run_weather_command
 
@@ -29,13 +32,21 @@ class StaticWeatherProvider:
             },
         }
 
-    def forecast(self, location: str, days: int, units: str, locale: str | None = None) -> dict[str, object]:
+    def forecast(
+        self,
+        location: str,
+        days: int,
+        units: str,
+        locale: str | None = None,
+        include_hourly: bool = False,
+    ) -> dict[str, object]:
         return {
             "location": f"Resolved {location}",
             "forecast": [
                 {"date": f"2026-05-{22 + index:02d}", "high": 70 + index, "low": 50 + index}
                 for index in range(days)
             ],
+            "hourly": [{"time": "2026-05-22T12:00", "temperature": 72}] if include_hourly else None,
         }
 
 
@@ -46,6 +57,38 @@ class TimeoutWeatherProvider(StaticWeatherProvider):
         raise TimeoutError("too slow")
 
 
+class CountingWeatherProvider(StaticWeatherProvider):
+    name = "counting-weather"
+
+    def __init__(self) -> None:
+        self.current_calls = 0
+        self.forecast_calls = 0
+
+    def current_weather(self, location: str, units: str, locale: str | None = None) -> dict[str, object]:
+        self.current_calls += 1
+        payload = super().current_weather(location, units, locale)
+        payload["current"]["temperature"] = 70 + self.current_calls
+        return payload
+
+    def forecast(
+        self,
+        location: str,
+        days: int,
+        units: str,
+        locale: str | None = None,
+        include_hourly: bool = False,
+    ) -> dict[str, object]:
+        self.forecast_calls += 1
+        return super().forecast(location, days, units, locale, include_hourly)
+
+
+@pytest.fixture(autouse=True)
+def isolate_weather_cache(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHER_CACHE_PATH", str(tmp_path / "weather_cache.json"))
+    monkeypatch.delenv("WEATHER_CURRENT_CACHE_TTL_SECONDS", raising=False)
+    monkeypatch.delenv("WEATHER_FORECAST_CACHE_TTL_SECONDS", raising=False)
+
+
 def weather_capabilities(rate_limit: int | None = None) -> dict[str, Capability]:
     metadata: dict[str, object] = {"requires_web_access": True}
     if rate_limit is not None:
@@ -54,6 +97,7 @@ def weather_capabilities(rate_limit: int | None = None) -> dict[str, Capability]
         "weather.status": Capability("weather.status", RiskLevel.LOW),
         "weather.current": Capability("weather.current", RiskLevel.LOW, metadata=metadata),
         "weather.forecast": Capability("weather.forecast", RiskLevel.LOW, metadata=metadata),
+        "weather.cache_clear": Capability("weather.cache_clear", RiskLevel.LOW),
     }
 
 
@@ -76,8 +120,8 @@ def make_broker(tmp_path, weather_provider=None, capabilities: dict[str, Capabil
     )
 
 
-def test_weather_provider_missing_returns_clear_error(tmp_path, monkeypatch) -> None:
-    monkeypatch.delenv("WEATHER_PROVIDER", raising=False)
+def test_weather_provider_explicitly_disabled_returns_clear_error(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHER_PROVIDER", "disabled")
     broker = make_broker(tmp_path)
 
     result = broker.execute(call("weather.current", {"location": "San Francisco"}))
@@ -88,6 +132,22 @@ def test_weather_provider_missing_returns_clear_error(tmp_path, monkeypatch) -> 
     assert payload["error"] == "weather provider is not configured"
     assert payload["configured"] is False
     assert payload["trust_level"] == "UNTRUSTED_WEB"
+
+
+def test_open_meteo_is_default_no_key_provider(monkeypatch) -> None:
+    monkeypatch.delenv("WEATHER_PROVIDER", raising=False)
+    monkeypatch.delenv("WEATHER_API_KEY", raising=False)
+
+    provider = OpenMeteoProvider()
+    from agent.tools.weather.provider import provider_from_env, weather_provider_status
+
+    env_provider = provider_from_env()
+    status = weather_provider_status(provider)
+
+    assert env_provider.name == "open_meteo"
+    assert status["provider"] == "open_meteo"
+    assert status["configured"] is True
+    assert status["requires_api_key"] is False
 
 
 def test_configured_provider_returns_normalized_current_weather(tmp_path) -> None:
@@ -143,6 +203,134 @@ def test_weather_rate_limit_enforced(tmp_path) -> None:
     assert first.allowed is True
     assert second.allowed is False
     assert json.loads(second.content)["error"] == "rate limit exceeded"
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert events[-1]["result_summary"] == "Denied by policy: rate limit exceeded"
+
+
+def test_weather_cache_first_request_hits_provider_second_uses_cache(tmp_path) -> None:
+    provider = CountingWeatherProvider()
+    broker = make_broker(tmp_path, weather_provider=provider)
+
+    first = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+    second = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    first_payload = json.loads(first.content)
+    second_payload = json.loads(second.content)
+    assert provider.current_calls == 1
+    assert first_payload["cached"] is False
+    assert second_payload["cached"] is True
+    assert second_payload["cached_at"] == first_payload["cached_at"]
+    assert second_payload["expires_at"] == first_payload["expires_at"]
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [event["result_summary"] for event in events] == ["weather cache miss", "weather cache hit"]
+
+
+def test_weather_expired_cache_refreshes(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHER_CURRENT_CACHE_TTL_SECONDS", "0")
+    provider = CountingWeatherProvider()
+    broker = make_broker(tmp_path, weather_provider=provider)
+
+    first = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+    second = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    assert provider.current_calls == 2
+    assert json.loads(first.content)["cached"] is False
+    assert json.loads(second.content)["cached"] is False
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert events[-1]["result_summary"] == "weather cache expired refresh"
+
+
+def test_weather_no_cache_bypasses_cache(tmp_path) -> None:
+    provider = CountingWeatherProvider()
+    broker = make_broker(tmp_path, weather_provider=provider)
+
+    first = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+    second = broker.execute(call("weather.current", {"location": "Phoenix, AZ", "no_cache": True}))
+    third = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    assert provider.current_calls == 2
+    assert json.loads(first.content)["cached"] is False
+    assert json.loads(second.content)["cached"] is False
+    assert json.loads(second.content)["cached_at"] is None
+    assert json.loads(third.content)["cached"] is True
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert events[1]["result_summary"] == "weather cache bypass"
+
+
+def test_weather_no_cache_cli_bypasses_cache(tmp_path, capsys) -> None:
+    provider = CountingWeatherProvider()
+    broker = make_broker(tmp_path, weather_provider=provider)
+
+    _run_weather_command(["current", "Phoenix, AZ"], broker)
+    capsys.readouterr()
+    exit_code = _run_weather_command(["current", "Phoenix, AZ", "--no-cache"], broker)
+
+    assert exit_code == 0
+    output = capsys.readouterr().out
+    assert provider.current_calls == 2
+    assert "Weather for Resolved Phoenix, AZ" in output
+    assert "Cache: fresh provider result; expires unavailable" in output
+
+
+def test_weather_cache_clear_works(tmp_path) -> None:
+    provider = CountingWeatherProvider()
+    broker = make_broker(tmp_path, weather_provider=provider)
+
+    broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+    clear = broker.execute(call("weather.cache_clear", {}))
+    after_clear = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    assert provider.current_calls == 2
+    clear_payload = json.loads(clear.content)
+    assert clear_payload["status"] == "ok"
+    assert clear_payload["cleared_entries"] == 1
+    assert json.loads(after_clear.content)["cached"] is False
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert "weather cache cleared" in [event["result_summary"] for event in events]
+
+
+def test_weather_cache_clear_cli_works(tmp_path, capsys) -> None:
+    provider = CountingWeatherProvider()
+    broker = make_broker(tmp_path, weather_provider=provider)
+    broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    exit_code = _run_weather_command(["cache", "clear"], broker)
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "ok"
+    assert payload["cleared_entries"] == 1
+
+
+def test_weather_cache_skips_precise_location_payloads(tmp_path) -> None:
+    provider = CountingWeatherProvider()
+    broker = make_broker(tmp_path, weather_provider=provider)
+
+    first = broker.execute(call("weather.current", {"location": "123 Private Street"}))
+    second = broker.execute(call("weather.current", {"location": "123 Private Street"}))
+
+    assert provider.current_calls == 2
+    assert json.loads(first.content)["cached"] is False
+    assert json.loads(second.content)["cached"] is False
+    assert not (tmp_path / "weather_cache.json").exists()
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [event["result_summary"] for event in events] == [
+        "weather cache skipped precise location",
+        "weather cache skipped precise location",
+    ]
+    assert "123 Private Street" not in (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
+
+
+def test_weather_cache_skips_direct_coordinate_payloads(tmp_path) -> None:
+    provider = CountingWeatherProvider()
+    broker = make_broker(tmp_path, weather_provider=provider)
+
+    result = broker.execute(call("weather.forecast", {"location": "33.4484,-112.0740"}))
+
+    assert result.allowed is True
+    assert provider.forecast_calls == 1
+    assert json.loads(result.content)["cached"] is False
+    assert not (tmp_path / "weather_cache.json").exists()
 
 
 def test_weather_location_redacted_in_audit_and_no_history_persisted(tmp_path) -> None:
@@ -200,10 +388,34 @@ def geocoding_payload() -> dict[str, object]:
     }
 
 
+def ambiguous_geocoding_payload() -> dict[str, object]:
+    return {
+        "results": [
+            {
+                "name": "Phoenix",
+                "admin1": "Arizona",
+                "country": "United States",
+                "latitude": 33.4484,
+                "longitude": -112.074,
+                "timezone": "America/Phoenix",
+            },
+            {
+                "name": "Phoenix",
+                "admin1": "Oregon",
+                "country": "United States",
+                "latitude": 42.2754,
+                "longitude": -122.8181,
+                "timezone": "America/Los_Angeles",
+            },
+        ]
+    }
+
+
 def test_open_meteo_current_normalization_and_audit_domains(tmp_path) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.host == "geocoding-api.open-meteo.com":
             assert request.url.params["name"] == "San Francisco"
+            assert request.url.params["count"] == "5"
             return httpx.Response(200, json=geocoding_payload())
         assert request.url.host == "api.open-meteo.com"
         assert "temperature_2m" in request.url.params["current"]
@@ -216,6 +428,9 @@ def test_open_meteo_current_normalization_and_audit_domains(tmp_path) -> None:
                     "apparent_temperature": "F",
                     "relative_humidity_2m": "%",
                     "precipitation": "inch",
+                    "rain": "inch",
+                    "snowfall": "inch",
+                    "pressure_msl": "hPa",
                     "wind_speed_10m": "mp/h",
                     "wind_direction_10m": "deg",
                 },
@@ -225,7 +440,10 @@ def test_open_meteo_current_normalization_and_audit_domains(tmp_path) -> None:
                     "apparent_temperature": 64.0,
                     "relative_humidity_2m": 72,
                     "precipitation": 0.0,
+                    "rain": 0.0,
+                    "snowfall": 0.0,
                     "weather_code": 1,
+                    "pressure_msl": 1012.4,
                     "wind_speed_10m": 11.2,
                     "wind_direction_10m": 270,
                     "is_day": 1,
@@ -240,10 +458,17 @@ def test_open_meteo_current_normalization_and_audit_domains(tmp_path) -> None:
     assert result.allowed is True
     payload = json.loads(result.content)
     assert payload["status"] == "ok"
-    assert payload["provider"] == "open-meteo"
+    assert payload["provider"] == "open_meteo"
     assert payload["location"] == "San Francisco, California, United States"
+    assert payload["coordinates"] == {"latitude": 37.7749, "longitude": -122.4194}
     assert payload["current"]["temperature"] == 65.3
     assert payload["current"]["temperature_unit"] == "F"
+    assert payload["current"]["condition"] == "mainly clear"
+    assert payload["current"]["rain"] == 0.0
+    assert payload["current"]["snow"] == 0.0
+    assert payload["current"]["humidity"] == 72
+    assert payload["current"]["pressure"] == 1012.4
+    assert "raw_provider_payload" not in payload
     events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
     assert events[0]["network_domains"] == ["geocoding-api.open-meteo.com", "api.open-meteo.com"]
 
@@ -261,7 +486,13 @@ def test_open_meteo_forecast_normalization(tmp_path) -> None:
                     "temperature_2m_max": "C",
                     "temperature_2m_min": "C",
                     "precipitation_sum": "mm",
+                    "precipitation_probability_max": "%",
+                    "rain_sum": "mm",
+                    "snowfall_sum": "cm",
                     "wind_speed_10m_max": "km/h",
+                    "wind_gusts_10m_max": "km/h",
+                    "wind_direction_10m_dominant": "deg",
+                    "uv_index_max": "",
                 },
                 "daily": {
                     "time": ["2026-05-22", "2026-05-23"],
@@ -269,7 +500,13 @@ def test_open_meteo_forecast_normalization(tmp_path) -> None:
                     "temperature_2m_max": [19.0, 20.0],
                     "temperature_2m_min": [11.0, 12.0],
                     "precipitation_sum": [0.0, 1.2],
+                    "precipitation_probability_max": [10, 40],
+                    "rain_sum": [0.0, 1.1],
+                    "snowfall_sum": [0.0, 0.0],
                     "wind_speed_10m_max": [18.0, 20.0],
+                    "wind_gusts_10m_max": [28.0, 30.0],
+                    "wind_direction_10m_dominant": [270, 280],
+                    "uv_index_max": [6.4, 7.0],
                 },
             },
         )
@@ -282,8 +519,154 @@ def test_open_meteo_forecast_normalization(tmp_path) -> None:
     payload = json.loads(result.content)
     assert payload["status"] == "ok"
     assert payload["forecast"][0]["date"] == "2026-05-22"
+    assert payload["forecast"][0]["condition"] == "mainly clear"
     assert payload["forecast"][0]["temperature_max"] == 19.0
     assert payload["forecast"][0]["temperature_max_unit"] == "C"
+    assert payload["forecast"][1]["precipitation_probability_max"] == 40
+    assert payload["forecast"][1]["rain_sum"] == 1.1
+    assert payload["forecast"][0]["snow_sum"] == 0.0
+    assert payload["forecast"][0]["wind_direction_dominant"] == 270
+    assert payload["forecast"][0]["uv_index_max"] == 6.4
+
+
+def test_open_meteo_ambiguous_geocode_returns_disambiguation(tmp_path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "geocoding-api.open-meteo.com":
+            return httpx.Response(200, json=ambiguous_geocoding_payload())
+        return httpx.Response(
+            200,
+            json={
+                "timezone": "America/Phoenix",
+                "current_units": {"temperature_2m": "C"},
+                "current": {"time": "2026-05-22T12:00", "temperature_2m": 40.0, "weather_code": 0},
+            },
+        )
+
+    broker = make_broker(tmp_path, weather_provider=open_meteo_provider(handler))
+
+    result = broker.execute(call("weather.current", {"location": "Phoenix"}))
+
+    payload = json.loads(result.content)
+    assert payload["status"] == "ok"
+    assert payload["location"] == "Phoenix, Arizona, United States"
+    assert payload["disambiguation"]["selected"]["admin1"] == "Arizona"
+    assert len(payload["disambiguation"]["alternatives"]) == 2
+
+
+def test_open_meteo_direct_lat_lon_bypasses_geocoding(tmp_path) -> None:
+    hosts: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        hosts.append(str(request.url.host))
+        assert request.url.host == "api.open-meteo.com"
+        assert request.url.params["latitude"] == "33.4484"
+        assert request.url.params["longitude"] == "-112.074"
+        return httpx.Response(
+            200,
+            json={
+                "timezone": "America/Phoenix",
+                "current_units": {"temperature_2m": "C"},
+                "current": {"time": "2026-05-22T12:00", "temperature_2m": 40.0, "weather_code": 0},
+            },
+        )
+
+    broker = make_broker(tmp_path, weather_provider=open_meteo_provider(handler))
+
+    result = broker.execute(call("weather.current", {"location": "33.4484,-112.0740"}))
+
+    payload = json.loads(result.content)
+    assert payload["status"] == "ok"
+    assert payload["location"] == "33.448400,-112.074000"
+    assert payload["coordinates"] == {"latitude": 33.4484, "longitude": -112.074}
+    assert hosts == ["api.open-meteo.com"]
+
+
+def test_open_meteo_hourly_forecast_optional(tmp_path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "geocoding-api.open-meteo.com":
+            return httpx.Response(200, json=geocoding_payload())
+        assert "hourly" in request.url.params
+        return httpx.Response(
+            200,
+            json={
+                "timezone": "America/Los_Angeles",
+                "daily_units": {"temperature_2m_max": "C", "temperature_2m_min": "C"},
+                "daily": {
+                    "time": ["2026-05-22"],
+                    "weather_code": [0],
+                    "temperature_2m_max": [20.0],
+                    "temperature_2m_min": [12.0],
+                },
+                "hourly_units": {
+                    "temperature_2m": "C",
+                    "precipitation_probability": "%",
+                    "precipitation": "mm",
+                    "rain": "mm",
+                    "snowfall": "cm",
+                    "wind_speed_10m": "km/h",
+                    "wind_direction_10m": "deg",
+                    "relative_humidity_2m": "%",
+                    "pressure_msl": "hPa",
+                },
+                "hourly": {
+                    "time": ["2026-05-22T00:00"],
+                    "temperature_2m": [12.0],
+                    "precipitation_probability": [20],
+                    "precipitation": [0.2],
+                    "rain": [0.2],
+                    "snowfall": [0.0],
+                    "weather_code": [61],
+                    "wind_speed_10m": [10.0],
+                    "wind_direction_10m": [180],
+                    "relative_humidity_2m": [82],
+                    "pressure_msl": [1011],
+                    "uv_index": [0.0],
+                },
+            },
+        )
+
+    broker = make_broker(tmp_path, weather_provider=open_meteo_provider(handler))
+
+    result = broker.execute(call("weather.forecast", {"location": "San Francisco", "days": 1, "include_hourly": True}))
+
+    payload = json.loads(result.content)
+    assert payload["status"] == "ok"
+    assert payload["hourly"][0]["condition"] == "slight rain"
+    assert payload["hourly"][0]["precipitation_probability"] == 20
+    assert payload["hourly"][0]["snow"] == 0.0
+    assert payload["hourly"][0]["humidity"] == 82
+    assert payload["hourly"][0]["pressure"] == 1011
+    assert payload["hourly"][0]["uv_index"] == 0.0
+
+
+def test_open_meteo_raw_payload_hidden_by_default_and_debug_opt_in(tmp_path, monkeypatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "geocoding-api.open-meteo.com":
+            return httpx.Response(200, json=geocoding_payload())
+        return httpx.Response(
+            200,
+            json={
+                "timezone": "America/Los_Angeles",
+                "current_units": {"temperature_2m": "C"},
+                "current": {"time": "2026-05-22T12:00", "temperature_2m": 20.0, "weather_code": 0},
+            },
+        )
+
+    broker = make_broker(tmp_path, weather_provider=open_meteo_provider(handler))
+
+    normal = broker.execute(call("weather.current", {"location": "San Francisco"}))
+    assert "raw_provider_payload" not in json.loads(normal.content)
+
+    monkeypatch.setenv("DEBUG", "true")
+    debug = broker.execute(call("weather.current", {"location": "San Francisco", "no_cache": True}))
+    payload = json.loads(debug.content)
+    assert payload["raw_provider_payload"]["forecast"]["timezone"] == "America/Los_Angeles"
+
+
+def test_weather_temperature_conversion_helper() -> None:
+    assert convert_temperature(0, "C", "F") == 32.0
+    assert convert_temperature(212, "F", "C") == 100.0
+    assert convert_temperature(None, "C", "F") is None
 
 
 def test_open_meteo_geocoding_failure_returns_structured_error(tmp_path) -> None:
@@ -312,6 +695,20 @@ def test_open_meteo_timeout_returns_structured_error(tmp_path) -> None:
     assert json.loads(result.content)["error"] == "weather provider timed out"
 
 
+def test_open_meteo_api_error_returns_structured_error(tmp_path) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"error": True, "reason": "invalid latitude"})
+
+    broker = make_broker(tmp_path, weather_provider=open_meteo_provider(handler))
+
+    result = broker.execute(call("weather.current", {"location": "San Francisco"}))
+
+    assert result.allowed is True
+    payload = json.loads(result.content)
+    assert payload["status"] == "error"
+    assert payload["error"] == "invalid latitude"
+
+
 def test_open_meteo_malformed_response_returns_structured_error(tmp_path) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.host == "geocoding-api.open-meteo.com":
@@ -326,7 +723,7 @@ def test_open_meteo_malformed_response_returns_structured_error(tmp_path) -> Non
     assert json.loads(result.content)["error"] == "weather provider returned malformed current weather"
 
 
-def test_weather_doctor_with_no_provider_configured(tmp_path, monkeypatch, capsys) -> None:
+def test_weather_doctor_defaults_to_open_meteo_when_no_provider_configured(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.delenv("WEATHER_PROVIDER", raising=False)
     broker = make_broker(tmp_path)
 
@@ -334,9 +731,9 @@ def test_weather_doctor_with_no_provider_configured(tmp_path, monkeypatch, capsy
 
     assert exit_code == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["provider"] == "disabled"
-    assert payload["configured"] is False
-    assert payload["error"] == "weather provider is not configured"
+    assert payload["provider"] == "open_meteo"
+    assert payload["configured"] is True
+    assert payload["error"] is None
     assert payload["capabilities"]["weather.current"]["decision"] == "ALLOW"
     events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
     assert events[0]["tool_name"] == "weather.status"
@@ -384,6 +781,123 @@ def test_weather_smoke_success_using_mocked_provider(tmp_path, capsys) -> None:
     assert payload["forecast"]["status"] == "ok"
     events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
     assert [event["tool_name"] for event in events] == ["weather.status", "weather.current", "weather.forecast"]
+
+
+def test_weather_current_cli_success_using_mocked_provider(tmp_path, capsys) -> None:
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    exit_code = _run_weather_command(["current", "Phoenix, AZ"], broker)
+
+    assert exit_code == 0
+    output = capsys.readouterr().out
+    assert "Weather for Resolved Phoenix, AZ" in output
+    assert "Current: 72C, clear:metric:None" in output
+    assert "Source: static-weather; retrieved_at" in output
+
+
+def test_weather_forecast_cli_success_using_mocked_provider(tmp_path, capsys) -> None:
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    exit_code = _run_weather_command(["forecast", "Phoenix, AZ", "--days", "3"], broker)
+
+    assert exit_code == 0
+    output = capsys.readouterr().out
+    assert "Weather forecast for Resolved Phoenix, AZ" in output
+    assert "Daily forecast: 2026-05-22 to 2026-05-24" in output
+    assert "Source: static-weather; retrieved_at" in output
+
+
+def test_weather_cli_json_option_preserves_structured_output(tmp_path, capsys) -> None:
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    exit_code = _run_weather_command(["current", "Phoenix, AZ", "--json"], broker)
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "ok"
+    assert payload["provider"] == "static-weather"
+    assert payload["location"] == "Resolved Phoenix, AZ"
+
+
+def test_weather_formatter_recommends_umbrella_from_precipitation_data() -> None:
+    text = format_weather_answer(
+        {
+            "status": "ok",
+            "provider": "test-weather",
+            "location": "Phoenix",
+            "units": "imperial",
+            "retrieved_at": "2026-05-22T12:00:00Z",
+            "forecast": [
+                {
+                    "date": "2026-05-22",
+                    "temperature_max": 80,
+                    "temperature_min": 60,
+                    "condition": "rain",
+                    "precipitation_probability_max": 70,
+                    "precipitation_probability_max_unit": "%",
+                    "rain_sum": 0.2,
+                    "rain_sum_unit": "inch",
+                }
+            ],
+        },
+        mode="forecast",
+    )
+
+    assert "Umbrella: bring an umbrella" in text
+    assert "70%" in text
+
+
+def test_weather_formatter_does_not_invent_missing_rain_chance() -> None:
+    text = format_weather_answer(
+        {
+            "status": "ok",
+            "provider": "test-weather",
+            "location": "Phoenix",
+            "units": "imperial",
+            "retrieved_at": "2026-05-22T12:00:00Z",
+            "current": {"temperature": 75, "condition": "clear"},
+        },
+        mode="current",
+    )
+
+    assert "rain data unavailable; no rain chance invented" in text
+    assert "50%" not in text
+
+
+def test_weather_formatter_displays_cache_metadata() -> None:
+    text = format_weather_answer(
+        {
+            "status": "ok",
+            "provider": "test-weather",
+            "location": "Phoenix",
+            "units": "imperial",
+            "retrieved_at": "2026-05-22T12:00:00Z",
+            "cached": True,
+            "cached_at": "2026-05-22T11:50:00Z",
+            "expires_at": "2026-05-22T12:05:00Z",
+            "forecast": [{"date": "2026-05-22", "condition": "clear"}],
+        },
+        mode="forecast",
+    )
+
+    assert "Cache: cached result from 2026-05-22T11:50:00Z; expires 2026-05-22T12:05:00Z" in text
+    assert "Cached weather may be stale" in text
+
+
+def test_weather_formatter_reports_unsupported_alerts() -> None:
+    text = format_weather_answer(
+        {
+            "status": "ok",
+            "provider": "test-weather",
+            "location": "Phoenix",
+            "units": "imperial",
+            "retrieved_at": "2026-05-22T12:00:00Z",
+            "current": {"temperature": 75, "condition": "clear", "rain": 0},
+        },
+        mode="current",
+    )
+
+    assert "Alerts: unavailable; this provider/result does not include alerts" in text
 
 
 def test_bad_location_handled(tmp_path) -> None:

@@ -325,7 +325,7 @@ class ToolBroker:
                 decision=policy_decision,
                 risk_level=risk,
                 args=self._sanitize_args(tool_name, args),
-                summary="Tool executed successfully.",
+                summary=str(audit_metadata.get("result_summary") or "Tool executed successfully."),
                 approval_result=approval_result.value,
                 files_read=audit_metadata.get("files_read", []),
                 files_written=audit_metadata.get("files_written", []),
@@ -417,7 +417,7 @@ class ToolBroker:
             )
         )
 
-    def _split_audit_metadata(self, result: Any) -> tuple[Any, dict[str, list[str]]]:
+    def _split_audit_metadata(self, result: Any) -> tuple[Any, dict[str, Any]]:
         if isinstance(result, dict) and isinstance(result.get("_audit"), dict):
             result_copy = dict(result)
             audit = result_copy.pop("_audit")
@@ -426,6 +426,7 @@ class ToolBroker:
                 "files_written": list(audit.get("files_written", [])),
                 "commands_run": list(audit.get("commands_run", [])),
                 "network_domains": list(audit.get("network_domains", [])),
+                "result_summary": audit.get("result_summary"),
             }
         return result, {}
 

@@ -16,6 +16,7 @@ from agent.safety.approvals import ApprovalManager, ApprovalStore
 from agent.safety.policy import PolicyEngine
 from agent.safety.validation import validate_startup_policy
 from agent.tools.registry import default_registry
+from agent.tools.weather.formatter import format_weather_answer
 from agent.ui.approvals_ui import ConsoleApprovalPrompt
 from agent.ui.cli_commands import dispatch_cli
 from agent.ui.interactive import InteractiveState, run_interactive
@@ -230,23 +231,32 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("doctor", help="Check weather provider configuration without fetching weather data.")
+    cache_parser = subparsers.add_parser("cache", help="Manage the local TTL weather cache.")
+    cache_subparsers = cache_parser.add_subparsers(dest="cache_command", required=True)
+    cache_subparsers.add_parser("clear", help="Clear cached weather responses.")
 
     smoke_parser = subparsers.add_parser("smoke", help="Run current and forecast checks for a user-provided location.")
     smoke_parser.add_argument("location", nargs="+", help="City, ZIP/postal code, or other user-provided location.")
     smoke_parser.add_argument("--days", type=int, default=3)
     smoke_parser.add_argument("--units", choices=["metric", "imperial"], default=None)
     smoke_parser.add_argument("--locale", default=None)
+    smoke_parser.add_argument("--hourly", action="store_true", help="Include hourly forecast slices when supported.")
 
     current_parser = subparsers.add_parser("current", help="Fetch current weather for a user-provided location.")
     current_parser.add_argument("location", nargs="+", help="City, ZIP/postal code, or other user-provided location.")
     current_parser.add_argument("--units", choices=["metric", "imperial"], default=None)
     current_parser.add_argument("--locale", default=None)
+    current_parser.add_argument("--no-cache", action="store_true", help="Bypass the local weather cache for this request.")
+    current_parser.add_argument("--json", action="store_true", help="Print the raw structured weather payload.")
 
     forecast_parser = subparsers.add_parser("forecast", help="Fetch a forecast for a user-provided location.")
     forecast_parser.add_argument("location", nargs="+", help="City, ZIP/postal code, or other user-provided location.")
     forecast_parser.add_argument("--days", type=int, default=None)
     forecast_parser.add_argument("--units", choices=["metric", "imperial"], default=None)
     forecast_parser.add_argument("--locale", default=None)
+    forecast_parser.add_argument("--hourly", action="store_true", help="Include hourly forecast slices when supported.")
+    forecast_parser.add_argument("--no-cache", action="store_true", help="Bypass the local weather cache for this request.")
+    forecast_parser.add_argument("--json", action="store_true", help="Print the raw structured weather payload.")
     try:
         parsed = parser.parse_args(argv)
     except SystemExit as exc:
@@ -263,6 +273,15 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0 if result.allowed else 2
 
+    if parsed.command == "cache":
+        try:
+            result = _execute_weather_tool(broker, "weather.cache_clear", {}, debug=debug)
+        except AuditLogError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
+        return 0 if result.allowed else 2
+
     if parsed.command == "smoke":
         location = " ".join(parsed.location)
         base_args: dict[str, object] = {"location": location}
@@ -272,6 +291,8 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
             base_args["locale"] = parsed.locale
         forecast_args = dict(base_args)
         forecast_args["days"] = parsed.days
+        if parsed.hourly:
+            forecast_args["include_hourly"] = True
         try:
             status_result = _execute_weather_tool(broker, "weather.status", {}, debug=debug)
             status_payload = json.loads(status_result.content)
@@ -319,12 +340,20 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
         arguments["locale"] = parsed.locale
     if parsed.command == "forecast" and parsed.days is not None:
         arguments["days"] = parsed.days
+    if parsed.command == "forecast" and parsed.hourly:
+        arguments["include_hourly"] = True
+    if getattr(parsed, "no_cache", False):
+        arguments["no_cache"] = True
     try:
         result = _execute_weather_tool(broker, tool_name, arguments, debug=debug)
     except AuditLogError as exc:
         print(str(exc), file=sys.stderr)
         return 2
-    print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
+    payload = json.loads(result.content)
+    if getattr(parsed, "json", False):
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        print(format_weather_answer(payload, mode=parsed.command))
     return 0 if result.allowed else 2
 
 

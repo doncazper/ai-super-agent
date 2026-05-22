@@ -10,7 +10,7 @@ from agent.core.lmstudio_client import LMStudioConfig, LMStudioClient, LMStudioE
 from agent.core.orchestrator import MINIMAL_SYSTEM_PROMPT, Orchestrator, format_debug_payload
 from agent.core.tool_broker import ToolBroker
 from agent.safety.audit import AuditLogger
-from agent.safety.policy import PolicyEngine
+from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
 
 
@@ -28,11 +28,41 @@ def response(message: dict[str, Any]) -> dict[str, Any]:
     return {"choices": [{"message": message}]}
 
 
-def make_orchestrator(fake_client: FakeClient, tmp_path) -> Orchestrator:
-    registry = default_registry()
+class FakeWeatherProvider:
+    name = "fake-weather"
+
+    def is_configured(self) -> bool:
+        return True
+
+    def current_weather(self, location: str, units: str, locale: str | None = None) -> dict[str, Any]:
+        return {
+            "location": location,
+            "current": {"temperature": 72, "condition": "clear", "rain": 0},
+        }
+
+    def forecast(
+        self,
+        location: str,
+        days: int,
+        units: str,
+        locale: str | None = None,
+        include_hourly: bool = False,
+    ) -> dict[str, Any]:
+        return {"location": location, "forecast": []}
+
+
+def make_orchestrator(fake_client: FakeClient, tmp_path, *, weather_provider=None) -> Orchestrator:
+    registry = default_registry(weather_provider=weather_provider)
+    capabilities = None
+    if weather_provider is not None:
+        capabilities = {
+            "time.get_current_time": Capability("time.get_current_time", RiskLevel.SAFE),
+            "weather.current": Capability("weather.current", RiskLevel.LOW, metadata={"requires_web_access": True}),
+            "weather.forecast": Capability("weather.forecast", RiskLevel.LOW, metadata={"requires_web_access": True}),
+        }
     broker = ToolBroker(
         registry,
-        PolicyEngine(),
+        PolicyEngine(capabilities),
         AuditLogger(tmp_path / "audit.jsonl"),
         session_id="test-session",
         model="test-model",
@@ -96,6 +126,20 @@ def test_no_tool_mode_attaches_no_tools_and_preserves_user_message(tmp_path) -> 
     }
 
 
+def test_no_tool_mode_attaches_no_tools_for_weather_request(tmp_path) -> None:
+    fake = FakeClient([response({"content": "I need a location to check weather."})])
+    orchestrator = make_orchestrator(fake, tmp_path)
+
+    result = orchestrator.run("What's the weather in Phoenix?", no_tools=True)
+
+    assert result.content == "I need a location to check weather."
+    assert fake.calls[0]["tools"] is None
+    assert fake.calls[0]["messages"][1] == {
+        "role": "user",
+        "content": "What's the weather in Phoenix?",
+    }
+
+
 def test_normal_chat_route_attaches_no_tools_by_default(tmp_path) -> None:
     fake = FakeClient([response({"content": "Hello."})])
     orchestrator = make_orchestrator(fake, tmp_path)
@@ -104,6 +148,53 @@ def test_normal_chat_route_attaches_no_tools_by_default(tmp_path) -> None:
 
     assert result.content == "Hello."
     assert fake.calls[0]["tools"] is None
+
+
+def test_weather_route_attaches_weather_tools_without_rewriting_user_message(tmp_path) -> None:
+    fake = FakeClient([response({"content": "I'll need to check the weather."})])
+    orchestrator = make_orchestrator(fake, tmp_path)
+
+    result = orchestrator.run("What's the weather in Phoenix?")
+
+    tool_names = {tool["function"]["name"] for tool in fake.calls[0]["tools"]}
+    assert result.content == "I'll need to check the weather."
+    assert {"weather.current", "weather.forecast"}.issubset(tool_names)
+    assert fake.calls[0]["messages"][1] == {
+        "role": "user",
+        "content": "What's the weather in Phoenix?",
+    }
+
+
+def test_weather_tool_chat_path_lets_model_write_final_answer(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEB_ACCESS_ENABLED", "true")
+    fake = FakeClient(
+        [
+            response(
+                {
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_weather",
+                            "type": "function",
+                            "function": {
+                                "name": "weather.current",
+                                "arguments": json.dumps({"location": "Phoenix, AZ"}),
+                            },
+                        }
+                    ],
+                }
+            ),
+            response({"content": "It is clear and 72 degrees in Phoenix."}),
+        ]
+    )
+    orchestrator = make_orchestrator(fake, tmp_path, weather_provider=FakeWeatherProvider())
+
+    result = orchestrator.run("What's the weather in Phoenix?")
+
+    assert result.content == "It is clear and 72 degrees in Phoenix."
+    assert len(result.tool_results) == 1
+    assert json.loads(result.tool_results[0]["content"])["provider"] == "fake-weather"
+    assert result.messages[-1]["content"] == "It is clear and 72 degrees in Phoenix."
 
 
 def test_tool_result_is_appended_with_matching_tool_call_id(tmp_path) -> None:

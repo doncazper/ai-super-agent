@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import os
+import re
 from dataclasses import dataclass, field
+from typing import Any
 
 from agent.safety.policy import RiskLevel
 
@@ -11,6 +14,7 @@ class RouteDecision:
     use_tools: bool
     tool_names: set[str] = field(default_factory=set)
     risk_level: RiskLevel = RiskLevel.SAFE
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class Router:
@@ -42,6 +46,46 @@ class Router:
         "search memory",
         "forget memory",
     )
+    WEATHER_INTENT_PATTERNS = (
+        "weather",
+        "forecast",
+        "rain",
+        "raining",
+        "umbrella",
+        "temperature",
+        "how hot",
+        "how cold",
+        "wear",
+        "jacket",
+        "coat",
+        "alerts",
+    )
+    WEATHER_NON_TOOL_PHRASES = (
+        "how weather forecasting works",
+        "difference between climate and weather",
+        "poem about rain",
+        "weather app architecture",
+        "build a weather app",
+    )
+    WEATHER_NON_TOOL_PREFIXES = (
+        "explain ",
+        "write ",
+        "build ",
+        "design ",
+        "architect ",
+    )
+    WEATHER_LOCATION_PATTERN = re.compile(
+        r"\b(?:in|for|near|around)\s+([a-z][a-z .,'-]*?)(?:\s+(?:today|tomorrow|tonight|this weekend|weekend|this week|next week))?[?.!]*$",
+        re.IGNORECASE,
+    )
+    WEATHER_PERSONAL_LOCATION_PHRASES = (
+        r"\bnear me\b",
+        r"\baround me\b",
+        r"\bwhere i am\b",
+        r"\bmy location\b",
+        r"\bcurrent location\b",
+        r"\bhere\b",
+    )
 
     def route(self, user_message: str, *, force_no_tools: bool = False) -> RouteDecision:
         if force_no_tools:
@@ -61,6 +105,9 @@ class Router:
                 tool_names={"web.fetch_url"},
                 risk_level=RiskLevel.MEDIUM,
             )
+        weather_route = self._weather_route(user_message, normalized)
+        if weather_route is not None:
+            return weather_route
         if any(pattern in normalized for pattern in self.WEB_SEARCH_PATTERNS):
             return RouteDecision(
                 name="tool.web_search",
@@ -76,3 +123,77 @@ class Router:
                 risk_level=RiskLevel.LOW,
             )
         return RouteDecision(name="chat.default", use_tools=False)
+
+    def _weather_route(self, user_message: str, normalized: str) -> RouteDecision | None:
+        if not any(pattern in normalized for pattern in self.WEATHER_INTENT_PATTERNS):
+            return None
+        if self._is_non_tool_weather_topic(normalized):
+            return None
+
+        requested_period = self._weather_period(normalized)
+        location = self._extract_weather_location(user_message)
+        user_location_detected = bool(location)
+        default_location = os.getenv("WEATHER_DEFAULT_LOCATION", "").strip()
+        uses_default_location = False
+
+        if not location and default_location:
+            location = default_location
+            uses_default_location = True
+
+        metadata: dict[str, Any] = {
+            "weather_intent": True,
+            "requested_period": requested_period,
+            "location_detected": user_location_detected,
+            "default_location_used": uses_default_location,
+        }
+
+        if not location:
+            return RouteDecision(
+                name="chat.weather_missing_location",
+                use_tools=False,
+                risk_level=RiskLevel.SAFE,
+                metadata={**metadata, "missing_location": True},
+            )
+
+        return RouteDecision(
+            name="tool.weather",
+            use_tools=True,
+            tool_names={"weather.current", "weather.forecast"},
+            risk_level=RiskLevel.LOW,
+            metadata={**metadata, "location": location},
+        )
+
+    def _is_non_tool_weather_topic(self, normalized: str) -> bool:
+        if any(phrase in normalized for phrase in self.WEATHER_NON_TOOL_PHRASES):
+            return True
+        return any(normalized.startswith(prefix) for prefix in self.WEATHER_NON_TOOL_PREFIXES)
+
+    def _weather_period(self, normalized: str) -> str:
+        if "tomorrow" in normalized:
+            return "tomorrow"
+        if "weekend" in normalized:
+            return "weekend"
+        if "today" in normalized or "tonight" in normalized:
+            return "today"
+        return "unspecified"
+
+    def _extract_weather_location(self, user_message: str) -> str | None:
+        normalized = user_message.casefold()
+        if any(re.search(pattern, normalized) for pattern in self.WEATHER_PERSONAL_LOCATION_PHRASES):
+            return None
+
+        match = self.WEATHER_LOCATION_PATTERN.search(user_message.strip())
+        if not match:
+            return None
+
+        location = match.group(1).strip(" \t\r\n.,!?")
+        location = re.sub(
+            r"\s+(today|tomorrow|tonight|this weekend|weekend|this week|next week)$",
+            "",
+            location,
+            flags=re.IGNORECASE,
+        ).strip(" \t\r\n.,!?")
+
+        if not location or location.casefold() in {"me", "here", "my area", "current location"}:
+            return None
+        return location

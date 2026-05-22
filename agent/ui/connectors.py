@@ -69,7 +69,7 @@ def connector_status(
         "last_successful_call": last_success,
         "last_error": last_error,
         "rate_limit_state": _rate_limit_state(capabilities),
-        "cache_state": "not_applicable",
+        "cache_state": _cache_state(connector, env),
         "docs_setup_hint": setup_hint,
         "status": "ok" if configured and enabled else "not_configured",
         **extra,
@@ -105,7 +105,7 @@ def _configuration(connector: str, env: Mapping[str, str]) -> tuple[bool, str, s
         return (
             bool(status["configured"]),
             str(status["provider"]),
-            "Set WEATHER_PROVIDER=open-meteo for no-key weather lookups.",
+            "Open-Meteo is the default no-key provider. Set WEATHER_PROVIDER=disabled to disable weather.",
             {"provider_status": _redact(status)},
         )
     if connector == "web":
@@ -163,6 +163,20 @@ def _rate_limit_state(capabilities: Mapping[str, Mapping[str, Any]]) -> dict[str
         if isinstance(entry.get("rate_limit"), Mapping)
     }
     return {"configured": bool(limits), "limits": limits}
+
+
+def _cache_state(connector: str, env: Mapping[str, str]) -> str | dict[str, Any]:
+    if connector != "weather":
+        return "not_applicable"
+    path = Path(_env(env, "WEATHER_CACHE_PATH", "data/weather_cache.json"))
+    if not path.exists():
+        return {"configured": True, "path": str(path), "entries": 0}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"configured": True, "path": str(path), "state": "unreadable"}
+    entries = len(payload) if isinstance(payload, Mapping) else 0
+    return {"configured": True, "path": str(path), "entries": entries}
 
 
 def _audit_status(connector: str, audit_path: str | Path) -> tuple[str | None, str | None]:

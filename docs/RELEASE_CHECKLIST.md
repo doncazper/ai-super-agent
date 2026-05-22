@@ -12,6 +12,8 @@
 - [x] Capability manifest includes trust levels, audit fields, storage flags, and web rate limits.
 - [x] Sensitive path denylist includes SSH, GPG, Keychain, Messages, Mail, Application Support, AWS, config, and `.env`.
 - [x] Prompt-injection regressions cover web, email, messages, and workspace-file content.
+- [x] Weather hardening verified: ToolBroker-only current/forecast path, manifest entries, audit metadata, rate limits, opt-in default location, no system location inference, structured outputs/errors, no live-network unit tests, and no personal-data tools enabled by weather.
+- [x] Weather cache avoids precise-looking street addresses and direct coordinates.
 - [x] Docs updated.
 - [x] `docs/COMPLETION_REPORT.md` updated.
 - [x] Next milestone identified.
