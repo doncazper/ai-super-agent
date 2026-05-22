@@ -171,6 +171,17 @@ export IMAP_PASSWORD="use-an-app-password-or-external-secret"
 
 Credentials are read from the environment or an external secret setup; the agent does not store passwords. Metadata listing returns headers only and no body. Selected thread reads are single-thread only, wrapped as `UNTRUSTED_EMAIL`, and not stored in long-term memory. Summaries treat email body as data, not instructions. Draft replies are marked draft-only and never send, delete, move, or archive email.
 
+Messages/text assistant selected-thread stubs and manual draft-only access:
+
+```bash
+python smart_agent.py messages read "<thread_id>"
+python smart_agent.py messages summarize "<thread_id>"
+python smart_agent.py messages draft-reply "<thread_id>"
+python smart_agent.py messages draft-from-text --to "Name" --context-file ./workspace/thread.txt
+```
+
+Messages tools are disabled by default and approval-gated. There is intentionally no live macOS Messages connector yet: the project does not scrape `~/Library/Messages`, does not request broad Full Disk Access, and does not bulk-read history. The safe fallback is a manually provided UTF-8 text file inside `./workspace`; its content is treated as `UNTRUSTED_MESSAGE`, audited as a file read, not stored in long-term memory, and used only to create a draft. Draft replies are marked draft-only and never send, delete, move, archive, or modify messages.
+
 Memory tools:
 
 ```bash

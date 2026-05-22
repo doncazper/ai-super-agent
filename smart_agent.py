@@ -56,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
     session_id = new_session_id()
     approval_store = ApprovalStore()
     approval_interactive = args.interactive or (
-        bool(args.message) and args.message[0] in {"calendar", "contacts", "email"} and sys.stdin.isatty()
+        bool(args.message) and args.message[0] in {"calendar", "contacts", "email", "messages"} and sys.stdin.isatty()
     )
     approval_prompt = ConsoleApprovalPrompt(interactive=approval_interactive)
     broker = ToolBroker(
@@ -84,6 +84,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_contacts_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "email":
         return _run_email_command(args.message[1:], broker, debug=debug_enabled)
+    if args.message and args.message[0] == "messages":
+        return _run_messages_command(args.message[1:], broker, debug=debug_enabled)
 
     try:
         client = LMStudioClient(config)
@@ -361,6 +363,71 @@ def _run_email_command(argv: list[str], broker: ToolBroker, *, debug: bool = Fal
     else:
         tool_name = "email.draft_reply"
         arguments = {"thread_id": parsed.thread_id, "user_instruction": parsed.instruction}
+    tool_call = {
+        "id": f"cli_{tool_name.replace('.', '_')}",
+        "type": "function",
+        "function": {
+            "name": tool_name,
+            "arguments": json.dumps(arguments),
+        },
+    }
+    try:
+        result = broker.execute(tool_call)
+    except AuditLogError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    if debug and result.debug:
+        from agent.core.orchestrator import format_debug_payload
+
+        print("[debug] " + format_debug_payload({"event": "tool_broker", **result.debug}), file=sys.stderr)
+    print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
+    return 0 if result.allowed else 2
+
+
+def _run_messages_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    parser = argparse.ArgumentParser(
+        prog="smart_agent.py messages",
+        description="Messages selected-thread stubs and manual draft-only replies.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    read_parser = subparsers.add_parser("read", help="Read one selected message thread if a safe connector is configured.")
+    read_parser.add_argument("thread_id", help="Selected message thread id.")
+
+    summarize_parser = subparsers.add_parser("summarize", help="Summarize one selected message thread.")
+    summarize_parser.add_argument("thread_id", help="Selected message thread id.")
+
+    draft_parser = subparsers.add_parser("draft-reply", help="Draft a message reply without sending.")
+    draft_parser.add_argument("thread_id", help="Selected message thread id.")
+    draft_parser.add_argument("--to", default="", help="Recipient display name for the draft.")
+    draft_parser.add_argument("--instruction", default="", help="Optional drafting instruction.")
+
+    manual_parser = subparsers.add_parser("draft-from-text", help="Draft from a manually provided ./workspace text file.")
+    manual_parser.add_argument("--to", required=True, help="Recipient display name for the draft.")
+    manual_parser.add_argument("--context-file", required=True, help="Path to a UTF-8 text file inside ./workspace.")
+    manual_parser.add_argument("--instruction", default="", help="Optional drafting instruction.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    if parsed.command == "read":
+        tool_name = "messages.read_selected_thread"
+        arguments: dict[str, object] = {"thread_id": parsed.thread_id}
+    elif parsed.command == "summarize":
+        tool_name = "messages.summarize_thread"
+        arguments = {"thread_id": parsed.thread_id}
+    elif parsed.command == "draft-reply":
+        tool_name = "messages.draft_reply"
+        arguments = {"thread_id": parsed.thread_id, "user_instruction": parsed.instruction}
+        if parsed.to:
+            arguments["to"] = parsed.to
+    else:
+        tool_name = "messages.draft_reply"
+        arguments = {
+            "to": parsed.to,
+            "context_file": parsed.context_file,
+            "user_instruction": parsed.instruction,
+        }
     tool_call = {
         "id": f"cli_{tool_name.replace('.', '_')}",
         "type": "function",

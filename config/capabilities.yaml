@@ -220,6 +220,9 @@ tools:
     default_enabled: false
     approval_required: true
     selected_scope_only: true
+    bulk_read_allowed: false
+    trust_level: UNTRUSTED_MESSAGE
+    stores_body: false
     stores_data: false
 
   messages.summarize_thread:
@@ -227,13 +230,20 @@ tools:
     default_enabled: false
     approval_required: true
     selected_scope_only: true
+    bulk_read_allowed: false
+    trust_level: UNTRUSTED_MESSAGE
+    stores_body: false
     stores_data: false
 
   messages.draft_reply:
-    risk_level: MEDIUM
+    risk_level: HIGH
     default_enabled: false
-    approval_required: false
+    approval_required: true
     selected_scope_only: true
+    bulk_read_allowed: false
+    trust_level: UNTRUSTED_MESSAGE
+    draft_only: true
+    sending_implemented: false
     stores_data: false
 
   browser.read_selected_tab:

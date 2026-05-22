@@ -114,6 +114,19 @@ class ActionPreviewFormatter:
                 sanitized,
                 exact_args_required=exact_required,
             )
+        if tool_name.startswith("messages.") and tool_name not in {"messages.send", "messages.send_approved"}:
+            return ActionPreview(
+                tool_name,
+                risk_level,
+                "Messages assistant",
+                (
+                    f"thread_id={sanitized.get('thread_id', sanitized.get('selected_scope_token', ''))}; "
+                    f"context_file={sanitized.get('context_file', '')}; "
+                    f"draft_only={tool_name == 'messages.draft_reply'}"
+                ),
+                sanitized,
+                exact_args_required=exact_required,
+            )
         if tool_name in {"email.send", "email.send_approved"}:
             return ActionPreview(
                 tool_name,

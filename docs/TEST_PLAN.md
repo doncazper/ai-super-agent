@@ -65,6 +65,7 @@
 - Calendar availability returns slots without leaking event details.
 - Contacts search/read require approval, keep tools disabled by default, return compact search candidates, require a selected-scope token and explicit requested fields for selected reads, omit notes, redact email/phone/address values by default, deny bulk export attempts, and audit accesses as `LOCAL_PRIVATE_DATA`.
 - Email metadata/read/summarize/draft require approval when enabled, keep tools disabled by default, return no body in metadata, wrap selected thread bodies as `UNTRUSTED_EMAIL`, ignore prompt injection, never send drafts, refuse bulk thread ids, avoid long-term body storage, and audit access.
+- Messages read/summarize/draft require approval when enabled, keep tools disabled by default, do not implement sends or bulk history reads, refuse bulk thread ids, return clear setup errors for unsafe/unconfigured adapters, restrict manual draft context files to `./workspace`, wrap content as `UNTRUSTED_MESSAGE`, ignore prompt injection, avoid long-term body storage, and audit access.
 
 ## Self-Improvement Tests
 

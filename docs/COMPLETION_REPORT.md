@@ -1000,3 +1000,44 @@ Do not disable audit logging."
   - Live IMAP smoke was not run because email capabilities remain disabled by default and no live connector setup was requested for this checkpoint.
 - Next recommended action:
   - Optional live IMAP smoke only after explicit user configuration and intentional enabling of the disabled read-only/draft email capabilities; otherwise continue to the next safe read-only connector or workflow hardening step.
+
+## Run: 2026-05-21 20:37 PDT Phase E2 Messages/Text Draft-Only Interface
+
+- Date/time: 2026-05-21 20:37:52 PDT, post-baseline messages/text assistant.
+- Phase attempted: Phase E2 messages/text assistant with selected-thread stubs and manual draft-only fallback.
+- Implementation path chosen:
+  - Added a messages adapter interface with a safe not-configured adapter by default.
+  - No live macOS Messages connector was implemented because this repo does not currently have a safe permissioned Messages integration path.
+  - Added a manual `messages draft-from-text` fallback that reads only UTF-8 files inside `./workspace`, wraps them as `UNTRUSTED_MESSAGE`, and drafts without sending.
+- Files changed:
+  - Added `agent/tools/personal/messages.py`.
+  - Updated `agent/tools/personal/read_only.py` to route `messages.read_selected_thread`, `messages.summarize_thread`, and `messages.draft_reply` through the messages adapter.
+  - Updated `agent/tools/registry.py` to support injected messages connectors for tests and workspace-bounded manual context reads.
+  - Updated `smart_agent.py` with `python smart_agent.py messages read`, `messages summarize`, `messages draft-reply`, and `messages draft-from-text`.
+  - Updated `agent/safety/action_preview.py`, `config/capabilities.yaml`, `.env.example`, `README.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/TEST_PLAN.md`, `docs/DECISION_LOG.md`, and `docs/COMPLETION_REPORT.md`.
+  - Updated `tests/test_personal_modules.py`.
+- Commands run:
+  - Read governance docs, completion history, capability config, personal connector code, registry, action previews, tool broker, README, risk register, threat model, and personal tests.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_personal_modules.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - Disabled messages CLI smoke: `$PY smart_agent.py messages draft-from-text --to Sam --context-file ./workspace/thread.txt`.
+  - `git diff --check`.
+- Tests run:
+  - Targeted personal tests: 49 passed in 0.38s.
+  - Full suite: 170 passed in 1.51s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - `messages.read_selected_thread` is HIGH risk, disabled by default, approval-required, selected-thread only, and returns a clear setup limitation when no safe adapter is configured.
+  - `messages.summarize_thread` treats selected message content as untrusted data and does not store body text.
+  - `messages.draft_reply` is HIGH risk, disabled by default, approval-required, draft-only, and never sends.
+  - Bulk-style thread ids such as `all` are denied.
+  - Manual `draft-from-text` reads only files inside `./workspace`, blocks traversal/outside paths, audits file reads, and labels content `UNTRUSTED_MESSAGE`.
+  - Message body text is redacted from audit arguments and approval lifecycle previews.
+  - Disabled messages CLI smoke safely returned `capability disabled`.
+  - No message send implementation, bulk history read, `~/Library/Messages` scraping, Full Disk Access requirement, deletion, moving, or archiving was added.
+- Known limitations:
+  - Live macOS Messages integration remains intentionally unavailable until a safe permissioned connector path is designed.
+  - Existing M8 send stubs remain disabled-by-default and were not enabled.
+- Next recommended action:
+  - Checkpoint/commit Phase E2, then continue with workflow hardening around draft-only email/messages or selected browser-tab stubs. Do not enable send/write actions.

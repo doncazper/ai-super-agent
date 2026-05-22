@@ -22,7 +22,7 @@
 | Approval confusion or click-through | Approval previews show request ID, risk, trust level, summary, redacted args, rollback availability, expiration, and allowed choices before approval. |
 | Critical approval reuse | Critical actions are per-action only; approve-all/reuse choices are denied and tests verify reuse does not authorize a second critical action. |
 | Prompt injection from email | Mark email `UNTRUSTED_EMAIL`; selected-thread only; wrap bodies with an untrusted-content warning; never follow embedded instructions or allow email text to approve actions, change policy, reveal secrets, or request tools. |
-| Prompt injection from messages | Mark messages `UNTRUSTED_MESSAGE`; selected-scope only; no sends before approvals. |
+| Prompt injection from messages | Mark messages `UNTRUSTED_MESSAGE`; selected-scope only; wrap bodies with an untrusted-content warning; never follow embedded instructions or allow message text to approve actions, change policy, reveal secrets, or request tools. |
 | Malicious documents | Mark documents `UNTRUSTED_DOCUMENT`; no macro execution; web fetch refuses binary downloads by default. |
 | Tool-broker bypass | Tools execute only through `ToolBroker`; tests verify unknown/direct paths are denied by policy boundaries. |
 | Path traversal | Resolve absolute paths and enforce allowed roots before filesystem actions. |
@@ -32,6 +32,7 @@
 | Calendar read overreach | Calendar read connector is disabled by default, approval-gated, selected date range only, max-range limited, and returns compact summaries without notes/body or locations by default. The optional macOS path uses Calendar.app Automation permissions and does not scrape private databases or require Full Disk Access. |
 | Contacts read overreach | Contacts connector is disabled by default, approval-gated, selected-scope only, and search returns compact candidates without email/phone values. Selected reads require a selected-scope token and explicit requested fields, omit notes, redact email/phone/address values by default, and do not scrape private databases or require Full Disk Access. |
 | Email read overreach | Email connector is disabled by default and approval-gated. Metadata listing returns no body; thread reads require one selected thread id; bulk ids such as `all` are denied; summaries/drafts do not store body text; draft replies are never sent. |
+| Messages read overreach | Messages connector is disabled by default and approval-gated. No live macOS Messages connector is implemented until a safe permissioned path exists; the project does not scrape `~/Library/Messages` or request Full Disk Access. Manual draft fallback reads only `./workspace` files, denies traversal/outside paths, wraps content as untrusted, and never sends. |
 | Email/text sending abuse | Draft-only workflows before send tools; M8 send tools disabled by default with critical per-action approval and preflight summaries. |
 | Calendar/contact modification abuse | M8 write tools disabled by default with critical per-action approval and preflight summaries. |
 | Self-improvement weakening safety | Branch-based changes; policy-reduction checks; protected safety files; tests and diff before approval-gated commit. |
