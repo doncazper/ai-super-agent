@@ -1198,3 +1198,60 @@ Do not disable audit logging."
   - Live connector smoke tests remain opt-in and were not run in this checkpoint.
 - Next recommended action:
   - Commit Phase G, then continue with audit-log verification tooling before any send/write enablement.
+
+## Run: 2026-05-22 Phase H Weather API Connector Decision Record
+
+- Date/time: 2026-05-22, post-baseline connector planning.
+- Phase attempted: Phase H connector selection decision record.
+- Connector considered:
+  - Weather API, selected as a low-risk planning candidate because the prompt left the connector name as a placeholder.
+- Files changed:
+  - Added `docs/decisions/2026-05-22_weather_api_connector.md`.
+  - Updated `docs/RISK_REGISTER.md` with weather-specific location leakage and provider reliability risks.
+  - Updated `docs/THREAT_MODEL.md` with weather-specific location, stale-data, provider manipulation, timeout, and rate-limit mitigations.
+  - Updated `docs/DECISION_LOG.md` with the proposed weather connector planning decision.
+  - Updated `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read current decision log, risk register, threat model, completion report, and repository status.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `git diff --check`.
+- Tests run:
+  - Full suite: 183 passed in 1.82s.
+  - Startup policy validation result: `startup policy ok`.
+  - `git diff --check`: clean.
+- Results:
+  - No connector implementation was added.
+  - No capabilities were added or enabled.
+  - No personal-data connector, send/write action, browser automation, or policy weakening was introduced.
+- Next recommended action:
+  - If Weather API is approved, implement only the provider abstraction and disabled/clear-error behavior first, then add one provider through `ToolBroker` with tests. If a different connector is desired, create a connector-specific decision record before implementation.
+
+## Run: 2026-05-21 20:57 PDT Phase H Checkpoint Validation
+
+- Date/time: 2026-05-21 20:57:48 PDT, post-baseline checkpoint.
+- Phase attempted: Validate Phase H connector decision-record work without implementing a connector.
+- Scope:
+  - Weather API connector planning record.
+  - Risk register and threat model updates for weather location leakage, provider outage, stale data, and provider manipulation.
+  - Decision log and completion report updates.
+- Approval gates checked:
+  - The prompt's goal field was still a placeholder, so no new connector implementation was approved.
+  - No capabilities were added or enabled.
+  - No personal-data tools were enabled by default.
+  - No send/write actions, browser automation, device location, IP geolocation, or memory storage were added.
+  - ToolBroker, PolicyEngine, ApprovalManager, and AuditLogger rules were unchanged.
+- Commands run:
+  - Read required governance docs, milestone queue, completion report, risk register, threat model, test plan, release checklist, decision log, and repository status.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `git diff --check`.
+- Tests run:
+  - Full suite: 183 passed in 1.89s.
+  - Startup policy validation result: `startup policy ok`.
+  - `git diff --check`: clean.
+- Results:
+  - Phase H remains planning-only.
+  - Next safe step is either commit this decision record or explicitly approve the Weather API provider-abstraction implementation.
+- Next recommended action:
+  - Commit Phase H planning docs, then continue only after an explicit connector implementation goal is supplied.
