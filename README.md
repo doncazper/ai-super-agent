@@ -295,10 +295,23 @@ Optional readiness check:
 $PY smart_agent.py doctor
 ```
 
+Controlled smoke harness:
+
+```bash
+$PY smart_agent.py smoke --lmstudio
+$PY smart_agent.py smoke --web
+$PY smart_agent.py smoke --calendar --contacts
+$PY smart_agent.py smoke --all-safe
+$PY smart_agent.py smoke --all-safe --dry-run
+```
+
 Expected result:
 
 - The first command answers naturally and attaches no tools.
 - The second command prints route/tool-call/policy/audit debug details and lets the model request the safe time tool through `ToolBroker`.
+- `smoke --lmstudio` sends minimal live prompts only when `LMSTUDIO_MODEL` is set; otherwise it reports a skipped check.
+- `smoke --web` uses the configured web provider if present and fetches `https://example.com` as a safe public page.
+- `smoke --calendar --contacts` is dry-run/check-only by default. It checks connector configuration and policy state but does not read personal data.
 
 If LM Studio is not running, the CLI should say:
 
@@ -311,6 +324,37 @@ If the model variable is missing, the CLI should say:
 ```text
 LMSTUDIO_MODEL is not set. Export LMSTUDIO_MODEL='<model id>'.
 ```
+
+## Test Environments
+
+Default tests are local and should not require live services or personal data:
+
+```bash
+$PY -m pytest -q
+```
+
+Pytest markers are registered for `unit`, `integration`, `live_lmstudio`, `live_web`, `live_calendar`, `live_contacts`, `requires_approval`, and `personal_data`. The default pytest configuration excludes tests marked `personal_data`.
+
+Examples:
+
+```bash
+$PY -m pytest -m unit
+$PY -m pytest -m integration
+$PY -m pytest -m live_lmstudio
+$PY -m pytest -m live_web
+```
+
+Personal-data tests must stay opt-in and should use test fixtures or explicitly selected non-production records only:
+
+```bash
+$PY -m pytest -m personal_data
+```
+
+Live smoke prerequisites:
+
+- LM Studio: set `LMSTUDIO_MODEL` and start the Developer Server.
+- Web search: set `WEB_SEARCH_PROVIDER=brave` and `BRAVE_SEARCH_API_KEY`, or expect search to be skipped.
+- Calendar/contacts: keep dry-run unless you intentionally enable the disabled read-only capabilities and approve selected-scope access.
 
 ## Architecture
 

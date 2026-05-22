@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import argparse
 from pathlib import Path
 
 from agent.config.loader import load_capabilities_config
@@ -13,6 +14,7 @@ from agent.ui.config_viewer import config_as_json
 from agent.ui.doctor import doctor_exit_code, format_doctor, run_doctor
 from agent.ui.memory_viewer import delete_memory, list_memory
 from agent.ui.permissions_dashboard import PermissionStore
+from agent.ui.smoke import SmokeOptions, format_smoke, run_smoke, smoke_exit_code
 
 
 def dispatch_cli(argv: list[str], *, project_root: str | Path = ".") -> int | None:
@@ -42,6 +44,8 @@ def dispatch_cli(argv: list[str], *, project_root: str | Path = ".") -> int | No
         checks = run_doctor()
         print(format_doctor(checks))
         return doctor_exit_code(checks)
+    if command == "smoke":
+        return _smoke(argv[1:])
     return None
 
 
@@ -111,3 +115,29 @@ def _config(argv: list[str]) -> int:
         return 0
     print("usage: config show|diff", file=sys.stderr)
     return 2
+
+
+def _smoke(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py smoke", description="Run controlled live smoke checks.")
+    parser.add_argument("--lmstudio", action="store_true", help="Run live LM Studio checks if LMSTUDIO_MODEL is set.")
+    parser.add_argument("--web", action="store_true", help="Run live web checks if web access/provider config allows it.")
+    parser.add_argument("--calendar", action="store_true", help="Dry-run calendar connector checks; no personal data read.")
+    parser.add_argument("--contacts", action="store_true", help="Dry-run contacts connector checks; no personal data read.")
+    parser.add_argument("--all-safe", action="store_true", help="Run LM Studio/web checks plus dry-run personal connector checks.")
+    parser.add_argument("--dry-run", action="store_true", help="Force tool calls into ToolBroker dry-run mode where applicable.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    checks = run_smoke(
+        SmokeOptions(
+            lmstudio=parsed.lmstudio,
+            web=parsed.web,
+            calendar=parsed.calendar,
+            contacts=parsed.contacts,
+            all_safe=parsed.all_safe,
+            dry_run=parsed.dry_run,
+        )
+    )
+    print(format_smoke(checks))
+    return smoke_exit_code(checks)

@@ -1041,3 +1041,78 @@ Do not disable audit logging."
   - Existing M8 send stubs remain disabled-by-default and were not enabled.
 - Next recommended action:
   - Checkpoint/commit Phase E2, then continue with workflow hardening around draft-only email/messages or selected browser-tab stubs. Do not enable send/write actions.
+
+## Run: 2026-05-21 20:44 PDT Phase F Real-World Integration Test Harness
+
+- Date/time: 2026-05-21 20:44:33 PDT, post-baseline smoke harness.
+- Phase attempted: Phase F controlled integration smoke harness without enabling personal-data access.
+- Implementation path chosen:
+  - Added pytest markers for unit, integration, live services, approval-required flows, and personal-data tests.
+  - Added a `smart_agent.py smoke` command with `--lmstudio`, `--web`, `--calendar`, `--contacts`, `--all-safe`, and `--dry-run`.
+  - Live services that are not configured report `skip` instead of being faked as passing.
+  - Calendar/contact smoke stays dry-run/check-only by default and does not read personal data.
+- Files changed:
+  - Added `agent/ui/smoke.py`.
+  - Added `tests/test_smoke.py`.
+  - Updated `agent/ui/cli_commands.py`, `pyproject.toml`, `README.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/TEST_PLAN.md`, `docs/DECISION_LOG.md`, and `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read current runtime, doctor, CLI, LM Studio, web, README, test-plan, and governance docs.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_smoke.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `$PY smart_agent.py smoke --calendar --contacts`
+  - `WEB_SEARCH_PROVIDER= BRAVE_SEARCH_API_KEY= $PY smart_agent.py smoke --web --dry-run`
+  - `env -u LMSTUDIO_MODEL $PY smart_agent.py smoke --lmstudio`
+  - `git diff --check`.
+- Tests run:
+  - Smoke harness tests: 6 passed in 0.11s.
+  - Full suite: 176 passed in 1.58s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - `smart_agent.py smoke --lmstudio` reports a skipped check when `LMSTUDIO_MODEL` is not set.
+  - `smart_agent.py smoke --web --dry-run` evaluates `web.search` and `web.fetch_url` policy paths without network execution.
+  - `smart_agent.py smoke --calendar --contacts` reports connector state and dry-run policy decisions without reading calendar or contacts data.
+  - Default pytest configuration excludes tests marked `personal_data`.
+  - No production email/messages/calendar/contact data was accessed.
+  - No personal-data tools were enabled by default and no policy was weakened.
+- Known limitations:
+  - Live LM Studio smoke was skipped in this shell because `LMSTUDIO_MODEL` is not set.
+  - Live Brave Search smoke was not run because `BRAVE_SEARCH_API_KEY` is not set; web dry-run was used instead.
+  - Live calendar/contact reads remain intentionally out of scope for this phase.
+- Next recommended action:
+  - Checkpoint/commit Phase F, then run local live smoke commands only after intentionally configuring LM Studio and/or a web provider. Continue to workflow hardening before any send/write enablement.
+
+## Run: 2026-05-21 20:46 PDT Phase F Checkpoint Validation
+
+- Date/time: 2026-05-21 20:46:28 PDT, post-baseline checkpoint.
+- Phase attempted: Validate and commit Phase F smoke harness work without enabling new capabilities.
+- Scope:
+  - Pytest marker registration and default `personal_data` exclusion.
+  - `smart_agent.py smoke` command for LM Studio, web, and dry-run personal connector checks.
+  - README and SDLC docs for local smoke/live test usage.
+- Approval gates checked:
+  - Personal connector smoke remains dry-run/check-only by default.
+  - No personal-data tools were enabled by default.
+  - No send/write actions were enabled.
+  - No production email/messages/calendar/contact data was accessed.
+  - No policy weakening or audit disabling was introduced.
+- Commands run:
+  - Read required governance docs, risk register, threat model, test plan, release checklist, and completion history.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_smoke.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
+  - `$PY smart_agent.py smoke --calendar --contacts`
+  - `WEB_SEARCH_PROVIDER= BRAVE_SEARCH_API_KEY= $PY smart_agent.py smoke --web --dry-run`
+  - `env -u LMSTUDIO_MODEL $PY smart_agent.py smoke --lmstudio`
+  - `git diff --check`.
+- Tests run:
+  - Smoke harness tests: 6 passed in 0.11s.
+  - Full suite: 176 passed in 1.68s.
+  - Startup policy validation result: `startup policy ok`.
+- Results:
+  - Calendar/contact smoke reported dry-run-only checks and did not read personal data.
+  - Web smoke dry-run evaluated policy without network execution.
+  - LM Studio smoke reported `skip` because `LMSTUDIO_MODEL` is not set in this shell.
+  - Checkpoint validation passed and is ready to commit.
+- Next recommended action:
+  - After this checkpoint commit, run live local smoke only after intentionally configuring LM Studio and/or Brave Search, then continue workflow hardening before any send/write enablement.

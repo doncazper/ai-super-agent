@@ -24,3 +24,14 @@ exclude = ["logs*", "docs*", "tests*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+  "unit: fast unit tests with no external services",
+  "integration: integration tests that may combine multiple local components",
+  "live_lmstudio: live LM Studio smoke tests, skipped unless explicitly selected",
+  "live_web: live web/provider smoke tests, skipped unless explicitly selected",
+  "live_calendar: live calendar connector smoke tests, skipped unless explicitly selected",
+  "live_contacts: live contacts connector smoke tests, skipped unless explicitly selected",
+  "requires_approval: tests that exercise approval-required flows",
+  "personal_data: personal-data connector tests, skipped by default unless explicitly selected"
+]
+addopts = "-m 'not personal_data'"

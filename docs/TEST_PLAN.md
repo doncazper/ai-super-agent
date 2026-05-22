@@ -13,6 +13,9 @@
 - No-tool chat sends no tools.
 - Tool-call loop appends matching tool results.
 - CLI modes construct expected orchestration options.
+- Smoke harness tests use mocks for LM Studio, web search/fetch, and personal connector policy checks.
+- Pytest markers identify `unit`, `integration`, `live_lmstudio`, `live_web`, `live_calendar`, `live_contacts`, `requires_approval`, and `personal_data`.
+- Tests marked `personal_data` are skipped by default and must be explicitly selected.
 
 ## Policy Tests
 
@@ -55,6 +58,13 @@
 - Research workflow reports fetch failures.
 - Foreign-language titles/snippets/excerpts pass through without cloud translation.
 - Audit logs include search and fetch actions.
+
+## Live Smoke Tests
+
+- `python smart_agent.py smoke --lmstudio` verifies no-tool chat, debug events, and the safe time-tool path when `LMSTUDIO_MODEL` and LM Studio are available.
+- `python smart_agent.py smoke --web` verifies configured search, safe public fetch, and source-grounded research behavior without fabricating sources.
+- `python smart_agent.py smoke --calendar --contacts` performs dry-run connector and policy checks only; it does not read personal data by default.
+- Unconfigured live services are reported as skipped instead of faked as passing.
 
 ## Personal-Data Tests
 
