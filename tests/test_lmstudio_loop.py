@@ -1,0 +1,163 @@
+from __future__ import annotations
+
+import json
+from typing import Any
+
+from agent.core.lmstudio_client import LMStudioConfig, LMStudioClient
+from agent.core.orchestrator import MINIMAL_SYSTEM_PROMPT, Orchestrator, format_debug_payload
+from agent.core.tool_broker import ToolBroker
+from agent.safety.audit import AuditLogger
+from agent.safety.policy import PolicyEngine
+from agent.tools.registry import default_registry
+
+
+class FakeClient:
+    def __init__(self, responses: list[dict[str, Any]]) -> None:
+        self.responses = responses
+        self.calls: list[dict[str, Any]] = []
+
+    def chat(self, messages: list[dict[str, Any]], *, tools=None) -> dict[str, Any]:
+        self.calls.append({"messages": list(messages), "tools": tools})
+        return self.responses.pop(0)
+
+
+def response(message: dict[str, Any]) -> dict[str, Any]:
+    return {"choices": [{"message": message}]}
+
+
+def make_orchestrator(fake_client: FakeClient, tmp_path) -> Orchestrator:
+    registry = default_registry()
+    broker = ToolBroker(
+        registry,
+        PolicyEngine(),
+        AuditLogger(tmp_path / "audit.jsonl"),
+        session_id="test-session",
+        model="test-model",
+        route="test",
+    )
+    return Orchestrator(fake_client, registry, broker)
+
+
+def test_lmstudio_payload_omits_tools_when_none() -> None:
+    client = LMStudioClient(LMStudioConfig(model="q"))
+
+    payload = client.build_payload([{"role": "user", "content": "hello"}], tools=None)
+
+    assert "tools" not in payload
+    assert payload["model"] == "q"
+    assert payload["max_tokens"] >= 2048
+
+
+def test_no_tool_mode_attaches_no_tools_and_preserves_user_message(tmp_path) -> None:
+    fake = FakeClient([response({"content": "RCS and iMessage are different messaging systems."})])
+    orchestrator = make_orchestrator(fake, tmp_path)
+
+    result = orchestrator.run("Explain RCS vs iMessage", no_tools=True)
+
+    assert result.content == "RCS and iMessage are different messaging systems."
+    assert fake.calls[0]["tools"] is None
+    assert fake.calls[0]["messages"][0]["content"] == MINIMAL_SYSTEM_PROMPT
+    assert fake.calls[0]["messages"][1] == {
+        "role": "user",
+        "content": "Explain RCS vs iMessage",
+    }
+
+
+def test_normal_chat_route_attaches_no_tools_by_default(tmp_path) -> None:
+    fake = FakeClient([response({"content": "Hello."})])
+    orchestrator = make_orchestrator(fake, tmp_path)
+
+    result = orchestrator.run("Tell me a short story.")
+
+    assert result.content == "Hello."
+    assert fake.calls[0]["tools"] is None
+
+
+def test_tool_result_is_appended_with_matching_tool_call_id(tmp_path) -> None:
+    fake = FakeClient(
+        [
+            response(
+                {
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_time",
+                            "type": "function",
+                            "function": {
+                                "name": "time.get_current_time",
+                                "arguments": json.dumps({"timezone": "UTC"}),
+                            },
+                        }
+                    ],
+                }
+            ),
+            response({"content": "It is whatever the tool reported."}),
+        ]
+    )
+    orchestrator = make_orchestrator(fake, tmp_path)
+
+    result = orchestrator.run("What time is it?")
+
+    assert result.content == "It is whatever the tool reported."
+    assert len(fake.calls) == 2
+    tool_messages = [message for message in fake.calls[1]["messages"] if message["role"] == "tool"]
+    assert len(tool_messages) == 1
+    assert tool_messages[0]["tool_call_id"] == "call_time"
+    assert tool_messages[0]["name"] == "time.get_current_time"
+    assert json.loads(tool_messages[0]["content"])["timezone"] == "UTC"
+
+
+def test_malformed_tool_arguments_are_returned_as_tool_error(tmp_path) -> None:
+    fake = FakeClient(
+        [
+            response(
+                {
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_bad_args",
+                            "type": "function",
+                            "function": {
+                                "name": "time.get_current_time",
+                                "arguments": "{not-json",
+                            },
+                        }
+                    ],
+                }
+            ),
+            response({"content": "I could not use the tool."}),
+        ]
+    )
+    orchestrator = make_orchestrator(fake, tmp_path)
+
+    result = orchestrator.run("What time is it?")
+
+    assert result.content == "I could not use the tool."
+    tool_messages = [message for message in fake.calls[1]["messages"] if message["role"] == "tool"]
+    assert json.loads(tool_messages[0]["content"])["error"] == "invalid tool arguments"
+
+
+def test_reasoning_content_is_not_fed_back_or_displayed(tmp_path) -> None:
+    fake = FakeClient(
+        [
+            response(
+                {
+                    "content": "Final only.",
+                    "reasoning_content": "hidden chain of thought",
+                }
+            )
+        ]
+    )
+    orchestrator = make_orchestrator(fake, tmp_path)
+
+    result = orchestrator.run("Tell me something.")
+
+    assert result.content == "Final only."
+    assert "reasoning_content" not in result.messages[-1]
+
+
+def test_debug_payload_redacts_secrets() -> None:
+    debug = format_debug_payload({"headers": {"Authorization": "token supersecret"}})
+
+    assert "supersecret" not in debug
+    assert "[REDACTED]" in debug

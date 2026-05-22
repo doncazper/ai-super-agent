@@ -1,0 +1,281 @@
+tools:
+  time.get_current_time:
+    risk_level: SAFE
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+
+  web.search:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 10
+
+  web.fetch_url:
+    risk_level: MEDIUM
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+    timeout_seconds: 10
+    blocked_domains: []
+    allowed_domains: []
+
+  filesystem.list:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+    allowed_roots:
+      - .
+      - ./workspace
+      - ./agent
+      - ./tests
+
+  filesystem.read:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+    allowed_roots:
+      - .
+      - ./workspace
+      - ./agent
+      - ./tests
+
+  filesystem.write:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+    allowed_roots:
+      - .
+      - ./workspace
+      - ./agent
+      - ./tests
+
+  filesystem.patch:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+    allowed_roots:
+      - .
+      - ./workspace
+      - ./agent
+      - ./tests
+
+  filesystem.delete:
+    risk_level: HIGH
+    default_enabled: true
+    approval_required: true
+    stores_data: false
+    allowed_roots:
+      - .
+      - ./workspace
+      - ./agent
+      - ./tests
+
+  git.status:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+
+  git.diff:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+
+  git.branch:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+
+  git.commit:
+    risk_level: HIGH
+    default_enabled: true
+    approval_required: true
+    stores_data: false
+
+  code.run_tests:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+
+  memory.store:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: true
+
+  memory.store_personal:
+    risk_level: HIGH
+    default_enabled: true
+    approval_required: true
+    stores_data: true
+
+  memory.search:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+
+  memory.export:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+
+  memory.delete:
+    risk_level: LOW
+    default_enabled: true
+    approval_required: false
+    stores_data: false
+
+  email.read_selected_thread:
+    risk_level: HIGH
+    default_enabled: false
+    approval_required: true
+    selected_scope_only: true
+    stores_data: false
+
+  contacts.search:
+    risk_level: HIGH
+    default_enabled: false
+    approval_required: true
+    selected_scope_only: true
+    stores_data: false
+
+  contacts.read_selected:
+    risk_level: HIGH
+    default_enabled: false
+    approval_required: true
+    selected_scope_only: true
+    stores_data: false
+
+  calendar.read_date_range:
+    risk_level: HIGH
+    default_enabled: false
+    approval_required: true
+    selected_scope_only: true
+    stores_data: false
+
+  calendar.find_availability:
+    risk_level: HIGH
+    default_enabled: false
+    approval_required: true
+    selected_scope_only: true
+    stores_data: false
+
+  email.list_metadata:
+    risk_level: HIGH
+    default_enabled: false
+    approval_required: true
+    selected_scope_only: true
+    stores_data: false
+
+  email.summarize_thread:
+    risk_level: HIGH
+    default_enabled: false
+    approval_required: true
+    selected_scope_only: true
+    stores_data: false
+
+  email.draft_reply:
+    risk_level: MEDIUM
+    default_enabled: false
+    approval_required: false
+    selected_scope_only: true
+    stores_data: false
+
+  messages.read_selected_thread:
+    risk_level: HIGH
+    default_enabled: false
+    approval_required: true
+    selected_scope_only: true
+    stores_data: false
+
+  messages.summarize_thread:
+    risk_level: HIGH
+    default_enabled: false
+    approval_required: true
+    selected_scope_only: true
+    stores_data: false
+
+  messages.draft_reply:
+    risk_level: MEDIUM
+    default_enabled: false
+    approval_required: false
+    selected_scope_only: true
+    stores_data: false
+
+  browser.read_selected_tab:
+    risk_level: HIGH
+    default_enabled: false
+    approval_required: true
+    selected_scope_only: true
+    stores_data: false
+
+  email.send:
+    risk_level: CRITICAL
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+
+  messages.send:
+    risk_level: CRITICAL
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+
+  calendar.create_event:
+    risk_level: CRITICAL
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+
+  calendar.update_event:
+    risk_level: CRITICAL
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+
+  calendar.delete_event:
+    risk_level: CRITICAL
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+
+  contacts.update_selected:
+    risk_level: CRITICAL
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+
+  email.send_approved:
+    risk_level: CRITICAL
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+
+  messages.send_approved:
+    risk_level: CRITICAL
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+
+  secrets.read:
+    risk_level: FORBIDDEN
+    default_enabled: false
+    approval_required: false

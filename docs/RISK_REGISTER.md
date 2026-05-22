@@ -1,0 +1,19 @@
+# Risk Register
+
+| Risk | Affected Modules | Likelihood | Impact | Mitigation | Owner | Status |
+|---|---|---:|---:|---|---|---|
+| Model hallucination causes false claims | core, ui | Medium | Medium | Model writes answers only from messages/tool results; debug mode shows payloads | Project | Open |
+| Prompt injection from web pages | web, workflows | High | High | Wrap untrusted content; never execute page instructions; tests verify webpage instructions remain data | Project | Mitigated in M4 |
+| Prompt injection from email | personal, workflows | High | High | Treat email as `UNTRUSTED_EMAIL`; selected-scope only | Project | Open |
+| Prompt injection from messages | personal, workflows | High | High | Treat messages as `UNTRUSTED_MESSAGE`; selected-scope only | Project | Open |
+| Malicious documents | web, personal | Medium | High | Treat as `UNTRUSTED_DOCUMENT`; no automatic macros/binary execution; web fetch refuses binary downloads by default | Project | Partially mitigated in M4 |
+| Tool-broker bypass | core, tools | Medium | Critical | Central registry and tests; direct tool execution out of policy scope prohibited | Project | Open |
+| Path traversal | filesystem tools | Medium | High | Resolve paths; allowed roots; deny private paths; tests cover traversal and outside-root writes | Project | Mitigated in M3 |
+| Secrets leakage | audit, memory, debug | Medium | Critical | Redaction, forbidden paths, no secret memory; memory audit content redacted | Project | Mitigated in M5 |
+| Unsafe memory storage | memory | Medium | High | Categorized memory; approval for personal data; deletion lifecycle; tests cover secret/personal rejection | Project | Mitigated in M5 |
+| Overbroad personal-data access | personal | Medium | Critical | Disabled by default; selected-scope; approvals; no private DB scraping or Full Disk Access dependency | Project | Mitigated in M6 |
+| Email/text sending abuse | personal, workflows | Medium | Critical | Draft-only first; M8 send tools disabled by default and require per-action approval with preflight | Project | Mitigated in M8 |
+| Calendar/contact modification abuse | personal | Medium | High | M8 write tools disabled by default and require per-action approval with preflight | Project | Mitigated in M8 |
+| Self-improvement weakening safety | workflows | Medium | Critical | Branches, diff review, policy-protection tests, protected safety files, approval-gated commit | Project | Mitigated in M9 |
+| Audit-log tampering | audit | Medium | High | Hash-chained JSONL; later viewer verification | Project | Open |
+| Configuration tampering | config, safety | Medium | High | Startup validator; dangerous config rejected | Project | Planned |
