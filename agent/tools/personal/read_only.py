@@ -32,11 +32,13 @@ from agent.tools.personal.tasks import (
     TasksConnector,
     complete_task,
     create_task,
+    draft_create_task,
     delete_task,
     list_tasks,
     tasks_connector_from_env,
     update_task,
 )
+from agent.tools.personal.write_actions import _require_action_center_approval, _require_matching_action_args
 
 
 def make_personal_tools(
@@ -46,6 +48,7 @@ def make_personal_tools(
     email_connector: EmailConnector | None = None,
     messages_connector: MessagesConnector | None = None,
     tasks_connector: TasksConnector | None = None,
+    action_center: Any | None = None,
 ) -> dict[str, Any]:
     connector = calendar_connector or calendar_connector_from_env()
     contact_connector = contacts_connector or contacts_connector_from_env()
@@ -190,6 +193,15 @@ def make_personal_tools(
         source_action_id: str = "",
         **kwargs: object,
     ) -> dict[str, object]:
+        record = _require_action_center_approval(
+            action_center,
+            action="messages.save_draft",
+            action_id=source_action_id,
+        )
+        approved_args: dict[str, Any] = {"to": to, "draft": draft}
+        if path is not None or "path" in record.sanitized_args:
+            approved_args["path"] = path
+        _require_matching_action_args(record, "messages.save_draft", approved_args)
         return save_draft_to_workspace(
             project_root=project_root,
             to=to,
@@ -200,6 +212,12 @@ def make_personal_tools(
         )
 
     def messages_copy_draft(to: str, draft: str, source_action_id: str = "", **kwargs: object) -> dict[str, object]:
+        record = _require_action_center_approval(
+            action_center,
+            action="messages.copy_draft",
+            action_id=source_action_id,
+        )
+        _require_matching_action_args(record, "messages.copy_draft", {"to": to, "draft": draft})
         return copy_draft_to_clipboard(
             to=to,
             draft=draft,
@@ -213,13 +231,31 @@ def make_personal_tools(
 
             raise ToolError("selected_scope_token is required for personal-data access")
         return {
-            "tool": "browser.read_selected_tab",
+            "tool": "browser.selected_tab",
             "configured": False,
             "error": "personal data connector is not configured; selected-scope approved access is required",
         }
 
     def tasks_list(selected_scope_token: str | None = None, max_results: int | None = None) -> dict[str, object]:
         return list_tasks(task_connector, selected_scope_token=selected_scope_token, max_results=max_results)
+
+    def tasks_draft_create(
+        title: str,
+        due: str = "",
+        notes: str = "",
+        list_name: str = "",
+        source_workflow: str = "manual",
+        allow_notes: bool = False,
+    ) -> dict[str, object]:
+        return draft_create_task(
+            title=title,
+            due=due,
+            notes=notes,
+            list_name=list_name,
+            source_workflow=source_workflow,
+            allow_notes=allow_notes,
+            action_center=action_center,
+        )
 
     def tasks_create(title: str, due: str = "", notes: str = "", list_name: str = "") -> dict[str, object]:
         return create_task(task_connector, title=title, due=due, notes=notes, list_name=list_name)
@@ -249,8 +285,10 @@ def make_personal_tools(
         "messages.draft_from_text": messages_draft_from_text,
         "messages.save_draft": messages_save_draft,
         "messages.copy_draft": messages_copy_draft,
+        "browser.selected_tab": browser_read_selected_tab,
         "browser.read_selected_tab": browser_read_selected_tab,
         "tasks.list": tasks_list,
+        "tasks.draft_create": tasks_draft_create,
         "tasks.create": tasks_create,
         "tasks.update": tasks_update,
         "tasks.complete": tasks_complete,
@@ -399,11 +437,25 @@ PERSONAL_SCHEMAS = {
         {"to": {"type": "string"}, "draft": {"type": "string"}, "source_action_id": {"type": "string"}},
         required=["to", "draft"],
     ),
-    "browser.read_selected_tab": _schema("browser.read_selected_tab", "Read an approved selected browser tab.", {"selected_scope_token": {"type": "string"}}),
+    "browser.selected_tab": _schema("browser.selected_tab", "Read an approved selected browser tab.", {"selected_scope_token": {"type": "string"}}),
+    "browser.read_selected_tab": _schema("browser.read_selected_tab", "Legacy alias for browser.selected_tab.", {"selected_scope_token": {"type": "string"}}),
     "tasks.list": _schema(
         "tasks.list",
         "List selected-scope personal tasks/reminders after approval.",
         {"selected_scope_token": {"type": "string"}, "max_results": {"type": "integer", "minimum": 1, "maximum": 50}},
+    ),
+    "tasks.draft_create": _schema(
+        "tasks.draft_create",
+        "Create a pending Action Center task-create draft without touching a task provider.",
+        {
+            "title": {"type": "string"},
+            "due": {"type": "string"},
+            "notes": {"type": "string"},
+            "list_name": {"type": "string"},
+            "source_workflow": {"type": "string"},
+            "allow_notes": {"type": "boolean"},
+        },
+        ["title"],
     ),
     "tasks.create": _schema(
         "tasks.create",

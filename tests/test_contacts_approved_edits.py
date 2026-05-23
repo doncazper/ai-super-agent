@@ -5,7 +5,7 @@ import json
 from agent.config.loader import load_capabilities_config
 from agent.core.tool_broker import ToolBroker
 from agent.safety.actions import ActionCenter, ActionCenterStore, ActionStatus
-from agent.safety.approvals import ApprovalStore
+from agent.safety.approvals import ApprovalManager, ApprovalStore
 from agent.safety.audit import AuditLogger
 from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
@@ -46,7 +46,7 @@ def _center(tmp_path) -> ActionCenter:
     )
 
 
-def _broker(tmp_path, *, enabled: bool = True) -> ToolBroker:
+def _broker(tmp_path, *, enabled: bool = True, center: ActionCenter | None = None) -> ToolBroker:
     capabilities = {
         name: Capability(
             capability.name,
@@ -58,7 +58,7 @@ def _broker(tmp_path, *, enabled: bool = True) -> ToolBroker:
         for name, capability in CONTACT_CAPABILITIES.items()
     }
     return ToolBroker(
-        default_registry(project_root=tmp_path),
+        default_registry(project_root=tmp_path, action_center=center),
         PolicyEngine(capabilities),
         AuditLogger(tmp_path / "broker-audit.jsonl"),
         session_id="broker-session",
@@ -143,13 +143,13 @@ def test_approved_contact_update_executes_once_with_stub_and_no_memory_write(tmp
     center.approve(action.action_id)
 
     first = execute_contact_action(
-        _broker(tmp_path),
+        _broker(tmp_path, center=center),
         center,
         action_id=action.action_id,
         expected_action_type=CONTACT_UPDATE_ACTION,
     )
     second = execute_contact_action(
-        _broker(tmp_path),
+        _broker(tmp_path, center=center),
         center,
         action_id=action.action_id,
         expected_action_type=CONTACT_UPDATE_ACTION,
@@ -170,7 +170,7 @@ def test_contact_create_is_action_center_stub(tmp_path) -> None:
     center.approve(action.action_id)
 
     report = execute_contact_action(
-        _broker(tmp_path),
+        _broker(tmp_path, center=center),
         center,
         action_id=action.action_id,
         expected_action_type=CONTACT_CREATE_ACTION,
@@ -190,7 +190,7 @@ def test_sensitive_phone_email_address_values_redacted_in_action_and_audit(tmp_p
         old_values={"email": "old@example.com", "phone": "555-0000", "address": "Old Address"},
     )
     center.approve(action.action_id)
-    execute_contact_action(_broker(tmp_path), center, action_id=action.action_id, expected_action_type=CONTACT_UPDATE_ACTION)
+    execute_contact_action(_broker(tmp_path, center=center), center, action_id=action.action_id, expected_action_type=CONTACT_UPDATE_ACTION)
 
     assert "[CONTACT_FIELD_REDACTED]" in json.dumps(action.to_dict())
     assert "sam@example.com" not in json.dumps(action.to_dict())
@@ -222,11 +222,69 @@ def test_contact_write_disabled_policy_denies_direct_tool_execution(tmp_path) ->
     assert json.loads(result.content)["decision"] == "DENY"
 
 
+def test_direct_contact_update_rejected_without_action_center_item(tmp_path) -> None:
+    broker = _broker(tmp_path)
+    broker.approval_manager = ApprovalManager(auto_approve={CONTACT_UPDATE_ACTION})
+    broker.approval_manager.configure_audit(
+        broker.audit_logger,
+        session_id=broker.session_id,
+        model=broker.model,
+        route=broker.route,
+    )
+
+    result = broker.execute(
+        _call(
+            CONTACT_UPDATE_ACTION,
+            {
+                "selected_scope_token": "person-1",
+                "changes": {"company": "NewCo"},
+                "field_diff": [{"field": "company", "old": "OldCo", "new": "NewCo", "sensitive": False}],
+                "bulk_edit": False,
+                "stored_in_memory": False,
+            },
+        )
+    )
+
+    assert result.allowed is False
+    assert "Action Center" in json.loads(result.content)["error"]
+
+
+def test_contact_update_arguments_must_match_approved_preview(tmp_path) -> None:
+    center = _center(tmp_path)
+    action = draft_contact_update(center, selected_scope_token="person-1", changes={"company": "NewCo"})
+    center.approve(action.action_id)
+    broker = _broker(tmp_path, center=center)
+    broker.approval_manager = ApprovalManager(auto_approve={CONTACT_UPDATE_ACTION})
+    broker.approval_manager.configure_audit(
+        broker.audit_logger,
+        session_id=broker.session_id,
+        model=broker.model,
+        route=broker.route,
+    )
+
+    result = broker.execute(
+        _call(
+            CONTACT_UPDATE_ACTION,
+            {
+                "selected_scope_token": "person-1",
+                "changes": {"company": "DifferentCo"},
+                "action_id": action.action_id,
+                "field_diff": action.sanitized_args["field_diff"],
+                "bulk_edit": False,
+                "stored_in_memory": False,
+            },
+        )
+    )
+
+    assert result.allowed is False
+    assert "approved Action Center preview" in json.loads(result.content)["error"]
+
+
 def test_contact_write_audits_draft_approval_and_write(tmp_path) -> None:
     center = _center(tmp_path)
     action = draft_contact_update(center, selected_scope_token="person-1", changes={"company": "NewCo"})
     center.approve(action.action_id)
-    execute_contact_action(_broker(tmp_path), center, action_id=action.action_id, expected_action_type=CONTACT_UPDATE_ACTION)
+    execute_contact_action(_broker(tmp_path, center=center), center, action_id=action.action_id, expected_action_type=CONTACT_UPDATE_ACTION)
 
     action_events = [json.loads(line)["tool_name"] for line in (tmp_path / "action-audit.jsonl").read_text(encoding="utf-8").splitlines()]
     broker_events = [json.loads(line)["tool_name"] for line in (tmp_path / "broker-audit.jsonl").read_text(encoding="utf-8").splitlines()]

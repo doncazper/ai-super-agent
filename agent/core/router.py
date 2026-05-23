@@ -46,6 +46,20 @@ class Router:
         "search memory",
         "forget memory",
     )
+    PERSONAL_DATA_ACTION_PATTERNS = (
+        "read my email",
+        "latest email",
+        "my inbox",
+        "send an email",
+        "email to",
+        "text ",
+        "send a text",
+        "send message",
+        "my calendar",
+        "my contacts",
+        "my messages",
+        "my tasks",
+    )
     WEATHER_INTENT_PATTERNS = (
         "weather",
         "forecast",
@@ -141,6 +155,13 @@ class Router:
         weather_route = self._weather_route(user_message, normalized)
         if weather_route is not None:
             return weather_route
+        if self._is_personal_data_request(normalized):
+            return RouteDecision(
+                name="chat.personal_data_approval_required",
+                use_tools=False,
+                risk_level=RiskLevel.HIGH,
+                metadata={"personal_data_request": True, "approval_required": True},
+            )
         if any(pattern in normalized for pattern in self.WEB_SEARCH_PATTERNS):
             return RouteDecision(
                 name="tool.web_search",
@@ -253,3 +274,8 @@ class Router:
         if not location or location.casefold() in {"me", "here", "my area", "current location"}:
             return None
         return location
+
+    def _is_personal_data_request(self, normalized: str) -> bool:
+        if normalized.startswith(("explain ", "what is ", "what are ", "write a poem", "build ")):
+            return False
+        return any(pattern in normalized for pattern in self.PERSONAL_DATA_ACTION_PATTERNS)

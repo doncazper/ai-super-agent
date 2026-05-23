@@ -29,6 +29,7 @@ Read:
 
 Write:
 
+- `tasks.draft_create`
 - `tasks.create`
 - `tasks.update`
 - `tasks.complete`
@@ -37,6 +38,7 @@ Write:
 ## Risk Level
 
 - `tasks.list`: HIGH because task titles may contain private personal data.
+- `tasks.draft_create`: MEDIUM because it stores a local pending Action Center record only and does not touch a task provider.
 - `tasks.create`, `tasks.update`, `tasks.complete`, `tasks.delete`: CRITICAL because they modify personal task state.
 
 ## Trust Level
@@ -57,6 +59,7 @@ V1 uses an adapter interface and mock provider only. A future native Reminders i
 ## Approval Requirements
 
 - Listing tasks requires approval.
+- Drafting task creation routes through the brokered `tasks.draft_create` capability and creates an Action Center item only.
 - Creating tasks requires Action Center review and per-action approval.
 - Updating, completing, and deleting tasks require explicit approval.
 - Denied or pending actions must not execute.
@@ -82,7 +85,7 @@ Build adapter interface plus mock provider first:
 - No native Reminders write path.
 - No private database scraping.
 - No Full Disk Access.
-- Action Center used for create drafts.
+- Action Center used for create drafts through brokered `tasks.draft_create`.
 - All tool execution goes through ToolBroker.
 
 ## Alternatives Rejected

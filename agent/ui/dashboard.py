@@ -9,6 +9,7 @@ from typing import Any, Iterable
 from agent.config.loader import load_capabilities_config
 from agent.config.runtime import RuntimeConfig, RuntimeConfigError
 from agent.connectors.registry import default_connector_registry
+from agent.native_skills.registry import NativeSkillRegistry
 from agent.safety.approvals import ApprovalRequest, ApprovalStatus, ApprovalStore
 from agent.safety.redaction import SecretRedactor
 from agent.tools.registry import default_registry
@@ -64,6 +65,7 @@ def build_dashboard(
         "runtime": _runtime_section(active_runtime, runtime_error),
         "lmstudio": _lmstudio_section(checks),
         "tools": _tools_section(project_root=root, capabilities=capabilities),
+        "native_skills": _native_skills_section(root, active_runtime.capabilities_path),
         "connectors": [_connector_summary(status) for status in connector_statuses],
         "permissions": {"grants": permission_grants, "grant_count": len(permission_grants)},
         "approvals": _approvals_section(approval_requests),
@@ -104,6 +106,10 @@ def format_dashboard(report: dict[str, Any]) -> str:
         f"- Registered: {report.get('tools', {}).get('registered_count')}",
         f"- Enabled by default: {report.get('tools', {}).get('enabled_count')}",
         f"- Enabled tools: {', '.join(report.get('tools', {}).get('enabled_tools', [])[:16])}",
+        "",
+        "Native Skills",
+        f"- Manifests: {report.get('native_skills', {}).get('manifest_count')}",
+        f"- Validation: {report.get('native_skills', {}).get('status')}",
         "",
         "Connectors",
     ]
@@ -234,6 +240,20 @@ def _connector_summary(status: dict[str, Any]) -> dict[str, Any]:
         "setup_hint": status.get("setup_hint") or status.get("docs_setup_hint"),
         "capabilities": status.get("capabilities", []),
     }
+
+
+def _native_skills_section(root: Path, capabilities_path: str) -> dict[str, Any]:
+    try:
+        registry = NativeSkillRegistry(root)
+        validation = registry.validate_all(capabilities_path)
+        return {
+            "status": validation["status"],
+            "manifest_count": validation["manifest_count"],
+            "skills": registry.list(),
+            "execution_model": "metadata_only; tool use remains brokered",
+        }
+    except Exception as exc:
+        return {"status": "error", "manifest_count": 0, "error": str(exc), "skills": []}
 
 
 def _approvals_section(requests: list[ApprovalRequest]) -> dict[str, Any]:

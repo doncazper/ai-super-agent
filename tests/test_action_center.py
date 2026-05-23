@@ -118,14 +118,61 @@ def test_secrets_redacted_in_action_previews(tmp_path) -> None:
         {
             "to": "a@example.com",
             "subject": "Hello",
-            "body": "token=sk-supersecretvalue1234567890",
-            "api_key": "sk-supersecretvalue1234567890",
+            "body": "token=not-a-real-secret-value",
+            "api_key": "not-a-real-secret-value",
         },
     )
 
     rendered = json.dumps(action.to_dict())
-    assert "sk-supersecretvalue1234567890" not in rendered
+    assert "not-a-real-secret-value" not in rendered
     assert "[REDACTED]" in rendered
+
+
+def test_action_record_includes_required_tool_alias(tmp_path) -> None:
+    center = _center(tmp_path)
+    action = center.create_action("git.commit", {"message": "checkpoint"})
+
+    rendered = action.to_dict()
+    assert rendered["tool"] == "git.commit"
+    assert rendered["tool_name"] == "git.commit"
+
+
+def test_action_center_never_executes_directly_even_after_approval(tmp_path) -> None:
+    center = _center(tmp_path)
+    action = center.create_action("git.commit", {"message": "checkpoint"})
+    center.approve(action.action_id)
+
+    gate = center.execution_gate(action.action_id, interactive=True)
+
+    assert gate["allowed"] is False
+    assert "ToolBroker" in gate["reason"]
+
+
+def test_export_minimizes_personal_draft_body(tmp_path) -> None:
+    center = _center(tmp_path)
+    exact_draft = "Exact personal message body for manual handoff"
+    center.create_action("messages.save_draft", {"to": "Pat", "draft": exact_draft})
+
+    exported = json.dumps(center.export())
+
+    assert exact_draft not in exported
+    assert "[ACTION_FIELD_REDACTED]" in exported
+    assert "sensitive preview details redacted" in exported
+
+
+def test_audit_minimizes_personal_preview_body(tmp_path) -> None:
+    center = _center(tmp_path)
+    exact_body = "Please send the exact appointment details to Pat"
+
+    center.create_action(
+        "email.send_approved",
+        {"to": "pat@example.com", "subject": "Appointment", "body": exact_body},
+    )
+
+    audit_text = (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
+    assert exact_body not in audit_text
+    assert "[ACTION_FIELD_REDACTED]" in audit_text
+    assert "sensitive preview details redacted" in audit_text
 
 
 def test_actions_cli_list_show_approve_deny_export(tmp_path, monkeypatch, capsys) -> None:

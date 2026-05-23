@@ -8,15 +8,15 @@ Build a local Mac AI agent with safety-first governance, ToolBroker-only tool ex
 
 ## Current Overall Phase
 
-Post-baseline hardening and roadmap reset after M0-M11 and the first real connector pattern.
+Dogfood and QA tooling after the controlled actions, product quality, native skills, and safe self-improvement planning batch.
 
 ## Current Batch
 
-Controlled actions and workflow feature-batch release gate.
+Dogfood QA tooling through Session Review and Bug Generator is complete; regression test generation from reviewed bugs is next.
 
 ## Current Task
 
-Full feature maturity review and release gate.
+Session Review and Bug Generator completed.
 
 ## Current Status
 
@@ -24,15 +24,15 @@ complete
 
 ## Current Branch
 
-`main`
+`agent/overnight-2026-05-23`
 
 ## Last Known Good Commit
 
-`fcfd68c Prepare post-connector feature batch` before this large working-tree release commit.
+`1c465df Complete controlled actions and workflow release gate`
 
 ## Last Test Result
 
-Full suite: 529 passed in 10.23s. Startup policy ok. Capability manifest ok (59 capabilities). Command registry validation ok (154 commands). Safe eval suite passed with 9 pass, 0 fail, 8 skipped by design. Personal-data tools enabled by default: none. CRITICAL approval reuse violations: none.
+Focused session review tests: 21 passed in 1.19s. Focused session/command registry tests: 26 passed in 1.14s. Focused session/command/prompt/maturity validation: 40 passed in 1.20s after docs updates. Full suite: 645 passed in 20.13s. Startup policy ok. Capability manifest ok. Command registry ok with 215 commands. `git diff --check` passed.
 
 ## Startup Policy Status
 
@@ -41,17 +41,390 @@ startup policy ok.
 ## Prompt Tracking
 
 - active_prompt_id: none
-- next_prompt_id: NATIVE-SKILLS-FOUNDATION
+- next_prompt_id: REGRESSION-TEST-GENERATOR
 - active_prompt_pack: none
-- prompt_queue_status: Full feature maturity review is complete; next queued prompt is `NATIVE-SKILLS-FOUNDATION`.
-- last_prompt_audit_result: 90 prompt records known; 53 definitely complete, 34 queued, 3 blocked, 0 active, next prompt `NATIVE-SKILLS-FOUNDATION`.
+- prompt_queue_status: `SESSION-REVIEW-BUG-GENERATOR` completed; queued dogfood follow-up points to `REGRESSION-TEST-GENERATOR`.
+- last_prompt_audit_result: Session review and bug generator recorded as completed; next prompt `REGRESSION-TEST-GENERATOR`.
+
+## Next Feature Set: Controlled Actions and Product Quality
+
+This is the next product-feature track to keep visible before starting implementation. Items already built remain marked complete in `docs/FEATURE_ROADMAP.md`; planned items must still get their own mini-SDLC, tests, docs, and release gates.
+
+1. Golden eval suite + quality scorecards. Complete for local tested v1; live LM Studio/provider validation remains opt-in.
+2. Unified Action Center v1.
+3. Tasks / Reminders connector v1.
+4. Calendar approved writes v1.
+5. Contacts approved edits v1.
+6. Email approved send v1.
+7. Messages safe handoff v1.
+8. Browser selected-tab / clipping v1.
+9. Notes / knowledge capture v1.
+10. Privacy Center / data inventory v1. Complete for local tested v1; metadata-only inventory and redacted export.
+11. Backup / restore / migration v1. Complete for local tested v1; restore live smoke should use a disposable project copy only.
+12. Model-router benchmark and prompt quality evals. Complete for local tested v1; live LM Studio answer-quality smoke remains opt-in.
+13. Scheduler / automation v1. Complete for manual-run v1, including optional redacted `backup_create`.
+14. Controlled self-improvement implementation loop.
+15. Overnight self-improvement runbook and one approved bounded safe-mode run. Complete for planning-only runbook, `improve overnight-plan`, and the 2026-05-23 docs/tests/tracking run; future overnight runs require separate explicit approval.
+16. Full release gate + maturity review. Complete locally; live validation remains opt-in where noted.
+
+## Overnight Self-Improvement Track
+
+- `OVERNIGHT-RUNBOOK` is complete and planning-only.
+- `OVERNIGHT-SAFE-6H` completed for this explicitly approved bounded run on `agent/overnight-2026-05-23`; future overnight runs require separate explicit approval.
+- No hidden persistence, background services, package installs, personal-data access, or approval-gated actions may run automatically.
 
 ## Last Updated Timestamp
 
-2026-05-23 00:20 PDT
+2026-05-23 11:35 PDT
 
 ## Last Completed Work
 
+- Session Review and Bug Generator completed on `agent/overnight-2026-05-23`.
+- Added `agent/session_logs/review.py` with redacted session review, optional local bug creation, stable `BUG-0001` style ids, severity classification, and audit events.
+- Added `python smart_agent.py session review <session_id>`, `python smart_agent.py session review --last`, `python smart_agent.py session review --last --create-bugs`, `python smart_agent.py bugs list`, `python smart_agent.py bugs show <bug_id>`, and `python smart_agent.py bugs export`.
+- Created `docs/BUG_TRIAGE.md`, `reports/session_reviews/.gitkeep`, and `bugs/.gitkeep`; generated review/bug artifacts are ignored by git.
+- Review reads redacted session previews and feedback only, does not access personal connectors, sends no data externally, writes no memory, and does not fix bugs automatically.
+- Focused session review tests passed: 21 passed in 1.19s.
+- Focused session/command registry tests passed: 26 passed in 1.14s.
+- Focused session/command/prompt/maturity validation passed: 40 passed in 1.23s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Full suite passed: 645 passed in 20.13s.
+- Command registry validation passed: 215 commands, no problems.
+- Final focused docs/registry validation after tracking updates passed: 40 passed in 1.20s; command registry ok; `git diff --check` passed.
+
+- Manual Dogfood Command Suites completed on `agent/overnight-2026-05-23`.
+- Added `agent/dogfood/` with suite loading, validation, command parsing, dry-run preview, failure-continuing runner, expected-exit handling, and optional active-session capture.
+- Added `python smart_agent.py dogfood list/show/run`, including `--dry-run` and `--session`.
+- Added curated suites under `dogfood_suites/`: `core`, `weather`, `web`, `workspace_files`, `memory`, `approvals`, `native_skills`, `personal_dry_run`, and `all_safe`.
+- Added synthetic dogfood fixtures under `workspace/dogfood` and `workspace/skills`.
+- Added `docs/dogfood/DOGFOOD_GUIDE.md` and `docs/dogfood/COMMAND_SUITES.md`.
+- Updated README, command registry docs, feature registry, maturity, roadmap, prompt tracking, changelog, and completion report.
+- Focused dogfood tests passed: 8 passed in 0.30s.
+
+- Live Session Logging and Replay completed on `agent/overnight-2026-05-23`.
+- Added `agent/session_logs/` with models, store, recorder, redaction, replay, and reviewer helpers.
+- Added `python smart_agent.py session start/status/run/end/list/show/replay/export/last`.
+- Added `docs/SESSION_LOGGING.md` and `reports/sessions/.gitkeep`; raw session logs are gitignored.
+- Added focused tests for lifecycle, replay, command run capture, redaction, visible audit-id linking, large output storage, malformed file handling, gitignore protection, and CLI dispatch.
+- Updated README, command registry docs, feature registry, maturity, roadmap, risk register, threat model, test plan, release checklist, prompt tracking, changelog, and completion report.
+- Focused session logging and command registry tests passed: 15 passed in 0.48s.
+- Focused session/docs/prompt/command validation passed: 29 passed in 0.55s.
+- Full suite passed: 626 passed in 19.91s on the final run.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok (77 capabilities).
+- Command registry validation passed: 197 commands, no problems.
+- Diff whitespace check passed.
+
+- Approved bounded overnight safe-mode run completed on `agent/overnight-2026-05-23`.
+- Completed two low-risk cycles: tracking sync for `OVERNIGHT-SAFE-6H` and stricter overnight report-template validation.
+- Created `reports/overnight/overnight_2026-05-23.md`.
+- Updated prompt queue, prompt ledger, prompt audit, project state, roadmap, feature maturity, feature registry, changelog, and completion report.
+- Focused self-improvement and docs validation passed: 47 passed in 3.04s after adjusting active-prompt validation to count unique prompt IDs.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok (77 capabilities).
+- Command registry validation passed: 189 commands, no problems.
+- Full suite passed: 616 passed in 18.63s on the final run.
+- No approval gate was hit after the user's explicit bounded-run approval.
+- No personal-data access, send/write path, package install, external script, unexpected network access, background persistence, policy weakening, audit disabling, or commit was added.
+
+- Full release gate and feature maturity review completed for this batch.
+- Full suite passed: 616 passed in 18.31s after docs updates.
+- Safe eval suite passed: 21 passed, 0 failed, 8 skipped. Skips were live LM Studio checks missing `LMSTUDIO_MODEL` and personal-data evals skipped by default.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok (77 capabilities).
+- Command registry validation passed: 189 commands, no problems.
+- Native skill validation passed: 3 manifests valid.
+- Unknown tool denial check passed through `ToolBroker`.
+- Personal-data connector/default-enabled check passed with `tasks.draft_create` treated as non-personal Action Center draft creation.
+- HIGH approval manifest check passed.
+- CRITICAL per-action/no-reuse manifest check passed.
+- ToolBroker path scan found the registered tool handler call inside `ToolBroker`; status/preflight paths only use registry metadata.
+- Feature roadmap row `Full release gate + maturity review` is now complete.
+- Updated release-gate evidence in feature maturity, feature registry, project state, prompt tracking, changelog, and completion report.
+- No runtime feature, connector, policy relaxation, send/write path, personal-data enablement, memory behavior, or background automation was added.
+- No commit was created because the worktree already contains broad pre-existing feature-batch changes and this release-gate sync is not a clean standalone commit boundary.
+- Overnight self-improvement safe-mode runbook completed in focused and full tests.
+- Added `docs/SELF_IMPROVEMENT_OVERNIGHT_RUNBOOK.md`, `docs/templates/overnight_report_template.md`, and `reports/overnight/.gitkeep`.
+- Added `python smart_agent.py improve overnight-plan`.
+- The planner reads tracking docs through brokered `filesystem.read`, ranks safe docs/tests/hardening/evals candidates, excludes HIGH/CRITICAL and personal-data work, writes no memory, creates no branch, starts no schedule/background runner, and commits nothing.
+- `OVERNIGHT-SAFE-6H` completed for the 2026-05-23 approved bounded run; future overnight runs require separate explicit user approval.
+- Updated README, command registry docs, feature registry, feature maturity, roadmap, risk register, threat model, test plan, release checklist, prompt tracking, project state, changelog, and completion report.
+- Focused self-improvement tests passed: 28 passed in 3.37s.
+- Focused prompt/maturity/command docs validation passed: 19 passed in 0.19s.
+- Full suite passed: 616 passed in 18.51s.
+- Command registry validation passed: 189 commands, no missing records.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok (77 capabilities).
+- Personal-data connector/default-enabled check passed with `tasks.draft_create` treated as non-personal Action Center draft creation.
+- HIGH/CRITICAL approval manifest check passed.
+- Diff whitespace check passed.
+- Controlled self-improvement implementation loop v1 commit-action checkpoint completed in focused and full tests.
+- Added `python smart_agent.py improve create-action-for-commit`.
+- The new checkpoint runs self-improvement tests through brokered `code.run_tests`, generates diff through brokered `git.diff`, and creates only a pending Action Center `self_improvement.commit` record.
+- The checkpoint refuses to create a commit action when tests fail, never executes `git.commit`, writes no memory, and requires later Action Center approval plus `improve commit --from-action <action_id>` for execution.
+- Updated README, command registry docs, feature registry, feature maturity, roadmap, risk register, threat model, test plan, release checklist, prompt tracking, project state, changelog, and completion report.
+- Focused self-improvement tests passed: 23 passed in 3.18s.
+- Full suite passed: 611 passed in 19.77s.
+- Command registry validation passed: 188 commands, no missing records.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok (77 capabilities).
+- Personal connector default-disabled check passed.
+- HIGH/CRITICAL approval manifest check passed.
+- Diff whitespace check passed.
+- Scheduler / Automation v1 backup_create follow-up completed in focused and full tests.
+- Added `backup_create` to the supported scheduler workflow allowlist and CLI `--workflow` choices.
+- Scheduled `backup_create` calls `backup.create` through `ToolBroker`, `PolicyEngine`, `ApprovalManager`, and `AuditLogger`.
+- Scheduled backups are redacted-only; unredacted backup args are rejected before any backup tool call.
+- Scheduled backup output records `personal_connectors_read=false`, `memory_written=false`, `critical_actions_executed=false`, and `toolbroker_used=true`.
+- Updated scheduler docs, README, command registry docs, feature registry, feature maturity, roadmap, risk register, threat model, test plan, release checklist, prompt tracking, project state, and completion report.
+- Focused scheduler tests passed: 9 passed in 0.62s.
+- Full suite passed: 609 passed in 19.59s.
+- Focused docs validation after tracking updates passed: 19 passed in 0.19s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok (77 capabilities).
+- Command registry validation passed: 187 commands, no missing records.
+- Personal-data default-disabled check passed.
+- HIGH/CRITICAL approval manifest check passed.
+- Scheduled backup_create CLI smoke passed using a temporary schedule store/audit log and redacted backup directory.
+- Diff whitespace check passed.
+- Model-router benchmark and prompt quality evals completed in focused and full tests.
+- Added `models list`, `models benchmark --safe`, `router eval`, `prompts eval`, and `prompts report`.
+- Added fixture-backed model/router/prompt-quality cases covering normal no-tool chat, weather, web/current-info, URL/document, memory, personal-data request, send/approval-gate, prompt-injection, and answer-quality guardrails.
+- Reports write to `docs/PROMPT_QUALITY_REPORT.md`, `logs/model_router_prompt_quality.json`, and `reports/evals/`.
+- Focused model/router/eval tests passed: 26 passed in 1.22s.
+- Full suite passed: 607 passed in 18.68s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: status ok, 187 commands, no problems.
+- Diff whitespace check passed.
+- Backup / Restore / Migration v1 completed in focused and full tests.
+- Added brokered `backup.create`, `backup.list`, `backup.inspect`, `backup.verify`, `backup.export`, and `backup.restore` tools.
+- Added CLI commands `backup create/list/inspect/verify/export --redacted/restore` through the direct CLI dispatch layer while still constructing `PolicyEngine`, `ToolBroker`, `ApprovalManager`, and `AuditLogger`.
+- Backups write redacted local archive directories with `manifest.json`, per-file hashes, an integrity hash, excluded-secret records, and restore limitations.
+- Backup scope includes config/docs/tracking/native-skill files plus redacted memory/action metadata; captures and audit metadata are optional.
+- `.env` and key/certificate files are excluded; secret-like values are redacted from copied text.
+- `backup.restore` is HIGH risk, approval-required, denied safely in non-interactive mode, verifies hashes first, creates pre-restore copies where possible, and blocks backed-up capability manifests that would weaken policy or enable personal connectors.
+- Added backup/restore docs, command registry entries, feature registry/maturity updates, risk register and threat model entries, and prompt ledger/queue/audit records.
+- Focused backup/policy/packaging tests passed: 46 passed in 1.87s.
+- Full suite passed: 598 passed in 17.30s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: status ok, 182 commands, no problems.
+- Diff whitespace check passed.
+- Local startup ergonomics completed in focused and full tests.
+- Added a Python 3.11+ guard at the top of `smart_agent.py` before agent module imports.
+- Added `scripts/agent`, an executable local launcher that prefers `AI_AGENT_PYTHON`, `./.venv/bin/python`, the bundled Codex Python 3.12 runtime, and then system `python3` only if it is Python 3.11+.
+- Documented `.venv` setup, `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL`, and `curl http://localhost:1234/v1/models` model-id discovery.
+- Added command registry entry `CMD-CORE-006` for `./scripts/agent <command>`.
+- Targeted startup ergonomics and command registry tests passed: 8 passed in 0.40s.
+- Full suite passed: 590 passed in 16.86s.
+- Focused prompt/maturity/command docs validation passed: 19 passed in 0.19s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: status ok, 177 commands, no problems.
+- Apple Python 3.9 smoke `python3 smart_agent.py setup` printed the Python 3.11+ setup instructions instead of crashing.
+- `./scripts/agent doctor` used Python 3.12 and reported missing `LMSTUDIO_MODEL` clearly while leaving model prompts/tools untouched.
+- Diff whitespace check passed.
+- Privacy Center / Data Inventory v1 completed in focused and full tests.
+- Added `privacy status`, `privacy inventory`, `privacy export`, `privacy delete-memory`, `privacy audit-summary`, and `privacy permissions` CLI commands.
+- Privacy inventory uses metadata/status only and does not read personal connector data.
+- Redacted privacy export includes memory/capture previews, pending actions, approvals, audit summary, cache metadata, and deletion limitations without revealing secrets.
+- Memory deletion requires explicit `--confirm DELETE-MEMORY` and then routes through brokered `memory.clear`; no real memory deletion was run in this release gate outside isolated tests.
+- Privacy status distinguishes enabled non-personal URL/task-draft workflows from disabled-by-default personal connector reads.
+- Targeted Privacy Center tests passed: 7 passed in 1.07s.
+- Full suite passed: 587 passed in 16.95s.
+- Focused prompt/maturity/command docs validation passed: 19 passed in 0.19s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: status ok, 176 commands, no problems.
+- CLI smoke passed for `privacy status`; unconfirmed `privacy delete-memory` returned the expected confirmation-required error.
+- Diff whitespace check passed.
+- Notes / Knowledge Capture trusted file marker completed in focused and full tests.
+- Added explicit `--trusted-user` support for `capture from-file` so user-authored workspace files can be labeled `TRUSTED_USER`; default file captures remain `UNTRUSTED_DOCUMENT`.
+- Capture file reads still go through brokered `filesystem.read`, capture writes still go through brokered `filesystem.write`, URL captures still go through brokered `web.fetch_url`, and memory promotion still goes through brokered `memory.store`.
+- No Apple Notes integration, private app database scraping, personal connector access, or automatic memory storage was added.
+- Targeted Knowledge Capture tests passed: 11 passed in 0.83s.
+- Full suite passed: 580 passed in 15.56s.
+- Focused prompt/maturity/command docs validation passed: 19 passed in 0.18s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: status ok, 170 commands, no problems.
+- Diff whitespace check passed.
+- Browser selected URL / web clipping capability compatibility completed in focused and full tests.
+- Added canonical capability tracking for `browser.read_url`, `browser.summarize_url`, and disabled `browser.selected_tab`, while retaining legacy selected-URL aliases.
+- Selected-tab CLI stub now audits the disabled `browser.selected_tab` capability.
+- Explicit URL read/summarize still fetch through brokered `web.fetch_url`; URL clipping still writes through brokered `filesystem.write`.
+- Focused browser/connector/manifest tests passed: 20 passed in 1.55s.
+- Full suite passed: 578 passed in 15.94s.
+- Focused prompt/maturity/command docs validation passed: 19 passed in 0.20s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: 170 commands, no problems.
+- Direct browser-access scan found expected docs/tests/stub references only; no history/cookie/session/password/profile reader was added.
+- `git diff --check` passed.
+- Messages safe handoff v1 Action Center verification hardening completed in focused and full tests.
+- Low-level `messages.save_draft` and `messages.copy_draft` now reject direct broker execution unless Action Center verifies the matching approved action id.
+- Message save/copy tool submissions must match the approved reviewed draft before workspace write or clipboard handoff can be reached.
+- Focused Messages safe handoff tests passed: 12 passed in 0.52s.
+- Focused Messages plus docs/prompt validation passed: 26 passed in 0.60s.
+- Focused command registry/release-gate tests passed: 12 passed in 0.20s.
+- Full suite passed: 577 passed in 15.19s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: 170 commands, no missing records.
+- Docs validation passed: 9 passed in 0.01s.
+- Final docs/prompt validation after tracking edits passed: 14 passed in 0.18s.
+- Diff whitespace check passed.
+- Email approved send v1 Action Center verification hardening completed in focused and full tests.
+- Low-level `email.send_approved` now rejects direct broker execution unless Action Center verifies the matching approved action id.
+- Email send tool submissions must match the approved reviewed draft before mock/no-provider execution can be reached.
+- `execute_email_send_action()` injects the approved `action_id` only after the Action Center record is approved and before brokered execution.
+- Focused email tests passed: 12 passed in 0.66s.
+- Focused email/write/release-gate tests passed: 26 passed in 0.73s.
+- Focused email and command-registry tests passed: 17 passed in 0.70s.
+- Focused tracking/maturity/command docs validation passed: 19 passed in 0.19s.
+- Full suite passed after docs updates: 574 passed in 14.93s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: 170 commands, no missing records.
+- Diff whitespace check passed.
+- Contacts approved edits v1 Action Center verification hardening completed in focused and full tests.
+- Low-level `contacts.update_selected` and `contacts.create` tools now reject direct broker execution unless Action Center verifies the matching approved action id.
+- Contact write tool submissions must match the approved Action Center preview before the stub is reached.
+- `execute_contact_action()` injects the approved `action_id` only after the Action Center record is approved and before brokered execution.
+- Focused contacts tests passed after final code hardening: 13 passed in 0.64s.
+- Focused contacts and command-registry tests passed: 18 passed in 0.69s.
+- Full suite passed after final code hardening: 573 passed in 15.06s.
+- Focused tracking/maturity/command docs validation passed: 19 passed in 0.18s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: 170 commands, no missing records.
+- Diff whitespace check passed.
+- Calendar approved writes v1 Action Center verification hardening completed in focused tests.
+- Low-level `calendar.create_event`, `calendar.update_event`, and `calendar.delete_event` tools now reject direct broker execution unless Action Center verifies the matching approved action id.
+- `execute_calendar_action()` injects the approved `action_id` only after the Action Center record is approved and before brokered execution.
+- Focused calendar/write/release-gate tests passed: 25 passed in 0.75s.
+- Full suite passed: 571 passed in 14.99s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: 170 commands, no missing records.
+- Diff whitespace check passed.
+- Tasks / Reminders connector v1 brokered draft-create pass completed.
+- Added `tasks.draft_create` as a brokered MEDIUM-risk Action Center-scoped capability.
+- Updated `tasks draft-create` CLI to route through ToolBroker before creating a pending Action Center `tasks.create` record.
+- Confirmed `tasks.draft_create` does not access a task provider, does not create a real reminder, does not write memory, and does not enable personal task provider access by default.
+- Focused Tasks/Command Registry tests passed: 16 passed in 0.91s.
+- Full suite passed: 570 passed in 14.74s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: 170 commands, no missing records.
+- Diff whitespace check passed.
+- Unified Action Center v1 hardening pass completed.
+- Added regression coverage for required `tool` metadata, no direct Action Center execution after approval, export minimization, and lifecycle audit minimization.
+- `actions export` and Action Center lifecycle audit records now minimize sensitive action bodies/drafts while exact secret-redacted local previews remain available for user approval review.
+- Focused Action Center tests passed: 14 passed in 0.79s.
+- Full suite passed: 569 passed in 14.04s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: 170 commands, no missing records.
+- Diff whitespace check passed.
+- Golden Eval Suite and quality scorecards completed for local tested v1 scope.
+- Added data-backed eval cases under `eval_cases/` for routing, policy, ToolBroker, prompt injection, and workflow dry-runs.
+- Added `eval run --routing`, `--policy`, `--tools`, `--workflows`, `--prompt-injection`, and `--lmstudio-live`.
+- Eval reports now include category scorecards, `quality_score`, latest JSON at `logs/eval_results.json`, and per-run JSON under `reports/evals/`.
+- Personal-data evals remain skipped by default; live LM Studio remains opt-in; tool evals use `ToolBroker`.
+- Focused tests passed: `tests/test_eval_harness.py tests/test_command_registry.py` reported 17 passed in 0.85s.
+- Release-gate sync before the next feature set completed.
+- Full suite passed: 561 passed in 13.51s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: 164 commands, no missing records.
+- Native skill validation passed: 3 manifests valid.
+- Prompt audit passed at that time: 90 prompt records, 59 complete, 28 queued, 3 blocked, next `SESSION-LOGGING-REPLAY`.
+- Manifest safety audit passed: no personal-data capabilities enabled by default; HIGH actions require approval; CRITICAL actions require per-action approval and no approval reuse.
+- `docs/FEATURE_ROADMAP.md` now explicitly tracks Native Skills, Next Product Feature, and Overnight Self-Improvement tracks.
+- PDF workspace native skill v1 implemented in the working tree.
+- Added `agent/tools/documents/pdf.py`.
+- Added `documents.pdf.read`, `documents.pdf.extract_text`, `documents.pdf.extract_tables`, and `documents.pdf.summarize`.
+- Added `python smart_agent.py pdf info`, `pdf extract-text`, `pdf summarize`, and `pdf extract-tables`.
+- Added built-in native skill manifest `native_skills/pdf_workspace.yaml`.
+- Added `docs/native_skills/pdf.md`.
+- PDF tools resolve paths through approved workspace roots, block traversal/outside paths, enforce file/page/text limits, and label content `UNTRUSTED_DOCUMENT`.
+- PDF tools use existing Python dependency `pypdf`; no external binaries, OCR, embedded actions/scripts, split/merge, generated PDF writes, or memory writes are enabled in v1.
+- PDF focused tests passed: 10 passed in 0.69s.
+- Focused docs/command/prompt/PDF validation passed: 29 passed in 0.75s.
+- Full suite passed: 561 passed in 12.77s.
+- Startup policy validation passed: startup policy ok.
+- Diff whitespace check passed.
+- Native skill manifest validation passed: 3 manifests valid.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: 164 commands, no missing records.
+- Native skill finder v1 implemented in the working tree.
+- Added `agent/native_skills/finder.py`.
+- Added brokered `native_skills.find_skill` capability and `python smart_agent.py skills find "<query>"`.
+- Added built-in metadata-only manifest `native_skills/native_skill_finder.yaml`.
+- Finder searches local native skill manifests, `docs/native_skills` candidate docs, feature registry, and maturity tracker.
+- Finder reports matching native skills/candidates, maturity level, readiness score, implementation status, safe-to-use-now status, required approvals, required capabilities, and next work needed.
+- Finder executes through `ToolBroker`, `PolicyEngine`, and `AuditLogger`; files read are audited.
+- Finder does not browse external marketplaces, install skills, execute external code, grant permissions, or write memory.
+- Native skill finder focused tests passed: 5 passed in 0.15s.
+- Focused docs/registry/prompt validation passed: 30 passed in 0.29s.
+- Full suite passed: 551 passed in 12.26s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: 161 commands, no missing records.
+- Native skill manifest and discovery loader implemented in the working tree.
+- Added `agent/native_skills/manifest.py`, `registry.py`, `loader.py`, `validator.py`, and `models.py`.
+- Added built-in metadata-only manifest `native_skills/native_skill_vetter.yaml`.
+- Added `python smart_agent.py skills list`, `skills show <skill_id>`, `skills validate`, and `skills doctor`.
+- Manifest loader reads metadata only and never executes scripts, imports external code, installs marketplace skills, grants permissions, enables tools, or writes memory.
+- Manifest validation rejects unknown required/allowed capabilities, missing risk/trust/memory/audit fields, ToolBroker-bypass language, executable manifest fields, personal-data manifests enabled by default, and CRITICAL manifests without `approval_required: per_action`.
+- Native skill registry status is included in runtime doctor and dashboard metadata.
+- Native skill manifest focused tests passed: 6 passed in 0.15s.
+- Manifest CLI smoke passed: `skills validate` and `skills show native_skill_vetter` returned `status=ok`.
+- Native skill vetter v1 implemented and locally validated in focused tests.
+- Added `native_skills.vet_skill_file`, `native_skills.vet_skill_folder`, and `native_skills.score_candidate` capabilities.
+- Added `python smart_agent.py skills vet`, `skills vet-folder`, and `skills score` CLI commands.
+- Vetter reads only approved workspace paths, treats candidate files as `UNTRUSTED_DOCUMENT`, parses `SKILL.md` frontmatter, flags scripts, shell commands, network calls, package installs, secrets, filesystem escapes, personal-data access, browser cookie/session access, prompt-injection language, approval-bypass language, opaque binaries, and missing licenses.
+- Vetter never executes scripts, installs dependencies, grants permissions, enables skills, or stores skill content in memory by default.
+- Vetter execution goes through `ToolBroker`, `PolicyEngine`, and `AuditLogger`.
+- Focused native skill vetter tests passed: 10 passed in 0.59s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Command registry validation passed: status ok.
+- Skill marketplace survey and native-candidate shortlist completed.
+- Created `docs/native_skills/SKILL_MARKETPLACE_SURVEY.md`.
+- Created `docs/native_skills/NATIVE_CANDIDATE_MATRIX.md`.
+- Created `docs/native_skills/TOP_NATIVE_SKILL_SHORTLIST.md`.
+- Updated `docs/native_skills/NATIVE_SKILL_CANDIDATES.md` with shortlisted native candidates.
+- Surveyed OpenClaw/ClawHub/LobeHub-style category signals as untrusted web research only.
+- No external skills were installed, imported, run, cloned, or executed.
+- No runtime capabilities were added.
+- High-risk categories such as email send, message send, browser automation, cloud deployment, self-evolution, and unrestricted app automation were marked later/defer.
+- Recommended first implementation is `NATIVE-SKILL-VETTER`.
+- Focused docs/prompt validation passed: 14 passed in 0.15s.
+- Full suite passed: 530 passed in 11.22s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok (59 capabilities).
+- Native Skills Program foundation completed.
+- Created `docs/native_skills/NATIVE_SKILLS_PROGRAM.md`.
+- Created `docs/native_skills/SKILL_INTAKE_PROCESS.md`.
+- Created `docs/native_skills/NATIVE_SKILL_CRITERIA.md`.
+- Created `docs/native_skills/NATIVE_SKILL_CANDIDATES.md`.
+- Created `docs/native_skills/SKILL_RISK_MODEL.md`.
+- Created `docs/templates/native_skill_record_template.md`.
+- Defined native skills as reviewed local versioned workflows mapped to existing `ToolBroker` capabilities.
+- Defined non-goals: no unreviewed external scripts, direct tool access, hidden network access, permission bypass, automatic installation, approval bypass, or replacement for ToolBroker tools.
+- Added native skill categories, maturity states, selection criteria, disqualification criteria, risk model, and candidate registry.
+- Added docs validation for required native skill files and safety-boundary language.
+- Updated feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, changelog, prompt tracking, project state, and completion report.
+- No external skills were installed, imported, run, or executed.
+- No runtime capabilities were added.
+- Focused docs/prompt validation passed: 14 passed in 0.17s.
+- Full suite passed: 530 passed in 10.68s.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok (59 capabilities).
 - Full feature maturity review and release gate completed.
 - Full test suite passed: 529 passed in 10.23s.
 - Startup policy validation passed: startup policy ok.
@@ -383,169 +756,138 @@ startup policy ok.
 
 ## Current Work In Progress
 
-None. Prompt Pack import/splitting support is implemented and locally release-gated. The working tree still contains completed but uncommitted connector-framework, tracking-doc, manifest-normalization, diagnostics, approval/preflight, web research, workspace file assistant, Memory v2, personal connector readiness, calendar read-only, contacts read-only, email draft-only, messages draft-only, Daily Briefing v1/v2, Meeting Prep v1, Meeting Follow-Up v1, Personal Task Extraction v1, Email Triage v1, Self-improvement backlog/implementation, Agent Dashboard v1, tracking sync, eval harness, Action Center, calendar approved writes, tasks connector, contacts approved edits, email approved send, messages safe handoff, browser clipping, knowledge capture, prompt tracking, and prompt pack import changes.
+None. Session Review and Bug Generator is complete for local/full tests.
 
 ## Files Being Changed
 
-- `agent/ui/prompts.py`
-- `agent/prompts/__init__.py`
-- `agent/prompts/pack_models.py`
-- `agent/prompts/pack_parser.py`
-- `agent/prompts/pack_validator.py`
-- `agent/prompts/prompt_store.py`
-- `agent/prompts/prompt_queue.py`
-- `agent/prompts/prompt_audit.py`
+- `.gitignore`
+- `agent/session_logs/review.py`
 - `agent/ui/cli_commands.py`
-- `tests/test_prompt_pack.py`
+- `agent/ui/command_registry.py`
+- `tests/test_session_logs.py`
 - `tests/test_prompt_tracking.py`
-- `tests/test_feature_maturity_docs.py`
-- `docs/PROMPT_PACK_FORMAT.md`
+- `README.md`
+- `CHANGELOG.md`
+- `docs/BUG_TRIAGE.md`
+- `docs/SESSION_LOGGING.md`
+- `docs/dogfood/DOGFOOD_GUIDE.md`
+- `docs/COMMAND_REGISTRY.md`
+- `docs/COMMAND_TEST_MATRIX.md`
+- `docs/FEATURE_REGISTRY.md`
+- `docs/FEATURE_MATURITY.md`
+- `docs/FEATURE_ROADMAP.md`
+- `docs/PROJECT_STATE.md`
 - `docs/PROMPT_LEDGER.md`
 - `docs/PROMPT_QUEUE.md`
 - `docs/PROMPT_AUDIT.md`
-- `docs/templates/prompt_record_template.md`
-- `docs/templates/prompt_pack_template.md`
-- `prompts/completed/PROMPT-PACK-IMPORT.md`
-- `prompts/completed/PROMPT-LEDGER-QUEUE.md`
-- `AGENTS.md`
-- `CHANGELOG.md`
-- `docs/FEATURE_REGISTRY.md`
-- `docs/FEATURE_MATURITY.md`
-- `docs/FEATURE_ROADMAP.md`
-- `docs/COMPLETION_REPORT.md`
-- `docs/PROJECT_STATE.md`
-- `agent/tools/personal/tasks.py`
-- `agent/workflows/tasks.py`
-- `tests/test_tasks_connector.py`
-- `agent/workflows/contact_edits.py`
-- `agent/safety/contact_redaction.py`
-- `tests/test_contacts_approved_edits.py`
-- `agent/workflows/email_sends.py`
-- `tests/test_email_approved_send.py`
-- `agent/workflows/daily_briefing.py`
-- `smart_agent.py`
-- `tests/test_workflows.py`
-- `README.md`
-- `CHANGELOG.md`
-- `docs/FEATURE_REGISTRY.md`
-- `docs/FEATURE_ROADMAP.md`
-- `docs/FEATURE_MATURITY.md`
-- `docs/COMPLETION_REPORT.md`
-- `docs/PROJECT_STATE.md`
-- `agent/workflows/message_handoff.py`
-- `agent/workflows/browser_clipping.py`
-- `agent/workflows/knowledge_capture.py`
-- `agent/workflows/meeting_followup.py`
-- `agent/workflows/task_extraction.py`
-- `agent/workflows/self_improvement_loop.py`
-- `docs/decisions/browser_selected_tab_clipping.md`
-- `tests/test_browser_clipping.py`
-- `tests/test_knowledge_capture.py`
-- `tests/test_messages_safe_handoff.py`
-- `docs/decisions/messages_send_path.md`
-- `docs/decisions/2026-05-22_reminders_tasks_connector.md`
-- `agent/tools/personal/read_only.py`
-- `agent/tools/registry.py`
-- `agent/config/schema.py`
-- `agent/safety/actions.py`
-- `agent/core/tool_broker.py`
-- `agent/connectors/registry.py`
-- `tests/test_connector_framework.py`
-- `tests/test_connectors.py`
-- `config/capabilities.yaml`
-- `agent/workflows/calendar_writes.py`
-- `agent/tools/personal/write_actions.py`
-- `smart_agent.py`
-- `tests/test_calendar_approved_writes.py`
-- `agent/safety/actions.py`
-- `agent/safety/action_preview.py`
-- `agent/ui/cli_commands.py`
-- `tests/test_action_center.py`
-- `README.md`
-- `CHANGELOG.md`
-- `docs/FEATURE_REGISTRY.md`
-- `docs/FEATURE_ROADMAP.md`
-- `docs/FEATURE_MATURITY.md`
-- `docs/PROJECT_STATE.md`
-- `docs/COMPLETION_REPORT.md`
-- `agent/ui/evals.py`
-- `agent/ui/cli_commands.py`
-- `tests/test_eval_harness.py`
-- `docs/EVAL_REPORT.md`
-- `README.md`
-- `CHANGELOG.md`
-- `docs/FEATURE_REGISTRY.md`
-- `docs/FEATURE_ROADMAP.md`
-- `docs/FEATURE_MATURITY.md`
-- `docs/PROJECT_STATE.md`
-- `docs/COMPLETION_REPORT.md`
-- `docs/PROJECT_STATE.md`
-- `docs/FEATURE_ROADMAP.md`
-- `docs/FEATURE_REGISTRY.md`
-- `docs/FEATURE_MATURITY.md`
-- `docs/COMPLETION_REPORT.md`
-- `CHANGELOG.md`
-- `AGENTS.md`
-- `CHANGELOG.md`
-- `docs/FEATURE_REGISTRY.md`
-- `docs/FEATURE_ROADMAP.md`
-- `docs/PROJECT_STATE.md`
-- `docs/templates/feature_record_template.md`
-- `docs/templates/changelog_entry_template.md`
-- `docs/templates/project_state_update_template.md`
-- `docs/COMPLETION_REPORT.md`
-- `docs/checklists/personal_connector_readiness.md`
-- `docs/RELEASE_CHECKLIST.md`
-- `tests/test_feature_maturity_docs.py`
-- `config/capabilities.yaml`
-- `agent/config/schema.py`
-- `tests/test_policy.py`
-- `docs/SDLC.md`
-- `docs/TEST_PLAN.md`
-- `agent/ui/doctor.py`
-- `agent/ui/dashboard.py`
-- `agent/connectors/base.py`
-- `agent/connectors/status.py`
-- `tests/test_ux_packaging.py`
-- `tests/test_connectors.py`
-- `agent/tools/registry.py`
-- `agent/ui/cli_commands.py`
-- `agent/ui/preflight.py`
-- `tests/test_preflight.py`
-- `docs/THREAT_MODEL.md`
-- `agent/workflows/research.py`
-- `agent/workflows/daily_briefing.py`
-- `agent/workflows/meeting_prep.py`
-- `agent/workflows/email_triage.py`
-- `agent/workflows/self_improvement_backlog.py`
-- `tests/test_workflows.py`
-- `tests/test_self_improvement.py`
 - `docs/RISK_REGISTER.md`
-- `agent/tools/low_risk/workspace_files.py`
-- `agent/workflows/files.py`
-- `smart_agent.py`
-- `tests/test_files_workflow.py`
-- `agent/memory/persistent_memory.py`
-- `agent/memory/search.py`
-- `agent/memory/context.py`
-- `agent/memory/tools.py`
-- `tests/test_memory.py`
-- `agent/tools/personal/calendar.py`
-- `agent/tools/personal/contacts.py`
-- `agent/tools/personal/email.py`
-- `agent/tools/personal/messages.py`
-- `agent/tools/personal/read_only.py`
-- `tests/test_personal_modules.py`
-
-Existing uncommitted connector-framework files are also present from the previous completed task:
-
-- `agent/connectors/*`
-- `agent/ui/connectors.py`
-- `tests/test_connector_framework.py`
-- related docs touched by that task
+- `docs/THREAT_MODEL.md`
+- `docs/TEST_PLAN.md`
+- `docs/RELEASE_CHECKLIST.md`
+- `docs/COMPLETION_REPORT.md`
+- `reports/session_reviews/.gitkeep`
+- `bugs/.gitkeep`
 
 ## Commands Run
 
+- Required governance/tracking docs read with `sed` and `rg`.
+- Inspected session logging, replay, store, dogfood, and command registry code with `rg` and `sed`.
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... write_command_docs('.') ... PY`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py tests/test_command_registry.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+- Startup policy validation.
+- Capability manifest validation.
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py tests/test_command_registry.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q && /Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate && git diff --check`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_dogfood_suites.py -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... write_command_docs('.') ... PY`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py dogfood list`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py dogfood run all_safe --dry-run`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_dogfood_suites.py tests/test_command_registry.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+- Startup policy validation.
+- Capability manifest validation.
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_dogfood_suites.py tests/test_command_registry.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q && /Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate && git diff --check`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_dogfood_suites.py -q && git diff --check`
+- Self-improvement workflow, CLI, command registry, and tests inspected with `sed` and `rg`.
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_self_improvement.py -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... write_command_docs('.') ... PY`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py improve overnight-plan --json`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py tests/test_command_registry.py -q`
+- Startup policy validation.
+- Capability manifest validation.
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest`
+- Personal-data connector/default-enabled manifest check.
+- HIGH/CRITICAL approval manifest check.
+- `git diff --check`
+- `git status --short`
+- `sed`/`rg` reads of required governance docs, ToolBroker, PolicyEngine, ApprovalManager, AuditLogger, capability manifest, CLI dispatch, command registry, memory/capture/action stores, and related tests.
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_backup_restore.py -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_policy.py -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... validate_startup_policy() ... PY`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_backup_restore.py tests/test_policy.py tests/test_ux_packaging.py -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest -q`
+- `git diff --check && git status --short`
+- `sed`/`rg` reads of the required governance docs, Action Center implementation, approval/action preview code, README, and tracking docs.
+- `git diff -- agent/safety/actions.py tests/test_action_center.py`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_action_center.py -q`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+- `git diff --check`
+- `rg` and `sed` reads of required governance docs, prompt tracking docs, calendar write tools, Action Center, calendar write workflow, CLI, capability manifest, and calendar write tests.
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_calendar_approved_writes.py tests/test_approved_write_actions.py tests/test_release_gate.py -q`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+- `git diff --check`
+- `rg` and `sed` reads of required governance docs, Tasks connector, Action Center, ToolBroker, capability manifest, CLI, command registry, and task tests.
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_tasks_connector.py -q`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_tasks_connector.py tests/test_command_registry.py -q`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY - <<'PY' ... write_command_docs('.') ... PY`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+- `git diff --check`
+- `rg -n "eval run|eval list|EVAL|Eval|eval_report|run_eval|evals|argparse.*eval|subparsers.*eval" smart_agent.py agent tests docs README.md`
+- `rg --files | rg "eval|scorecard|golden|EVAL"`
+- `git status --short && git branch --show-current`
+- `sed -n '1,260p' agent/ui/evals.py`
+- `sed -n '260,620p' agent/ui/evals.py`
+- `sed -n '300,365p' agent/ui/cli_commands.py`
+- `sed -n '1,340p' tests/test_eval_harness.py`
+- `sed -n '1,260p' agent/core/router.py`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_eval_harness.py -q`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py eval run --routing --policy --tools --workflows --prompt-injection`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_eval_harness.py tests/test_command_registry.py -q`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY - <<'PY' ... write_command_docs('.') ... PY`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py tests/test_command_registry.py -q`
+- Read required governance, tracking, and native-skills docs with `sed`.
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-active NATIVE-SKILL-MANIFEST`
+- Implemented metadata-only native skill manifest models, loader, validator, registry, and CLI commands.
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_native_skill_manifests.py -q`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py skills validate`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py skills show native_skill_vetter`
+- Regenerated command registry docs after adding `skills list/show/validate/doctor`.
+- Focused native manifest/doctor/dashboard/command validation.
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-active NATIVE-SKILL-VETTER`
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_native_skills.py -q`
+- Startup policy validation.
+- Capability manifest validation.
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+- Regenerated command registry docs after adding `skills` commands.
+- CLI smoke for `skills vet` and `skills score` using a temporary workspace skill file; removed the temporary workspace file after the smoke.
+- Web research for OpenClaw/ClawHub/LobeHub-style marketplace category and risk signals.
+- `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-active SKILL-MARKETPLACE-SURVEY`
+- Updated native-skills survey docs, matrix, shortlist, and tracking files.
+- Focused docs/prompt validation, full test suite, startup policy validation, capability manifest validation, and prompt audit pending/finalized during this run.
 - `sed -n '1,220p' AGENTS.md`
 - `sed -n '1,220p' docs/PROJECT_STATE.md`
 - `sed -n '1,180p' smart_agent.py`
@@ -846,6 +1188,89 @@ Existing uncommitted connector-framework files are also present from the previou
 
 ## Test Status
 
+- Session feedback focused tests: 14 passed in 0.69s.
+- Focused session/command/prompt/maturity validation: 33 passed in 0.81s.
+- Full suite after feedback capture: 638 passed in 19.15s.
+- Startup policy validation after feedback capture: startup policy ok.
+- Capability manifest validation after feedback capture: capability manifest ok (77 capabilities).
+- Command registry validation after feedback capture: status ok, 210 commands, no problems.
+- Final focused docs/registry validation after tracking updates: 33 passed in 0.77s.
+- Diff whitespace check after feedback capture: passed.
+- Dogfood suite focused tests: 8 passed in 0.30s.
+- Focused dogfood/command/prompt/maturity validation: 27 passed in 0.35s.
+- Dogfood CLI smoke: `dogfood list` and `dogfood run all_safe --dry-run` passed.
+- Full suite after dogfood suites: 634 passed in 20.12s.
+- Startup policy validation after dogfood suites: startup policy ok.
+- Capability manifest validation after dogfood suites: capability manifest ok (77 capabilities).
+- Command registry validation after dogfood suites: status ok, 201 commands, no problems.
+- Final focused docs/registry validation after tracking updates: 27 passed in 0.33s.
+- Final dogfood focused rerun after suite YAML adjustment: 8 passed in 0.22s.
+- Diff whitespace check after dogfood suites: passed.
+- Overnight self-improvement focused tests: 28 passed in 3.37s.
+- Focused prompt/maturity/command docs validation: 19 passed in 0.19s.
+- Full suite after overnight runbook: 616 passed in 18.51s.
+- Startup policy validation after overnight runbook: startup policy ok.
+- Capability manifest validation after overnight runbook: capability manifest ok (77 capabilities).
+- Command registry validation after overnight runbook: status ok, 189 commands, no problems.
+- Personal-data connector/default-enabled check after overnight runbook: passed; `tasks.draft_create` is a non-personal Action Center draft exception.
+- HIGH/CRITICAL approval manifest check after overnight runbook: passed.
+- Diff whitespace check after overnight runbook: passed.
+- Backup/policy/packaging focused tests: 46 passed in 1.87s.
+- Full suite after Backup / Restore / Migration v1: 598 passed in 17.30s.
+- Startup policy validation after Backup / Restore / Migration v1: startup policy ok.
+- Capability manifest validation after Backup / Restore / Migration v1: capability manifest ok.
+- Command registry validation after Backup / Restore / Migration v1: status ok, 182 commands, no problems.
+- Diff whitespace check after Backup / Restore / Migration v1: passed.
+- Calendar approved writes focused tests: 25 passed in 0.75s.
+- Full suite after calendar approved writes Action Center verification hardening: 571 passed in 14.99s.
+- Startup policy validation after calendar approved writes Action Center verification hardening: startup policy ok.
+- Capability manifest validation after calendar approved writes Action Center verification hardening: capability manifest ok.
+- Command registry validation after calendar approved writes Action Center verification hardening: status ok, 170 commands, no problems.
+- Diff whitespace check after calendar approved writes Action Center verification hardening: passed.
+- Tasks connector focused tests: 11 passed in 0.93s.
+- Tasks connector plus command registry focused tests: 16 passed in 0.91s.
+- Full suite after Tasks / Reminders brokered draft-create pass: 570 passed in 14.74s.
+- Startup policy validation after Tasks / Reminders brokered draft-create pass: startup policy ok.
+- Capability manifest validation after Tasks / Reminders brokered draft-create pass: capability manifest ok.
+- Command registry validation after Tasks / Reminders brokered draft-create pass: status ok, 170 commands, no problems.
+- Diff whitespace check after Tasks / Reminders brokered draft-create pass: passed.
+- Action Center focused tests: 14 passed in 0.79s.
+- Full suite after Action Center hardening: 569 passed in 14.04s.
+- Startup policy validation after Action Center hardening: startup policy ok.
+- Capability manifest validation after Action Center hardening: capability manifest ok.
+- Command registry validation after Action Center hardening: status ok, 170 commands, no problems.
+- Diff whitespace check after Action Center hardening: passed.
+- Golden Eval focused tests: 12 passed in 0.84s.
+- Golden Eval + command registry focused tests: 17 passed in 0.85s.
+- Focused Golden Eval CLI: 13 passed, 0 failed, 5 personal-data skips by design.
+- Full suite after Golden Eval Suite: 565 passed in 12.90s.
+- Post-doc focused docs/command validation: 14 passed in 0.12s.
+- Startup policy validation after Golden Eval Suite: startup policy ok.
+- Capability manifest validation after Golden Eval Suite: capability manifest ok.
+- Command registry validation after Golden Eval Suite: status ok, 170 commands, no problems.
+- Native skill validation after Golden Eval Suite: status ok, 3 valid manifests.
+- Diff whitespace check after Golden Eval Suite: passed.
+- Native skill manifest focused tests: 6 passed in 0.15s.
+- Manifest CLI smoke: `skills validate` returned `status=ok` for one manifest, and `skills show native_skill_vetter` returned `status=ok`.
+- Focused native manifest/doctor/dashboard/command validation: 22 passed in 0.38s.
+- Focused validation after prompt/docs sync: 37 passed in 0.93s.
+- Full suite after native skill manifest loader: 546 passed in 12.16s.
+- Startup policy validation after native skill manifest loader: startup policy ok.
+- Capability manifest validation after native skill manifest loader: capability manifest ok.
+- Command registry validation after native skill manifest loader: status ok, 160 commands, no problems.
+- Skills doctor after native skill manifest loader: status ok, one manifest validated.
+- Native skill vetter focused tests: 10 passed in 0.59s.
+- Focused native skill/docs/command validation: 29 passed in 0.75s.
+- Full suite after Native skill vetter: 540 passed in 12.46s.
+- CLI smoke for `skills vet` and `skills score`: both returned allowed brokered results with `content.status=ok`, `risk_level=LOW`, and `safe_to_port=yes`.
+- Startup policy validation after Native skill vetter: startup policy ok.
+- Capability manifest validation after Native skill vetter: capability manifest ok.
+- Command registry validation after Native skill vetter: status ok, 157 commands, no problems.
+- Native Skills Program focused docs validation: 9 passed in 0.02s.
+- Full suite after Native Skills Program foundation: 530 passed in 10.38s.
+- Startup policy validation after Native Skills Program foundation: startup policy ok.
+- Capability manifest validation after Native Skills Program foundation: capability manifest ok (59 capabilities).
+- Prompt audit after Native Skills Program foundation: 90 prompt records known; 54 complete, 33 queued, 3 blocked, next prompt `SKILL-MARKETPLACE-SURVEY`.
 - Prompt Pack import/splitting focused/docs tests: 28 passed in 0.18s.
 - Full suite after Prompt Pack import/splitting support: 503 passed in 10.59s.
 - Startup policy validation after Prompt Pack import/splitting support: startup policy ok.
@@ -968,6 +1393,60 @@ None currently. `.DS_Store` files are untracked local noise and should not be co
 
 ## Decisions Made During Current Task
 
+- Treat the overnight runbook as a planning gate only; `OVERNIGHT-SAFE-6H` ran only after explicit user approval in this thread, and future overnight runs require separate approval.
+- Add `improve overnight-plan` as a read-only planner that uses brokered `filesystem.read` calls against tracking docs.
+- Rank docs, tests, and hardening work first for overnight safe-mode.
+- Exclude HIGH, CRITICAL, FORBIDDEN, personal-data, send/write, package-install, network, persistence, and approval-bypass work from overnight candidates.
+- Keep commits, schedules, branches, file edits, and memory writes out of the overnight planner.
+- Treat Scheduler v1 backup support as an optional manual-run workflow named `backup_create`, not a background automation or new backup capability.
+- Require scheduled backups to execute through brokered `backup.create` and force `redacted=true`.
+- Reject `redacted=false` in scheduled backup args before invoking any backup tool.
+- Keep `backup.restore`, calendar/contact/task writes, email sends, message sends, and self-improvement commits outside scheduled automatic execution.
+- Implement Backup / Restore as brokered `backup.*` tools rather than a direct filesystem CLI path.
+- Keep backup archives as local redacted directory archives with `manifest.json`, per-file hashes, and an integrity hash instead of compressed opaque archives in v1.
+- Include config/docs/tracking/native-skill files by default, redacted memory/action metadata by default when present, and optional captures/audit metadata.
+- Exclude `.env` and key/certificate files and redact secret-looking text in copied files and metadata exports.
+- Make `backup.restore` HIGH risk and approval-required; in non-interactive mode it is denied safely and audited.
+- Validate backed-up `config/capabilities.yaml` against the current startup validator before restore so policy weakening, personal connector default enablement, CRITICAL approval reuse, and bypass flags are blocked.
+- Treat Action Center action-id verification as part of the low-level message handoff tool guard, not only as CLI workflow policy.
+- Require `messages.save_draft` and `messages.copy_draft` handlers to reject execution unless the configured Action Center has the matching approved action id.
+- Require message save/copy submitted arguments to match the approved Action Center preview before the workspace write or clipboard copy path is reached.
+- Keep message handoff HIGH risk, disabled by default, approval-required, no-send, no Messages database scraping, no Full Disk Access, no AppleScript/Accessibility send automation, and no memory storage.
+- Treat Action Center action-id verification as part of the low-level email send tool guard, not only as CLI workflow policy.
+- Require `email.send_approved` handler to reject execution unless the configured Action Center has the matching approved action id.
+- Require email send submitted arguments to match the approved reviewed draft before the mock/no-provider send path is reached.
+- Keep email send disabled by default and CRITICAL per-action; this hardening does not enable a live email provider.
+- Preserve draft commands as Action Center-only record creation; no draft sends email, reads private Mail databases, runs in the background, or stores memory.
+- Treat Action Center action-id verification as part of the low-level contact write tool guard, not only as CLI workflow policy.
+- Require `contacts.update_selected` and `contacts.create` handlers to reject execution unless the configured Action Center has the matching approved action id.
+- Require contact write submitted arguments to match the approved Action Center preview before the no-external-change stub is reached.
+- Keep contact write tools disabled by default and CRITICAL per-action; this hardening does not enable a live native Contacts write provider.
+- Preserve draft commands as Action Center-only record creation; no draft edits Contacts.app, bulk-edits, deletes contacts, or stores memory.
+- Treat Action Center action-id verification as part of the low-level calendar write tool guard, not only as CLI workflow policy.
+- Require `calendar.create_event`, `calendar.update_event`, and `calendar.delete_event` handlers to reject execution unless the configured Action Center has the matching approved action id.
+- Keep calendar write tools disabled by default and CRITICAL per-action; this hardening does not enable a live native write provider.
+- Preserve draft commands as Action Center-only record creation; no draft creates, updates, deletes, sends invites, recurrence, or stores memory.
+- Treat `tasks.draft_create` as an Action Center-scoped capability, not a personal task-provider connector capability, because it only creates a local pending action and does not read or write task-provider data.
+- Keep `tasks.draft_create` MEDIUM risk and default enabled so users can draft task proposals, while keeping `tasks.list`, `tasks.create`, `tasks.update`, `tasks.complete`, and `tasks.delete` disabled by default and approval-gated.
+- Route `python smart_agent.py tasks draft-create "task"` through ToolBroker before Action Center creates a pending `tasks.create` action.
+- Omit task notes from draft-create by default unless explicitly allowed; do not write memory.
+- Treat Unified Action Center as a review/approval queue only; do not add any direct execution path.
+- Preserve exact local approval previews in `data/actions.json` so user review remains meaningful.
+- Minimize sensitive bodies/drafts in action exports and lifecycle audit payloads because those records are for reporting and audit evidence, not exact approval display.
+- Keep CRITICAL actions per-action only and require any future execution to go through ToolBroker, PolicyEngine, ApprovalManager, and AuditLogger.
+- Treat this task as documentation and validation only; do not add runtime features.
+- Mark `SESSION-LOGGING-REPLAY` complete after adding redacted session logging/replay; use `DOGFOOD-COMMAND-SUITES` as the next prompt queue item.
+- Add the requested product feature set to `docs/PROJECT_STATE.md` and `docs/FEATURE_ROADMAP.md` without marking planned items mature or implemented.
+- Add an explicit Overnight Self-Improvement track and keep long-running overnight work blocked until a runbook and user approval exist.
+- Implement native skill manifests as metadata-only workflow definitions, not executable plugins.
+- Discover manifests from `native_skills/` and `docs/native_skills/manifests/`.
+- Reject manifests with unknown capabilities, executable fields, ToolBroker-bypass language, enabled personal-data defaults, or CRITICAL approval reuse risk.
+- Integrate native skill registry status into doctor/dashboard as metadata only.
+- Implement native skill vetting as static analysis only; do not execute external skill scripts or imported code.
+- Restrict v1 vetting input to approved workspace paths.
+- Treat candidate skill content as `UNTRUSTED_DOCUMENT`.
+- Register native skill vetting as LOW-risk, rate-limited, audited `native_skills.*` capabilities.
+- Keep vetting separate from native manifests, loaders, installation, and enablement.
 - Implement prompt pack support as SDLC metadata import/splitting only; do not execute imported prompts.
 - Reject any pack mode other than `import_only` and any default execution other than `one_prompt_at_a_time`.
 - Store original prompt packs under `prompts/packs/` and split individual prompt files under `prompts/queued/`.
@@ -1062,10 +1541,12 @@ None currently. `.DS_Store` files are untracked local noise and should not be co
 - Full suite, docs validation, startup policy validation, capability manifest validation, diff whitespace check, completion report, project state, feature registry, feature maturity, changelog, and prompt audit are updated.
 - Prompt tracking docs exist, queue rows have prompt IDs, project state references `active_prompt_id` and `next_prompt_id`, AGENTS requires prompt ledger updates, prompt CLI tests pass, full suite passes, startup policy validation passes, capability manifest validation passes, and completion report is updated.
 - Knowledge Capture v1 full suite, startup policy, capability manifest validation, docs validation, diff whitespace check, README, changelog, feature registry, roadmap, maturity tracker, risk register, threat model, release checklist, completion report, and PROJECT_STATE completion update are complete.
+- Knowledge Capture trusted file marker full suite, startup policy, capability manifest validation, command registry validation, docs validation, diff whitespace check, README, changelog, feature registry, roadmap, maturity tracker, prompt tracking, risk register, threat model, release checklist, completion report, and PROJECT_STATE completion update are complete.
+- Privacy Center full suite, startup policy, capability manifest validation, command registry validation, docs validation, CLI smoke, diff whitespace check, README, changelog, command registry, feature registry, roadmap, maturity tracker, prompt tracking, risk register, threat model, release checklist, completion report, and PROJECT_STATE completion update are complete.
 - Browser selected URL and clipping v1 focused tests, full suite, startup policy, capability manifest validation, docs validation, diff whitespace check, CLI selected-tab stub smoke, README, decision record, changelog, feature registry, roadmap, maturity tracker, risk register, threat model, release checklist, completion report, and PROJECT_STATE completion update are complete.
-- Contacts approved edits full suite, startup policy, capability manifest validation, docs validation, diff whitespace check, README, changelog, feature registry, roadmap, maturity tracker, risk register, threat model, completion report, and PROJECT_STATE completion update are complete.
-- Email approved send targeted tests, CLI smoke, full suite, startup policy, capability manifest validation, docs validation, diff whitespace check, README, changelog, feature registry, roadmap, maturity tracker, risk register, threat model, release checklist, completion report, and PROJECT_STATE completion update are complete.
-- Messages safe handoff targeted tests, disabled CLI smoke, full suite, startup policy, capability manifest validation, docs validation, diff whitespace check, bypass/path scans, README, decision record, changelog, feature registry, roadmap, maturity tracker, risk register, threat model, release checklist, completion report, and PROJECT_STATE completion update are complete.
+- Contacts approved edits full suite, startup policy, capability manifest validation, command registry validation, diff whitespace check, README, changelog, feature registry, roadmap, maturity tracker, risk register, threat model, test plan, release checklist, completion report, and PROJECT_STATE completion update are complete.
+- Email approved send targeted tests, full suite, startup policy, capability manifest validation, command registry validation, diff whitespace check, README, changelog, feature registry, roadmap, maturity tracker, risk register, threat model, test plan, release checklist, completion report, and PROJECT_STATE completion update are complete.
+- Messages safe handoff targeted tests, full suite, startup policy, capability manifest validation, command registry validation, docs validation, diff whitespace check, bypass/path scans, README, decision record, changelog, feature registry, roadmap, maturity tracker, risk register, threat model, test plan, release checklist, completion report, and PROJECT_STATE completion update are complete.
 - Reminders / Tasks full suite, startup policy, capability manifest validation, docs validation, diff whitespace check, README, changelog, feature registry, roadmap, maturity tracker, risk register, threat model, completion report, and PROJECT_STATE completion update are complete.
 - Calendar approved writes full suite, startup policy, capability manifest validation, docs validation, diff whitespace check, README, changelog, feature registry, roadmap, maturity tracker, risk register, threat model, completion report, and PROJECT_STATE completion update are complete.
 - Action Center targeted tests passed: 10 passed in 0.48s.
@@ -1116,34 +1597,31 @@ None currently. `.DS_Store` files are untracked local noise and should not be co
 
 ## Next Queue
 
-1. NATIVE-SKILLS-FOUNDATION: Native Skills Program foundation.
-2. SKILL-MARKETPLACE-SURVEY: Skill marketplace survey.
-3. NATIVE-SKILL-VETTER: Native skill vetter.
-4. NATIVE-SKILL-MANIFEST: Native skill manifest and loader.
-5. SKILL-FINDER-NATIVE: Skill finder native skill.
-6. PDF-WORKSPACE-SKILL: PDF workspace native skill.
-7. SESSION-LOGGING-REPLAY: Session logging and replay system.
-8. DOGFOOD-COMMAND-SUITES: Manual dogfood command suites.
-9. FEEDBACK-CAPTURE-RATINGS: Feedback capture and ratings.
-10. See `docs/PROMPT_QUEUE.md` for the full ordered prompt queue and blocked approval gates.
+1. REGRESSION-TEST-GENERATOR: Regression test generator from bugs.
+2. LIVE-TEST-RUNBOOK: Live test runbook and daily dogfood workflow.
+3. PRODUCT-QUALITY-DASHBOARD: Product quality dashboard.
+4. DOGFOOD-RELEASE-GATE: Dogfood system release gate.
+5. APPLE-MESSAGING-ROADMAP: Apple Messaging roadmap and decision records.
+8. See `docs/PROMPT_QUEUE.md` for the full ordered prompt queue and blocked approval gates.
 
 ## Next Feature Set: Controlled Actions and Proactive Workflows
 
-1. Live validation and eval harness. Complete in local mocked tests; live runs remain user opt-in.
-2. Unified Action Center. Complete in local tests; no direct execution path.
-3. Calendar approved writes. Complete in local targeted tests; live native writes deferred.
-4. Reminders/tasks connector. Complete in local targeted tests; native Reminders provider deferred.
-5. Contacts approved edits. Complete in local targeted tests; native Contacts write provider and delete deferred.
-6. Email approved send. Complete in local targeted tests; mock provider only and real provider deferred.
-7. Messages safe handoff / send decision. Complete in local targeted tests; automatic send remains deferred.
-8. Browser selected-tab / clipping connector. Complete in local targeted tests; native selected-tab remains stubbed.
-9. Notes / knowledge capture. Complete in local/full tests; Apple Notes integration deferred.
-10. Daily briefing v2. Complete in local/full tests; live personal sections require explicit approval/config.
-11. Meeting follow-up workflow. Complete in local/full tests; action execution remains separate and approval-gated.
-12. Personal task extraction. Complete in local/full tests; task writes remain Action Center drafts only.
-13. Controlled self-improvement implementation loop. Complete in focused/full tests; startup policy, capability manifest, docs validation, CLI smokes, and diff whitespace check passed.
-14. Scheduler / automation v1.
-15. Full feature maturity review.
+1. Golden eval suite + quality scorecards. Complete for local tested v1; live LM Studio/provider validation remains opt-in.
+2. Unified Action Center v1. Complete in local tests; no direct execution path.
+3. Tasks / Reminders connector v1. Complete in local targeted tests; native Reminders provider deferred.
+4. Calendar approved writes v1. Complete in local targeted tests; live native writes deferred.
+5. Contacts approved edits v1. Complete in local targeted tests; native Contacts write provider and delete deferred.
+6. Email approved send v1. Complete in local targeted tests; mock provider only and real provider deferred.
+7. Messages safe handoff v1. Complete in local targeted tests; automatic send remains deferred.
+8. Browser selected-tab / clipping v1. Complete in local targeted tests; native selected-tab remains stubbed.
+9. Notes / knowledge capture v1. Complete in local/full tests; Apple Notes integration deferred.
+10. Privacy Center / data inventory v1. Complete in local/full tests; metadata-only inventory and redacted export, no personal connector reads.
+11. Backup / restore / migration v1. Planned.
+12. Model-router benchmark and prompt quality evals. Planned.
+13. Scheduler / automation v1. Complete; manual-run only, optional redacted `backup_create`, and no hidden persistence.
+14. Controlled self-improvement implementation loop. Complete in focused/full tests; commit remains approval-gated.
+15. Overnight self-improvement runbook. Queued/planning-only.
+16. Full release gate + maturity review. Planned after this feature set.
 
 ## Open Decisions
 
@@ -1191,4 +1669,4 @@ Before finishing any run:
 
 ## Last Run Summary
 
-Completed Prompt Pack import/splitting support. Added strict prompt pack parser, validator, splitter, queue/ledger/audit integration, pack format docs/templates, and prompt CLI commands for `validate-pack`, `import`, `split`, and `mark-superseded`. Imported packs are `import_only`, stored under `prompts/packs/`, split into `prompts/queued/`, and never executed automatically. Focused prompt pack/docs validation passed with 28 tests, full suite passed with 503 tests, startup policy and capability manifest validation passed, prompt audit reported 86 known prompt records with 49 complete, 34 queued, 3 blocked, and no active prompts, and diff whitespace check passed. Next recommended prompt is `NATIVE-SKILLS-FOUNDATION`.
+Completed `SESSION-REVIEW-BUG-GENERATOR`. Added redacted session review reports, optional local bug generation, `session review`, `bugs list/show/export`, P0 safety classification for bypass/data-leak signals, command registry entries, docs, and tests. Focused session review tests passed with 21 tests, focused session/command/prompt/maturity validation passed with 40 tests, and the full suite passed with 645 tests. Startup policy, capability manifest, command registry validation, and `git diff --check` passed. Next recommended prompt is `REGRESSION-TEST-GENERATOR`.

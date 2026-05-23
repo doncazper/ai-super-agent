@@ -1,0 +1,51 @@
+suite_id: core
+name: Core Runtime Smoke
+description: Exercises no-tool chat, runtime status, tool metadata, config, and safe preflight checks.
+risk_level: LOW
+requires_live_lmstudio: true
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: core_no_tool_chat
+    description: Run a plain no-tool Qwopus/LM Studio chat.
+    command: python smart_agent.py --no-tools "Explain RCS vs iMessage in two sentences."
+    expected_behavior: The model answers without attached tools.
+    failure_signals: Missing LM Studio model, connection failure, or tool debug output in no-tool mode.
+    tags: [core, lmstudio, no_tools]
+  - id: core_time_tool
+    description: Ask for the time so the deterministic route can exercise the time tool.
+    command: python smart_agent.py "What time is it?"
+    expected_behavior: Time tool is routed through ToolBroker and the answer is concise.
+    failure_signals: Tool call bypass, policy denial for the safe time tool, or model connection failure.
+    tags: [core, toolbroker, time]
+  - id: core_doctor
+    description: Show runtime doctor checks.
+    command: python smart_agent.py doctor
+    expected_behavior: Doctor reports Python/config/policy/audit/connector readiness.
+    failure_signals: Startup validation failure or unredacted secret in output.
+    tags: [doctor, diagnostics]
+  - id: core_status
+    description: Show the read-only dashboard status.
+    command: python smart_agent.py status
+    expected_behavior: Status prints metadata only and does not read personal data.
+    failure_signals: Personal connector data access, secret leakage, or crash.
+    tags: [dashboard, status]
+  - id: core_tools_list
+    description: List registered tools.
+    command: python smart_agent.py tools list
+    expected_behavior: Tool names are listed without executing any tool.
+    failure_signals: Tool execution, policy bypass, or crash.
+    tags: [tools, registry]
+  - id: core_config_show
+    description: Show redacted runtime config.
+    command: python smart_agent.py config show
+    expected_behavior: Config metadata is printed with secrets redacted.
+    failure_signals: Raw API key, token, password, or private path leakage.
+    tags: [config, redaction]
+  - id: core_preflight_safe
+    description: Preflight a safe no-personal-data request.
+    command: python smart_agent.py preflight "What is the weather in Phoenix?"
+    expected_behavior: Dry-run reports planned safe capabilities without executing tools.
+    failure_signals: Tool execution during preflight or personal-data inference.
+    tags: [preflight, dry_run]

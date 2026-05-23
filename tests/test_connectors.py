@@ -49,7 +49,9 @@ def test_browser_url_workflow_status_does_not_require_profile_access() -> None:
     assert status["name"] == "browser"
     assert status["configured"] is True
     assert status["default_provider"] == "url_workflow"
-    assert any(item["name"] == "browser.read_selected_tab" for item in status["capabilities"])
+    names = {item["name"] for item in status["capabilities"]}
+    assert "browser.selected_tab" in names
+    assert "browser.read_selected_tab" in names
     assert "history" in status["docs_setup_hint"]
     assert "cookies" in status["docs_setup_hint"]
 

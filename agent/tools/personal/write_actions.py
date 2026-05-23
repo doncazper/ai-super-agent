@@ -4,7 +4,34 @@ from datetime import UTC, datetime
 from typing import Any
 
 from agent.config.runtime import env_value
+from agent.safety.actions import ActionCenter, ActionRecord, ActionStatus
 from agent.tools.errors import ToolError
+
+
+def _require_action_center_approval(
+    action_center: ActionCenter | None,
+    *,
+    action: str,
+    action_id: str,
+) -> ActionRecord:
+    if not action_id:
+        raise ToolError(f"{action} must originate from an approved Action Center item")
+    if action_center is None:
+        raise ToolError(f"{action} requires Action Center verification before execution")
+    record = action_center.get_action(action_id)
+    if record is None:
+        raise ToolError(f"{action} Action Center item was not found")
+    if record.action_type != action:
+        raise ToolError(f"{action} Action Center item type mismatch")
+    if record.status is not ActionStatus.APPROVED:
+        raise ToolError(f"{action} Action Center item must be approved before execution")
+    return record
+
+
+def _require_matching_action_args(record: ActionRecord, action: str, submitted_args: dict[str, Any]) -> None:
+    for key, submitted_value in submitted_args.items():
+        if record.sanitized_args.get(key) != submitted_value:
+            raise ToolError(f"{action} arguments must match the approved Action Center preview")
 
 
 def _not_configured(action: str, rollback_available: bool = False) -> dict[str, object]:
@@ -18,11 +45,12 @@ def _not_configured(action: str, rollback_available: bool = False) -> dict[str, 
     }
 
 
-def make_write_action_tools() -> dict[str, Any]:
+def make_write_action_tools(action_center: ActionCenter | None = None) -> dict[str, Any]:
     def calendar_create_event(
         title: str,
         start: str,
         end: str,
+        action_id: str = "",
         attendees: list[str] | None = None,
         notes: str = "",
         calendar_name: str = "",
@@ -30,6 +58,7 @@ def make_write_action_tools() -> dict[str, Any]:
         send_invites: bool = False,
         recurrence: str | None = None,
     ):
+        _require_action_center_approval(action_center, action="calendar.create_event", action_id=action_id)
         return {
             **_not_configured("calendar.create_event", rollback_available=False),
             "event": {
@@ -44,16 +73,19 @@ def make_write_action_tools() -> dict[str, Any]:
             },
             "invites_sent": False if not send_invites else False,
             "recurring_events_supported": False,
+            "action_id": action_id,
             "_audit": {"result_summary": "Calendar create action reached approved write connector stub; no external change was made."},
         }
 
     def calendar_update_event(
         event_id: str,
         changes: dict[str, Any],
+        action_id: str = "",
         rollback_data: dict[str, Any] | None = None,
         send_invites: bool = False,
         recurrence: str | None = None,
     ):
+        _require_action_center_approval(action_center, action="calendar.update_event", action_id=action_id)
         return {
             **_not_configured("calendar.update_event", rollback_available=False),
             "event_id": event_id,
@@ -62,29 +94,45 @@ def make_write_action_tools() -> dict[str, Any]:
             "rollback_data": rollback_data or {},
             "invites_sent": False if not send_invites else False,
             "recurrence": recurrence,
+            "action_id": action_id,
             "_audit": {"result_summary": "Calendar update action reached approved write connector stub; no external change was made."},
         }
 
     def calendar_delete_event(
         event_id: str,
+        action_id: str = "",
         rollback_data: dict[str, Any] | None = None,
         rollback_availability: bool = False,
     ):
+        _require_action_center_approval(action_center, action="calendar.delete_event", action_id=action_id)
         return {
             **_not_configured("calendar.delete_event", rollback_available=rollback_availability),
             "event_id": event_id,
             "rollback_data_captured": bool(rollback_data),
             "rollback_data": rollback_data or {},
+            "action_id": action_id,
             "_audit": {"result_summary": "Calendar delete action reached approved write connector stub; no external change was made."},
         }
 
     def contacts_update_selected(
         selected_scope_token: str,
         changes: dict[str, Any],
+        action_id: str = "",
         field_diff: list[dict[str, Any]] | None = None,
         bulk_edit: bool = False,
         stored_in_memory: bool = False,
     ):
+        record = _require_action_center_approval(action_center, action="contacts.update_selected", action_id=action_id)
+        approved_args = {
+            "selected_scope_token": selected_scope_token,
+            "changes": changes,
+            "field_diff": field_diff or [],
+            "bulk_edit": bulk_edit,
+            "stored_in_memory": stored_in_memory,
+        }
+        _require_matching_action_args(record, "contacts.update_selected", approved_args)
+        if bulk_edit:
+            raise ToolError("contacts.update_selected denies bulk edits")
         return {
             **_not_configured("contacts.update_selected", rollback_available=False),
             "selected_scope_token": selected_scope_token,
@@ -92,16 +140,28 @@ def make_write_action_tools() -> dict[str, Any]:
             "field_diff": field_diff or [],
             "bulk_edit": bulk_edit,
             "stored_in_memory": stored_in_memory,
+            "action_id": action_id,
             "_audit": {"result_summary": "Contact update action reached approved write connector stub; no external change was made."},
         }
 
-    def contacts_create(display_name: str, fields: dict[str, Any] | None = None, stored_in_memory: bool = False):
+    def contacts_create(display_name: str, fields: dict[str, Any] | None = None, action_id: str = "", stored_in_memory: bool = False):
+        record = _require_action_center_approval(action_center, action="contacts.create", action_id=action_id)
+        _require_matching_action_args(
+            record,
+            "contacts.create",
+            {
+                "display_name": display_name,
+                "fields": fields or {},
+                "stored_in_memory": stored_in_memory,
+            },
+        )
         return {
             **_not_configured("contacts.create", rollback_available=False),
             "display_name": display_name,
             "fields": fields or {},
             "created": False,
             "stored_in_memory": stored_in_memory,
+            "action_id": action_id,
             "_audit": {"result_summary": "Contact create action reached approved write connector stub; no external change was made."},
         }
 
@@ -122,8 +182,27 @@ def make_write_action_tools() -> dict[str, Any]:
         rollback_available: bool = False,
         rollback_note: str = "Email sending is irreversible after provider acceptance.",
     ):
-        if not action_id:
-            raise ToolError("email.send_approved must originate from an approved Action Center item")
+        record = _require_action_center_approval(action_center, action="email.send_approved", action_id=action_id)
+        _require_matching_action_args(
+            record,
+            "email.send_approved",
+            {
+                "from_account": from_account,
+                "provider": provider,
+                "to": to,
+                "cc": cc or [],
+                "bcc": bcc or [],
+                "subject": subject,
+                "body": body,
+                "attachments": attachments or [],
+                "thread_id": thread_id,
+                "reply_context": reply_context,
+                "source_trust_level": source_trust_level,
+                "rollback_available": rollback_available,
+                "rollback_note": rollback_note,
+                "stored_in_memory": stored_in_memory,
+            },
+        )
         if not to.strip():
             raise ToolError("email.send_approved requires exactly one recipient")
         if "," in to or ";" in to:
@@ -230,6 +309,7 @@ WRITE_ACTION_SCHEMAS = {
             "title": {"type": "string"},
             "start": {"type": "string"},
             "end": {"type": "string"},
+            "action_id": {"type": "string"},
             "attendees": {"type": "array", "items": {"type": "string"}},
             "notes": {"type": "string"},
             "calendar_name": {"type": "string"},
@@ -245,6 +325,7 @@ WRITE_ACTION_SCHEMAS = {
         {
             "event_id": {"type": "string"},
             "changes": {"type": "object"},
+            "action_id": {"type": "string"},
             "rollback_data": {"type": "object"},
             "send_invites": {"type": "boolean"},
             "recurrence": {"type": ["string", "null"]},
@@ -256,6 +337,7 @@ WRITE_ACTION_SCHEMAS = {
         "Delete a calendar event after explicit per-action approval.",
         {
             "event_id": {"type": "string"},
+            "action_id": {"type": "string"},
             "rollback_data": {"type": "object"},
             "rollback_availability": {"type": "boolean"},
         },
@@ -267,6 +349,7 @@ WRITE_ACTION_SCHEMAS = {
         {
             "selected_scope_token": {"type": "string"},
             "changes": {"type": "object"},
+            "action_id": {"type": "string"},
             "field_diff": {"type": "array", "items": {"type": "object"}},
             "bulk_edit": {"type": "boolean"},
             "stored_in_memory": {"type": "boolean"},
@@ -276,7 +359,12 @@ WRITE_ACTION_SCHEMAS = {
     "contacts.create": _schema(
         "contacts.create",
         "Create one contact from an approved Action Center record. Stubbed until a safe native connector is configured.",
-        {"display_name": {"type": "string"}, "fields": {"type": "object"}, "stored_in_memory": {"type": "boolean"}},
+        {
+            "display_name": {"type": "string"},
+            "fields": {"type": "object"},
+            "action_id": {"type": "string"},
+            "stored_in_memory": {"type": "boolean"},
+        },
         ["display_name"],
     ),
     "email.send_approved": _schema(

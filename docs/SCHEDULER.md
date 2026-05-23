@@ -8,6 +8,7 @@ Scheduler v1 is a local, opt-in, manual-run scheduler. It stores schedule record
 python smart_agent.py schedule list
 python smart_agent.py schedule create --workflow connector_doctor --schedule daily@08:00 --name "Connector doctor"
 python smart_agent.py schedule create --workflow daily_briefing --arg sections=weather --arg weather_location="Phoenix, AZ"
+python smart_agent.py schedule create --workflow backup_create --arg backup_dir=workspace/backups
 python smart_agent.py schedule run <schedule_id>
 python smart_agent.py schedule pause <schedule_id>
 python smart_agent.py schedule delete <schedule_id>
@@ -20,6 +21,7 @@ Supported workflows:
 - `eval_safe`
 - `memory_cleanup`
 - `audit_summary`
+- `backup_create`
 
 ## Safety Model
 
@@ -32,6 +34,7 @@ Supported workflows:
 - Scheduled workflows may create Action Center items, but they do not execute CRITICAL actions automatically.
 - No email sends, text sends, calendar writes, contact writes, task writes, or self-improvement commits run automatically.
 - `memory_cleanup` is intentionally conservative in v1 and does not delete memory automatically.
+- `backup_create` invokes `backup.create` through `ToolBroker`, forces redacted backups, reads no personal connectors, and writes only local backup archives.
 
 ## Background Automation
 

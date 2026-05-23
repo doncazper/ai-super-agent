@@ -15,6 +15,7 @@ from agent.workflows.tasks import TASK_CREATE_ACTION, draft_task_create, execute
 
 TASK_CAPABILITIES = {
     "tasks.list": Capability("tasks.list", RiskLevel.HIGH, default_enabled=True, approval_required=True),
+    "tasks.draft_create": Capability("tasks.draft_create", RiskLevel.MEDIUM, default_enabled=True),
     "tasks.create": Capability(
         "tasks.create",
         RiskLevel.CRITICAL,
@@ -68,7 +69,7 @@ def _broker(tmp_path, *, approvals: ApprovalManager | None = None, connector: Mo
         for name, capability in TASK_CAPABILITIES.items()
     }
     return ToolBroker(
-        default_registry(project_root=tmp_path, tasks_connector=connector or MockTasksConnector()),
+        default_registry(project_root=tmp_path, tasks_connector=connector or MockTasksConnector(), action_center=_center(tmp_path)),
         PolicyEngine(capabilities),
         AuditLogger(tmp_path / "broker-audit.jsonl"),
         session_id="broker-session",
@@ -121,6 +122,38 @@ def test_tasks_draft_create_creates_action_center_item(tmp_path) -> None:
     assert action.sanitized_args["title"] == "Send agenda"
     assert "notes" not in action.sanitized_args
     assert action.sanitized_args["notes_omitted"] is True
+
+
+def test_tasks_draft_create_routes_through_tool_broker(tmp_path) -> None:
+    broker = _broker(tmp_path)
+
+    result = broker.execute(
+        _call(
+            "tasks.draft_create",
+            {
+                "title": "Send agenda",
+                "due": "2026-05-23",
+                "notes": "private notes",
+                "source_workflow": "meeting_prep",
+                "allow_notes": False,
+            },
+        )
+    )
+
+    payload = json.loads(result.content)
+    action = ActionCenterStore(tmp_path / "actions.json").list()[0]
+    broker_events = [json.loads(line)["tool_name"] for line in (tmp_path / "broker-audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    action_events = [json.loads(line)["tool_name"] for line in (tmp_path / "action-audit.jsonl").read_text(encoding="utf-8").splitlines()]
+
+    assert result.allowed is True
+    assert payload["status"] == "ok"
+    assert payload["executed"] is False
+    assert payload["connector_accessed"] is False
+    assert payload["action_id"] == action.action_id
+    assert action.action_type == TASK_CREATE_ACTION
+    assert "notes" not in action.sanitized_args
+    assert "tasks.draft_create" in broker_events
+    assert "action.created" in action_events
 
 
 def test_tasks_create_requires_approval(tmp_path) -> None:
@@ -221,6 +254,8 @@ def test_tasks_audit_logs_access_and_writes(tmp_path) -> None:
 def test_tasks_capabilities_disabled_by_default() -> None:
     tools = load_capabilities_config("config/capabilities.yaml")["tools"]
 
+    assert tools["tasks.draft_create"]["default_enabled"] is True
+    assert tools["tasks.draft_create"]["risk_level"] == "MEDIUM"
     assert tools["tasks.list"]["default_enabled"] is False
     assert tools["tasks.list"]["risk_level"] == "HIGH"
     for name in ("tasks.create", "tasks.update", "tasks.complete", "tasks.delete"):

@@ -45,6 +45,7 @@ def test_tracking_docs_exist() -> None:
         "docs/templates/feature_record_template.md",
         "docs/templates/changelog_entry_template.md",
         "docs/templates/project_state_update_template.md",
+        "docs/templates/native_skill_record_template.md",
     ):
         assert (ROOT / path).exists(), path
 
@@ -126,6 +127,61 @@ def test_agents_requires_project_tracking_updates() -> None:
     assert "Every Codex final report must include the `prompt_id` and `next_prompt_id`." in agents
 
 
+def test_native_skills_program_docs_exist_and_define_safety_boundary() -> None:
+    for path in (
+        "docs/native_skills/NATIVE_SKILLS_PROGRAM.md",
+        "docs/native_skills/SKILL_INTAKE_PROCESS.md",
+        "docs/native_skills/NATIVE_SKILL_CRITERIA.md",
+        "docs/native_skills/NATIVE_SKILL_CANDIDATES.md",
+        "docs/native_skills/SKILL_RISK_MODEL.md",
+        "docs/native_skills/SKILL_MARKETPLACE_SURVEY.md",
+        "docs/native_skills/NATIVE_CANDIDATE_MATRIX.md",
+        "docs/native_skills/TOP_NATIVE_SKILL_SHORTLIST.md",
+        "docs/native_skills/pdf.md",
+        "native_skills/native_skill_vetter.yaml",
+        "native_skills/native_skill_finder.yaml",
+        "native_skills/pdf_workspace.yaml",
+    ):
+        assert (ROOT / path).exists(), path
+
+    program = read("docs/native_skills/NATIVE_SKILLS_PROGRAM.md")
+    criteria = read("docs/native_skills/NATIVE_SKILL_CRITERIA.md")
+    risk_model = read("docs/native_skills/SKILL_RISK_MODEL.md")
+
+    assert "maps to existing `ToolBroker` capabilities" in program
+    assert "an unreviewed external script" in program
+    assert "direct tool access" in program
+    assert "automatic installation" in program
+    assert "require unrestricted filesystem access" in criteria
+    assert "require browser cookies or session tokens" in criteria
+    assert "require Keychain or password access" in criteria
+    assert "External skill ecosystems" in risk_model
+    assert "never run during intake" in risk_model
+
+    survey = read("docs/native_skills/SKILL_MARKETPLACE_SURVEY.md")
+    matrix = read("docs/native_skills/NATIVE_CANDIDATE_MATRIX.md")
+    shortlist = read("docs/native_skills/TOP_NATIVE_SKILL_SHORTLIST.md")
+
+    assert "does not install, import, run, clone, or execute external skills" in survey
+    assert "Skill-vetter native" in shortlist
+    assert "Email send" in shortlist
+    assert "skill_id: native_skill_vetter" in read("native_skills/native_skill_vetter.yaml")
+    assert "skill_id: native_skill_finder" in read("native_skills/native_skill_finder.yaml")
+    assert "skill_id: pdf_workspace" in read("native_skills/pdf_workspace.yaml")
+    for column in (
+        "User Value",
+        "Frequency",
+        "Safety Concern",
+        "Implementation Difficulty",
+        "Dependency Risk",
+        "Personal-Data Risk",
+        "Workspace-Bounded Feasibility",
+        "Testability",
+        "Native Priority",
+    ):
+        assert column in matrix
+
+
 def test_prompt_tracking_docs_are_valid() -> None:
     queue_rows = table_rows(read("docs/PROMPT_QUEUE.md"), "prompt_id")
     ledger_rows = table_rows(read("docs/PROMPT_LEDGER.md"), "prompt_id")
@@ -136,7 +192,8 @@ def test_prompt_tracking_docs_are_valid() -> None:
     assert all(row["prompt_id"] for row in queue_rows)
     assert all(row["prompt_id"] for row in ledger_rows)
     assert {row["status"] for row in queue_rows} <= {"queued", "active", "completed", "skipped", "failed", "superseded", "blocked"}
-    assert sum(1 for row in ledger_rows + queue_rows if row["status"] == "active") <= 1
+    active_prompt_ids = {row["prompt_id"] for row in ledger_rows + queue_rows if row["status"] == "active"}
+    assert len(active_prompt_ids) <= 1
     assert "active_prompt_id" in project_state
     assert "next_prompt_id" in project_state
     assert "prompt_queue_status" in project_state

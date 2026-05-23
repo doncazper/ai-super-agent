@@ -58,6 +58,7 @@ Deferred actions:
 Mitigation in v1:
 
 - Clipboard copy requires a reviewed Action Center item and approval.
+- Low-level save/copy tool execution requires the verified Action Center action id, and submitted recipient/draft/path arguments must match the approved preview.
 - It never sends a message.
 - Draft text is audited as a handoff action, not stored in long-term memory.
 - Workspace save is available as a lower-surprise alternative.

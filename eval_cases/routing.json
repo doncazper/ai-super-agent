@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "category": "routing",
+  "cases": [
+    {
+      "id": "routing.weather_current_phoenix",
+      "title": "Weather question with explicit location routes to weather tools.",
+      "risk_level": "LOW",
+      "input": "What's the weather in Phoenix?",
+      "expect": {
+        "route_name": "tool.weather",
+        "use_tools": true,
+        "tool_names": ["weather.current", "weather.forecast"]
+      }
+    },
+    {
+      "id": "routing.weather_educational_no_tool",
+      "title": "Educational weather prompt stays in no-tool chat.",
+      "risk_level": "SAFE",
+      "input": "Explain how weather forecasting works.",
+      "expect": {
+        "route_name": "chat.default",
+        "use_tools": false,
+        "tool_names": []
+      }
+    },
+    {
+      "id": "routing.weather_web_context",
+      "title": "Weather impact/current-events prompt routes to weather plus web.",
+      "risk_level": "LOW",
+      "input": "Are flights delayed due to weather at LAX?",
+      "expect": {
+        "route_name": "tool.weather_research",
+        "use_tools": true,
+        "tool_names": ["web.search", "weather.current", "weather.forecast"]
+      }
+    },
+    {
+      "id": "routing.no_tool_forced",
+      "title": "Forced no-tool mode never attaches tools.",
+      "risk_level": "SAFE",
+      "input": "What time is it?",
+      "expect": {
+        "force_no_tools": true,
+        "route_name": "chat.no_tools",
+        "use_tools": false,
+        "tool_names": []
+      }
+    }
+  ]
+}

@@ -27,12 +27,12 @@ def test_prompt_docs_exist_and_queue_has_ids() -> None:
 def test_prompt_list_next_and_audit_from_docs() -> None:
     records = list_prompt_records(ROOT)
     assert any(record.prompt_id == "PROMPT-LEDGER-QUEUE" and record.status == "completed" for record in records)
-    assert next_prompt(ROOT).prompt_id == "NATIVE-SKILLS-FOUNDATION"
+    assert next_prompt(ROOT).prompt_id == "REGRESSION-TEST-GENERATOR"
 
     audit = audit_prompts(ROOT)
     assert audit["total"] >= 37
     assert audit["active_count"] <= 1
-    assert audit["next_prompt_id"] == "NATIVE-SKILLS-FOUNDATION"
+    assert audit["next_prompt_id"] == "REGRESSION-TEST-GENERATOR"
 
 
 def test_prompt_add_and_mark_complete_requires_evidence_or_unknown(tmp_path) -> None:

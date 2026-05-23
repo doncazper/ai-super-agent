@@ -7,6 +7,9 @@ from pathlib import Path
 
 from agent.config.loader import load_capabilities_config
 from agent.config.runtime import RuntimeConfig, RuntimeConfigError
+from agent.core.tool_broker import ToolBroker
+from agent.dogfood.runner import run_suite as run_dogfood_suite
+from agent.dogfood.suites import list_suite_summaries, load_all_suites, load_suite
 from agent.prompts.pack_models import PromptPackError
 from agent.prompts.prompt_store import import_prompt_pack, validate_pack_file
 from agent.promptops.clipboard import ClipboardUnavailable
@@ -29,9 +32,15 @@ from agent.promptops.workbench import (
     show_next as promptops_show_next,
     status as promptops_status,
 )
+from agent.session_logs.feedback import FeedbackManager, VALID_FEEDBACK_TAGS, bug_feedback, make_feedback
+from agent.session_logs.recorder import SessionRecorder
+from agent.session_logs.review import SessionReviewer
 from agent.safety.actions import ActionCenter, ActionCenterStore
+from agent.safety.approvals import ApprovalManager
 from agent.safety.approvals import ApprovalStatus, ApprovalStore
-from agent.safety.audit import AuditLogger
+from agent.safety.audit import AuditLogError, AuditLogger
+from agent.safety.policy import PolicyEngine
+from agent.safety.validation import validate_startup_policy
 from agent.tools.registry import default_registry
 from agent.ui.approvals_ui import print_request, print_requests
 from agent.ui.audit_viewer import tail_audit
@@ -52,6 +61,15 @@ from agent.ui.connectors import connector_status, connectors_doctor, format_conn
 from agent.ui.dashboard import build_dashboard, format_dashboard, format_dashboard_json
 from agent.ui.doctor import doctor_exit_code, format_doctor, run_doctor
 from agent.ui.evals import EvalOptions, eval_exit_code, format_eval_json, format_eval_list_json, format_eval_summary, read_eval_report, run_eval
+from agent.ui.model_quality import (
+    format_quality_json,
+    format_quality_summary,
+    list_models,
+    read_prompt_quality_report,
+    run_model_benchmark,
+    run_prompt_eval,
+    run_router_eval,
+)
 from agent.ui.permissions_dashboard import PermissionStore
 from agent.ui.preflight import PreflightOptions, format_preflight, run_preflight
 from agent.ui.prompts import (
@@ -114,14 +132,28 @@ def dispatch_cli(argv: list[str], *, project_root: str | Path = ".") -> int | No
         return _smoke(argv[1:])
     if command == "eval":
         return _eval(argv[1:])
+    if command == "models":
+        return _models(argv[1:])
+    if command == "router":
+        return _router(argv[1:])
     if command == "prompts":
         return _prompts(argv[1:], project_root=project_root)
     if command == "work":
         return _work(argv[1:], project_root=project_root)
+    if command == "session":
+        return _session(argv[1:], project_root=project_root)
+    if command == "bugs":
+        return _bugs(argv[1:], project_root=project_root)
+    if command == "feedback":
+        return _feedback(argv[1:], project_root=project_root)
+    if command == "dogfood":
+        return _dogfood(argv[1:], project_root=project_root)
     if command == "commands":
         return _commands(argv[1:], project_root=project_root)
     if command == "schedule":
         return _schedule(argv[1:], project_root=project_root)
+    if command == "backup":
+        return _backup(argv[1:], project_root=project_root)
     return None
 
 
@@ -322,6 +354,12 @@ def _eval(argv: list[str]) -> int:
     run_parser = subparsers.add_parser("run", help="Run selected eval checks.")
     run_parser.add_argument("--safe", action="store_true", help="Run all safe evals; personal-data evals remain skipped.")
     run_parser.add_argument("--lmstudio", action="store_true", help="Run live LM Studio evals if configured.")
+    run_parser.add_argument("--lmstudio-live", action="store_true", help="Run opt-in live LM Studio smoke evals if configured.")
+    run_parser.add_argument("--routing", action="store_true", help="Run deterministic router golden cases.")
+    run_parser.add_argument("--policy", action="store_true", help="Run policy allow/ask/deny golden cases.")
+    run_parser.add_argument("--tools", action="store_true", help="Run ToolBroker and audit golden cases.")
+    run_parser.add_argument("--workflows", action="store_true", help="Run workflow dry-run golden cases.")
+    run_parser.add_argument("--prompt-injection", action="store_true", help="Run untrusted-content prompt-injection golden cases.")
     run_parser.add_argument("--web", action="store_true", help="Run web search/fetch evals if configured.")
     run_parser.add_argument("--weather", action="store_true", help="Run weather current/forecast evals if configured.")
     run_parser.add_argument("--workspace", action="store_true", help="Run workspace read/write evals in ./workspace/eval.")
@@ -342,6 +380,12 @@ def _eval(argv: list[str]) -> int:
         EvalOptions(
             safe=parsed.safe,
             lmstudio=parsed.lmstudio,
+            lmstudio_live=parsed.lmstudio_live,
+            routing=parsed.routing,
+            policy=parsed.policy,
+            tools=parsed.tools,
+            workflows=parsed.workflows,
+            prompt_injection=parsed.prompt_injection,
             web=parsed.web,
             weather=parsed.weather,
             workspace=parsed.workspace,
@@ -350,6 +394,41 @@ def _eval(argv: list[str]) -> int:
     )
     print(format_eval_json(report) if parsed.json else format_eval_summary(report))
     return eval_exit_code(report)
+
+
+def _models(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py models", description="Inspect model configuration and run safe model benchmarks.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    list_parser = subparsers.add_parser("list", help="List configured model information without sending prompts.")
+    list_parser.add_argument("--live", action="store_true", help="Query LM Studio /v1/models without sending prompts.")
+    benchmark_parser = subparsers.add_parser("benchmark", help="Run model/router/prompt quality benchmark cases.")
+    benchmark_parser.add_argument("--safe", action="store_true", help="Run safe fixture-backed benchmark cases.")
+    benchmark_parser.add_argument("--live", action="store_true", help="Include opt-in live LM Studio smoke placeholders.")
+    benchmark_parser.add_argument("--json", action="store_true", help="Print JSON instead of a readable summary.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    if parsed.command == "list":
+        print(json.dumps(list_models(live=parsed.live), indent=2, sort_keys=True))
+        return 0
+    report = run_model_benchmark(safe=parsed.safe, live=parsed.live)
+    print(format_quality_json(report) if parsed.json else format_quality_summary(report))
+    return 1 if report.get("status") == "fail" else 0
+
+
+def _router(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py router", description="Evaluate deterministic router behavior.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    eval_parser = subparsers.add_parser("eval", help="Run router quality eval cases.")
+    eval_parser.add_argument("--json", action="store_true", help="Print JSON instead of a readable summary.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    report = run_router_eval()
+    print(format_quality_json(report) if parsed.json else format_quality_summary(report))
+    return 1 if report.get("status") == "fail" else 0
 
 
 def _prompts(argv: list[str], *, project_root: str | Path = ".") -> int:
@@ -387,6 +466,9 @@ def _prompts(argv: list[str], *, project_root: str | Path = ".") -> int:
     split_parser.add_argument("pack_file")
     subparsers.add_parser("audit", help="Audit prompt ledger evidence.")
     subparsers.add_parser("missing", help="Show queued prompts with no completion evidence.")
+    eval_parser = subparsers.add_parser("eval", help="Run prompt/system-prompt quality evals.")
+    eval_parser.add_argument("--json", action="store_true", help="Print JSON instead of a readable summary.")
+    subparsers.add_parser("report", help="Show latest model-router/prompt quality report.")
     try:
         parsed = parser.parse_args(argv)
     except SystemExit as exc:
@@ -450,6 +532,12 @@ def _prompts(argv: list[str], *, project_root: str | Path = ".") -> int:
             print(json.dumps(audit_prompts(project_root), indent=2, sort_keys=True))
         elif parsed.command == "missing":
             print(format_prompt_records(missing_prompts(project_root)))
+        elif parsed.command == "eval":
+            report = run_prompt_eval()
+            print(format_quality_json(report) if parsed.json else format_quality_summary(report))
+            return 1 if report.get("status") == "fail" else 0
+        elif parsed.command == "report":
+            print(read_prompt_quality_report())
     except (ValueError, PromptPackError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -586,6 +674,267 @@ def _work(argv: list[str], *, project_root: str | Path = ".") -> int:
     return 2
 
 
+def _session(argv: list[str], *, project_root: str | Path = ".") -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py session", description="Record and replay redacted manual dogfooding sessions.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    start_parser = subparsers.add_parser("start", help="Start a redacted live session log.")
+    start_parser.add_argument("--name", required=True)
+    start_parser.add_argument("--tag", action="append", default=[])
+    subparsers.add_parser("status", help="Show active session status.")
+    subparsers.add_parser("end", help="End the active session.")
+    subparsers.add_parser("list", help="List session logs.")
+    show_parser = subparsers.add_parser("show", help="Show one session as structured JSON.")
+    show_parser.add_argument("session_id")
+    replay_parser = subparsers.add_parser("replay", help="Render a redacted session replay.")
+    replay_parser.add_argument("session_id", nargs="?")
+    replay_parser.add_argument("--last", action="store_true")
+    review_parser = subparsers.add_parser("review", help="Analyze a session and generate candidate bug reports.")
+    review_parser.add_argument("session_id", nargs="?")
+    review_parser.add_argument("--last", action="store_true")
+    review_parser.add_argument("--create-bugs", action="store_true")
+    export_parser = subparsers.add_parser("export", help="Export one redacted session as JSON.")
+    export_parser.add_argument("session_id")
+    subparsers.add_parser("last", help="Show the last active or ended session.")
+    run_parser = subparsers.add_parser("run", help="Run a smart_agent.py command and append redacted output to the active session.")
+    run_parser.add_argument("--unsafe-raw", action="store_true", help="Store unredacted command output. Unsafe; off by default.")
+    run_parser.add_argument("command_args", nargs=argparse.REMAINDER)
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    recorder = SessionRecorder(project_root=project_root)
+    try:
+        if parsed.command == "start":
+            print(json.dumps(recorder.start(name=parsed.name, tags=parsed.tag).to_dict(), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "status":
+            print(json.dumps(recorder.status(), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "end":
+            print(json.dumps(recorder.end().to_dict(), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "list":
+            print(json.dumps({"sessions": recorder.list()}, indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "show":
+            print(json.dumps(recorder.show(parsed.session_id), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "replay":
+            session_id = _resolve_session_id(recorder, parsed.session_id, parsed.last)
+            print(recorder.replay(session_id))
+            return 0
+        if parsed.command == "review":
+            session_id = _resolve_session_id(recorder, parsed.session_id, parsed.last)
+            reviewer = SessionReviewer(
+                store=recorder.store,
+                project_root=project_root,
+                audit_logger=AuditLogger(Path(project_root) / "logs" / "audit.jsonl"),
+            )
+            print(json.dumps(reviewer.review_session(session_id, create_bugs=parsed.create_bugs), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "export":
+            print(json.dumps(recorder.export(parsed.session_id), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "last":
+            last = recorder.last()
+            print(json.dumps(last or {"error": "no sessions found"}, indent=2, sort_keys=True))
+            return 0 if last else 1
+        if parsed.command == "run":
+            args = list(parsed.command_args)
+            if args and args[0] == "--":
+                args = args[1:]
+            record = recorder.run_command(args, unsafe_raw=parsed.unsafe_raw)
+            print(json.dumps(record.to_dict(), indent=2, sort_keys=True))
+            return 0 if record.exit_code == 0 else record.exit_code
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    return 2
+
+
+def _bugs(argv: list[str], *, project_root: str | Path = ".") -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py bugs", description="Inspect redacted session-derived bug reports.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("list", help="List local redacted bug reports.")
+    show_parser = subparsers.add_parser("show", help="Show one local redacted bug report.")
+    show_parser.add_argument("bug_id")
+    subparsers.add_parser("export", help="Export all local redacted bug reports.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    reviewer = SessionReviewer(project_root=project_root, audit_logger=AuditLogger(Path(project_root) / "logs" / "audit.jsonl"))
+    try:
+        if parsed.command == "list":
+            print(json.dumps({"bugs": [record.to_dict() for record in reviewer.list_bugs()]}, indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "show":
+            print(json.dumps(reviewer.show_bug(parsed.bug_id).to_dict(), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "export":
+            print(json.dumps(reviewer.export_bugs(), indent=2, sort_keys=True))
+            return 0
+    except (ValueError, AuditLogError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    return 2
+
+
+def _resolve_session_id(recorder: SessionRecorder, session_id: str | None, last: bool) -> str:
+    if session_id and last:
+        raise ValueError("use either <session_id> or --last")
+    if session_id:
+        return session_id
+    if last:
+        latest = recorder.last()
+        if latest is None:
+            raise ValueError("no sessions found")
+        return str(latest["session_id"])
+    raise ValueError("session replay requires <session_id> or --last")
+
+
+def _feedback(argv: list[str], *, project_root: str | Path = ".") -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py feedback", description="Attach redacted feedback to session commands.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    good_parser = subparsers.add_parser("good", help="Mark a command as good.")
+    _add_last_or_session_args(good_parser)
+
+    bad_parser = subparsers.add_parser("bad", help="Mark a command as bad.")
+    _add_last_or_session_args(bad_parser)
+    bad_parser.add_argument("--reason", required=True)
+
+    bug_parser = subparsers.add_parser("bug", help="Mark a command as buggy and create a linked bug placeholder.")
+    _add_last_or_session_args(bug_parser)
+    bug_parser.add_argument("--title", required=True)
+    bug_parser.add_argument("--reason", default="")
+
+    confusing_parser = subparsers.add_parser("confusing", help="Mark a command as confusing.")
+    _add_last_or_session_args(confusing_parser)
+    confusing_parser.add_argument("--reason", required=True)
+
+    slow_parser = subparsers.add_parser("slow", help="Mark a command as slow.")
+    _add_last_or_session_args(slow_parser)
+    slow_parser.add_argument("--reason", required=True)
+
+    unsafe_parser = subparsers.add_parser("unsafe", help="Mark a command as unsafe.")
+    _add_last_or_session_args(unsafe_parser)
+    unsafe_parser.add_argument("--reason", required=True)
+
+    rate_parser = subparsers.add_parser("rate", help="Rate a command from 1 to 5.")
+    _add_last_or_session_args(rate_parser)
+    rate_parser.add_argument("--score", type=int, required=True)
+
+    add_parser = subparsers.add_parser("add", help="Attach custom feedback to a command id.")
+    add_parser.add_argument("command_id")
+    add_parser.add_argument("--tag", action="append", required=True, choices=sorted(VALID_FEEDBACK_TAGS))
+    add_parser.add_argument("--note", default="")
+    add_parser.add_argument("--reason", default="")
+    add_parser.add_argument("--expected-behavior", default="")
+    add_parser.add_argument("--actual-behavior", default="")
+    add_parser.add_argument("--severity", default="low", choices=["low", "medium", "high", "critical"])
+    add_parser.add_argument("--session", default=None)
+
+    list_parser = subparsers.add_parser("list", help="List feedback for a session.")
+    list_parser.add_argument("--session", required=True)
+
+    export_parser = subparsers.add_parser("export", help="Export redacted feedback for a session.")
+    export_parser.add_argument("--session", required=True)
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    manager = FeedbackManager(
+        store=SessionRecorder(project_root=project_root).store,
+        audit_logger=AuditLogger(Path(project_root) / "logs" / "audit.jsonl"),
+    )
+    try:
+        if parsed.command == "good":
+            record = manager.add_feedback(None, make_feedback(tags=[], rating=5, user_note="good"), use_last=parsed.last, session_id=parsed.session)
+        elif parsed.command == "bad":
+            record = manager.add_feedback(None, make_feedback(tags=["poor_response"], rating=1, reason=parsed.reason, severity="medium"), use_last=parsed.last, session_id=parsed.session)
+        elif parsed.command == "bug":
+            record = manager.add_feedback(None, bug_feedback(parsed.title, reason=parsed.reason), use_last=parsed.last, session_id=parsed.session)
+        elif parsed.command == "confusing":
+            record = manager.add_feedback(None, make_feedback(tags=["UX_confusing"], reason=parsed.reason, severity="medium"), use_last=parsed.last, session_id=parsed.session)
+        elif parsed.command == "slow":
+            record = manager.add_feedback(None, make_feedback(tags=["too_slow"], reason=parsed.reason, severity="medium"), use_last=parsed.last, session_id=parsed.session)
+        elif parsed.command == "unsafe":
+            record = manager.add_feedback(None, make_feedback(tags=["unsafe_behavior"], reason=parsed.reason, severity="high"), use_last=parsed.last, session_id=parsed.session)
+        elif parsed.command == "rate":
+            record = manager.add_feedback(None, make_feedback(tags=[], rating=parsed.score), use_last=parsed.last, session_id=parsed.session)
+        elif parsed.command == "add":
+            record = manager.add_feedback(
+                parsed.command_id,
+                make_feedback(
+                    tags=parsed.tag,
+                    reason=parsed.reason,
+                    expected_behavior=parsed.expected_behavior,
+                    actual_behavior=parsed.actual_behavior,
+                    user_note=parsed.note,
+                    severity=parsed.severity,
+                ),
+                session_id=parsed.session,
+            )
+        elif parsed.command == "list":
+            print(json.dumps({"feedback": [record.to_dict() for record in manager.list_feedback(session_id=parsed.session)]}, indent=2, sort_keys=True))
+            return 0
+        elif parsed.command == "export":
+            print(json.dumps(manager.export_feedback(session_id=parsed.session), indent=2, sort_keys=True))
+            return 0
+        else:
+            return 2
+        print(json.dumps(record.to_dict(), indent=2, sort_keys=True))
+        return 0
+    except (ValueError, AuditLogError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+
+def _add_last_or_session_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--last", action="store_true", help="Attach feedback to the last command in the active or latest session.")
+    parser.add_argument("--session", default=None, help="Optional session id; defaults to active session, then latest session.")
+
+
+def _dogfood(argv: list[str], *, project_root: str | Path = ".") -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py dogfood", description="Run curated manual dogfood command suites.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("list", help="List available dogfood suites.")
+    show_parser = subparsers.add_parser("show", help="Show one suite definition.")
+    show_parser.add_argument("suite")
+    run_parser = subparsers.add_parser("run", help="Run one dogfood suite and continue through failures.")
+    run_parser.add_argument("suite")
+    run_parser.add_argument("--session", action="store_true", help="Capture command output into the active session log.")
+    run_parser.add_argument("--dry-run", action="store_true", help="Show commands without executing them.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    try:
+        if parsed.command == "list":
+            load_all_suites(project_root=project_root)
+            print(json.dumps({"suites": list_suite_summaries(project_root=project_root)}, indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "show":
+            print(json.dumps(load_suite(parsed.suite, project_root=project_root).to_dict(), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "run":
+            report = run_dogfood_suite(
+                parsed.suite,
+                project_root=project_root,
+                dry_run=parsed.dry_run,
+                use_session=parsed.session,
+            )
+            print(json.dumps(report, indent=2, sort_keys=True))
+            return 0 if report["status"] == "ok" else 1
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    return 2
+
+
 def _commands(argv: list[str], *, project_root: str | Path = ".") -> int:
     parser = argparse.ArgumentParser(prog="smart_agent.py commands", description="Inspect the durable command registry and manual QA plan.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -638,12 +987,126 @@ def _commands(argv: list[str], *, project_root: str | Path = ".") -> int:
     return 2
 
 
+def _backup(argv: list[str], *, project_root: str | Path = ".") -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py backup", description="Create, inspect, verify, and approval-gate local redacted backups.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    create_parser = subparsers.add_parser("create", help="Create a redacted local backup archive.")
+    create_parser.add_argument("--backup-dir", default="")
+    create_parser.add_argument("--include-captures", action="store_true")
+    create_parser.add_argument("--include-audit-metadata", action="store_true")
+
+    list_parser = subparsers.add_parser("list", help="List local backup archives.")
+    list_parser.add_argument("--backup-dir", default="")
+
+    inspect_parser = subparsers.add_parser("inspect", help="Inspect one backup manifest and restore preview.")
+    inspect_parser.add_argument("backup_id")
+    inspect_parser.add_argument("--backup-dir", default="")
+
+    restore_parser = subparsers.add_parser("restore", help="Restore one backup after approval.")
+    restore_parser.add_argument("backup_id")
+    restore_parser.add_argument("--backup-dir", default="")
+
+    export_parser = subparsers.add_parser("export", help="Create a portable redacted backup export.")
+    export_parser.add_argument("--redacted", action="store_true", default=True)
+    export_parser.add_argument("--backup-dir", default="")
+    export_parser.add_argument("--include-captures", action="store_true")
+    export_parser.add_argument("--include-audit-metadata", action="store_true")
+
+    verify_parser = subparsers.add_parser("verify", help="Verify backup integrity.")
+    verify_parser.add_argument("backup_id")
+    verify_parser.add_argument("--backup-dir", default="")
+
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    try:
+        broker = _local_broker(project_root=project_root, route="backup_cli")
+        if parsed.command == "create":
+            tool_name = "backup.create"
+            arguments = {
+                "backup_dir": parsed.backup_dir,
+                "include_captures": parsed.include_captures,
+                "include_audit_metadata": parsed.include_audit_metadata,
+                "redacted": True,
+            }
+        elif parsed.command == "list":
+            tool_name = "backup.list"
+            arguments = {"backup_dir": parsed.backup_dir}
+        elif parsed.command == "inspect":
+            tool_name = "backup.inspect"
+            arguments = {"backup_id": parsed.backup_id, "backup_dir": parsed.backup_dir}
+        elif parsed.command == "restore":
+            tool_name = "backup.restore"
+            arguments = {"backup_id": parsed.backup_id, "backup_dir": parsed.backup_dir}
+        elif parsed.command == "export":
+            tool_name = "backup.export"
+            arguments = {
+                "backup_dir": parsed.backup_dir,
+                "include_captures": parsed.include_captures,
+                "include_audit_metadata": parsed.include_audit_metadata,
+                "redacted": bool(parsed.redacted),
+            }
+        else:
+            tool_name = "backup.verify"
+            arguments = {"backup_id": parsed.backup_id, "backup_dir": parsed.backup_dir}
+        payload = _execute_local_tool(broker, f"cli_{tool_name.replace('.', '_')}", tool_name, arguments)
+    except (RuntimeConfigError, AuditLogError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(json.dumps(payload["content"], indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
+
+
+def _local_broker(*, project_root: str | Path = ".", route: str = "cli") -> ToolBroker:
+    runtime = RuntimeConfig.from_env()
+    validate_startup_policy(runtime.capabilities_path)
+    policy_engine = PolicyEngine.from_config(load_capabilities_config(runtime.capabilities_path))
+    audit_logger = AuditLogger(runtime.audit_log_path)
+    registry = default_registry(project_root=project_root, memory_path=Path(project_root) / "data" / "memory.sqlite3")
+    return ToolBroker(
+        registry,
+        policy_engine,
+        audit_logger,
+        session_id="cli-session",
+        model=runtime.lmstudio_model,
+        route=route,
+        approval_manager=ApprovalManager(store=ApprovalStore(), audit_logger=audit_logger, route=route),
+    )
+
+
+def _execute_local_tool(broker: ToolBroker, call_id: str, tool_name: str, arguments: dict[str, object]) -> dict[str, object]:
+    result = broker.execute(
+        {
+            "id": call_id,
+            "type": "function",
+            "function": {"name": tool_name, "arguments": json.dumps(arguments)},
+        }
+    )
+    try:
+        content = json.loads(result.content)
+    except json.JSONDecodeError:
+        content = {"raw": result.content}
+    return {
+        "tool_name": result.tool_name,
+        "tool_call_id": result.tool_call_id,
+        "allowed": result.allowed,
+        "content": content,
+        "debug": result.debug,
+    }
+
+
 def _schedule(argv: list[str], *, project_root: str | Path = ".") -> int:
     parser = argparse.ArgumentParser(prog="smart_agent.py schedule", description="Manual-run opt-in scheduler.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("list", help="List local schedule records.")
     create_parser = subparsers.add_parser("create", help="Create a local manual-run schedule record.")
-    create_parser.add_argument("--workflow", required=True, choices=["daily_briefing", "connector_doctor", "eval_safe", "memory_cleanup", "audit_summary"])
+    create_parser.add_argument(
+        "--workflow",
+        required=True,
+        choices=["daily_briefing", "connector_doctor", "eval_safe", "memory_cleanup", "audit_summary", "backup_create"],
+    )
     create_parser.add_argument("--name")
     create_parser.add_argument("--schedule", default="manual", help="Human schedule hint, such as daily@08:00. V1 does not install a background runner.")
     create_parser.add_argument("--arg", action="append", default=[], help="Workflow arg as key=value. Repeat as needed.")

@@ -6,10 +6,10 @@ This audit is a best-effort reconstruction from repo evidence. It should be upda
 
 | category | count | notes |
 |---|---:|---|
-| definitely completed | 53 | Inferred from implemented files, tests, docs, feature registry, maturity tracker, changelog, and completion report. |
+| definitely completed | 75 | Inferred from implemented files, tests, docs, feature registry, maturity tracker, changelog, and completion report. |
 | likely completed | 0 | No separate likely bucket is currently needed; uncertain items are left queued or blocked. |
-| queued but not confirmed | 34 | Native skills, dogfood, messaging planning, web acquisition, provider doctors, and runbook prompts remain queued. |
-| blocked by approval gates | 3 | macOS approved iMessage send adapter, approved lead response send, and safe 6-hour overnight run require explicit safety/approval gates. |
+| queued but not confirmed | 24 | Dogfood follow-ups, messaging planning, web acquisition, and provider doctor prompts remain queued. |
+| blocked by approval gates | 2 | macOS approved iMessage send adapter and approved lead response send require explicit safety/approval gates. |
 | superseded by later work | 2 | Weather-only briefing is superseded by Daily Briefing v2; early C1/C2 approval prompts are superseded for planning by the unified approval/Action Center foundation. |
 
 ## Definitely Completed
@@ -55,19 +55,33 @@ This audit is a best-effort reconstruction from repo evidence. It should be upda
 - COMMAND-REGISTRY-QA
 - SCHEDULER-V1
 - FULL-FEATURE-MATURITY-REVIEW
-
-## Queued But Not Confirmed
-
 - NATIVE-SKILLS-FOUNDATION
 - SKILL-MARKETPLACE-SURVEY
 - NATIVE-SKILL-VETTER
 - NATIVE-SKILL-MANIFEST
 - SKILL-FINDER-NATIVE
 - PDF-WORKSPACE-SKILL
+- CONTACTS-WRITES-HARDENING
+- EMAIL-SEND-HARDENING
+- MESSAGES-HANDOFF-HARDENING
+- BROWSER-CLIPPING-COMPAT
+- KNOWLEDGE-CAPTURE-TRUSTED-FILE
+- PRIVACY-CENTER-V1
+- LOCAL-STARTUP-ERGONOMICS
+- BACKUP-RESTORE-MIGRATION-V1
+- MODEL-ROUTER-PROMPT-EVALS
+- SCHEDULER-V1-BACKUP-CREATE
+- SELF-IMPROVE-COMMIT-ACTION-CHECKPOINT
+- OVERNIGHT-RUNBOOK
+- FULL-RELEASE-GATE-MATURITY-REVIEW
+- OVERNIGHT-SAFE-6H
 - SESSION-LOGGING-REPLAY
 - DOGFOOD-COMMAND-SUITES
 - FEEDBACK-CAPTURE-RATINGS
 - SESSION-REVIEW-BUG-GENERATOR
+
+## Queued But Not Confirmed
+
 - REGRESSION-TEST-GENERATOR
 - LIVE-TEST-RUNBOOK
 - PRODUCT-QUALITY-DASHBOARD
@@ -91,22 +105,19 @@ This audit is a best-effort reconstruction from repo evidence. It should be upda
 - SERPAPI-FALLBACK
 - WEATHER-PROVIDER-SELECTOR
 - GMAIL-TELEGRAM-DOCTORS
-- OVERNIGHT-RUNBOOK
 
 ## Blocked By Approval Gates
 
 - MACOS-APPROVED-IMESSAGE-SEND: blocked until a safe permissioned path and explicit approval are documented.
 - APPROVED-LEAD-RESPONSE-SEND: blocked until send-provider strategy and per-action approval UX are complete.
-- OVERNIGHT-SAFE-6H: blocked until an overnight runbook and explicit automation approval exist.
 
 ## Missing Evidence
 
-- Native Skills Program prompts have no implementation evidence yet.
-- Dogfood/session logging prompts have no implementation evidence yet.
-- Apple Messaging/iMessage strategy prompts have no implementation evidence yet beyond the existing messages safe handoff v1.
+- Regression-test generation from reviewed bug records still needs implementation evidence.
+- Apple Messaging/iMessage strategy prompts have no implementation evidence yet beyond the existing messages safe handoff v1 and its Action Center verification hardening.
 - Web Acquisition Layer and cost-aware provider prompts have no implementation evidence yet.
 - Gmail/Telegram doctors have no implementation evidence yet.
-- Overnight self-improvement prompts have no implementation evidence yet.
+- Future safe overnight self-improvement runs still require explicit user approval, even though the 2026-05-23 bounded run completed.
 
 ## Superseded
 
@@ -115,10 +126,11 @@ This audit is a best-effort reconstruction from repo evidence. It should be upda
 
 ## Next Recommended Prompt
 
-NATIVE-SKILLS-FOUNDATION
+REGRESSION-TEST-GENERATOR
 
 Before running it:
 
-1. Confirm it does not install or enable unvetted skills automatically.
-2. Keep skill execution behind ToolBroker/PolicyEngine if it can perform actions.
-3. Update `docs/PROMPT_LEDGER.md`, `docs/PROMPT_QUEUE.md`, and this audit after completion.
+1. Read only approved redacted bug reports from `bugs/`.
+2. Do not turn bug text directly into policy-weakening instructions.
+3. Generate tests only after reviewing candidate bugs.
+4. Update `docs/PROMPT_LEDGER.md`, `docs/PROMPT_QUEUE.md`, and this audit after completion.

@@ -13,7 +13,11 @@
 - No-tool chat sends no tools.
 - Tool-call loop appends matching tool results.
 - CLI modes construct expected orchestration options.
+- Golden Eval Suite tests load data-backed cases from `eval_cases/`, run router/policy/ToolBroker/workflow/prompt-injection checks, write scorecard reports, and keep personal-data cases skipped by default.
+- Model-router benchmark and prompt-quality tests load reviewed fixture prompts, compare expected vs actual routes, attached tools, and policy decisions, verify no-tool prompts attach no tools, verify personal-data/send requests do not auto-execute, verify prompt-injection wrappers, and write prompt-quality reports.
 - Prompt tracking CLI lists, advances, shows, adds, marks, audits, and reports missing prompt records without executing agent tools.
+- Session logging tests cover start/status/end/list/show/replay/export behavior, `session run -- ...` stdout/stderr/exit-code capture, secret/email/phone and command-line redaction, visible audit-id linking, large-output truncation/storage, malformed session files, and gitignore protection for raw reports.
+- Session review tests cover clean session summaries, failed command detection, user feedback flags, optional bug creation, stable incrementing bug ids, secret/personal-data redaction, P0 safety classification for policy-bypass signals, and `bugs list/show/export`.
 - Smoke harness tests use mocks for LM Studio, web search/fetch, and personal connector policy checks.
 - Pytest markers identify `unit`, `integration`, `live_lmstudio`, `live_web`, `live_calendar`, `live_contacts`, `requires_approval`, and `personal_data`.
 - Tests marked `personal_data` are skipped by default and must be explicitly selected.
@@ -37,6 +41,11 @@
 - Denial prevents execution.
 - Critical actions do not reuse approvals.
 - Interactive approval prompts display previews, allow details review, and execute only after explicit approval.
+- Action Center tests verify list/show, HIGH and CRITICAL approval requirements, one-time approval consumption, denial, edit invalidation, non-interactive blocking, no direct execution, required tool metadata, and export/audit minimization of sensitive bodies and drafts.
+- Calendar approved write tests verify draft-only Action Center records, create/update/delete approval gates, denial blocking, one-shot approved execution through `ToolBroker`, direct broker write denial without a verified Action Center action id, rollback token capture, notes/body omission unless explicitly allowed, audit lifecycle, and disabled-by-default manifest entries.
+- Contacts approved edit tests verify draft-only Action Center records, update/create approval gates, denial blocking, one-shot approved execution through `ToolBroker`, direct broker write denial without a verified Action Center action id, submitted-args matching against the approved preview, exact field diffs, sensitive-field redaction, bulk-edit denial, delete deferral, audit lifecycle, and disabled-by-default manifest entries.
+- Email approved send tests verify Action Center reviewed drafts, CRITICAL per-action approval, denial blocking, edit invalidation, one-shot mock send execution through `ToolBroker`, direct broker send denial without a verified Action Center action id, submitted-args matching against the approved reviewed draft, full body preview, missing recipient blocking, attachment blocking, untrusted reply context, audit lifecycle, and disabled-by-default manifest entries.
+- Messages safe handoff tests verify Action Center reviewed save/copy drafts, approval blocking, workspace-only saves, mock clipboard copy, direct broker save/copy denial without a verified Action Center action id, submitted-args matching against the approved reviewed draft, no automatic send capability, no memory writes, and audit lifecycle.
 
 ## Audit-Log Tests
 
@@ -45,12 +54,14 @@
 - Approval results are logged.
 - Hash chain links entries.
 - Secrets are redacted.
+- Action lifecycle audit entries minimize sensitive Action Center previews while preserving lifecycle status, risk, trust, capability, and approval metadata.
 
 ## Prompt-Injection Tests
 
 - Webpage instructions are ignored.
 - Email/message instructions are ignored.
 - Document instructions are ignored.
+- Golden eval prompt-injection fixtures verify hostile page text is wrapped as untrusted data and does not become a system/tool instruction.
 - Regression phrases include attempts to ignore instructions, reveal secrets, change policy, call tools, send email/text, disable audit logs, and store private data.
 
 ## Web Research Tests
@@ -75,7 +86,8 @@
 - Search respects scope and category filters.
 - Export/delete/clear lifecycle operations are audited and document best-effort deletion limits.
 - Context injection obeys record and character limits, excludes personal memory by default, and audits injected memory IDs.
-- Knowledge Capture tests cover workspace-only note captures, URL captures through `web.fetch_url`, file captures through `filesystem.read`, secret rejection before capture writes, prompt-injection filtering, personal-data default memory-promotion blocks, and `promote-to-memory` routing through `memory.store`.
+- Knowledge Capture tests cover workspace-only note captures, URL captures through `web.fetch_url`, file captures through `filesystem.read`, explicit `--trusted-user` file labeling, secret rejection before capture writes, prompt-injection filtering, personal-data default memory-promotion blocks, and `promote-to-memory` routing through `memory.store`.
+- Privacy Center tests cover status, metadata-only inventory, disabled connector visibility, memory counts without contents, redacted export previews, delete-memory confirmation denial, brokered `memory.clear` execution, audit summary, permissions summary, CLI dispatch, and no personal connector reads.
 
 ## Weather Tests
 
@@ -123,7 +135,9 @@
 - Contacts search/read require approval, keep tools disabled by default, return compact search candidates, require a selected-scope token and explicit requested fields for selected reads, omit notes, redact email/phone/address values by default, deny bulk export attempts, and audit accesses as `LOCAL_PRIVATE_DATA`.
 - Email metadata/read/summarize/draft require approval when enabled, keep tools disabled by default, return no body in metadata, wrap selected thread bodies as `UNTRUSTED_EMAIL`, ignore prompt injection, never send drafts, refuse bulk thread ids, avoid long-term body storage, and audit access.
 - Messages read/summarize/draft require approval when enabled, keep tools disabled by default, do not implement sends or bulk history reads, refuse bulk thread ids, return clear setup errors for unsafe/unconfigured adapters, restrict manual draft context files to `./workspace`, wrap content as `UNTRUSTED_MESSAGE`, ignore prompt injection, avoid long-term body storage, and audit access.
-- Browser selected URL and clipping tests cover explicit URL fetch through `web.fetch_url`, blocked-domain denial, prompt-injection filtering, workspace-only clipping through `filesystem.write`, `UNTRUSTED_WEB`/`UNTRUSTED_DOCUMENT` labeling, selected-tab stub setup notes, no browser history/cookie/session/password/profile access, and audit logs for fetch/write/stub paths.
+- Messages save/copy handoff requires Action Center approval with verified action ids and approved-preview argument matching before any workspace draft write or clipboard copy.
+- Browser selected URL and clipping tests cover canonical capabilities `browser.read_url`, `browser.summarize_url`, `browser.clip_url_to_workspace`, and disabled `browser.selected_tab`; explicit URL fetch through `web.fetch_url`; blocked-domain denial; prompt-injection filtering; workspace-only clipping through `filesystem.write`; `UNTRUSTED_WEB`/`UNTRUSTED_DOCUMENT` labeling; selected-tab stub setup notes; no browser history/cookie/session/password/profile access; and audit logs for fetch/write/stub paths.
+- Tasks/reminders tests cover disabled provider access, approval-required listing, brokered `tasks.draft_create` Action Center queuing, create/complete/delete approval gates, one-shot approved create execution, no memory writes, audit lifecycle, setup errors, and mock provider list/create/update/complete/delete paths.
 
 ## Self-Improvement Tests
 
@@ -131,12 +145,17 @@
 - Implementation creates a branch.
 - Policy weakening and audit disabling are blocked.
 - Tests and diffs are produced before commit.
+- `improve create-action-for-commit` runs brokered tests and brokered diff, creates only a pending Action Center `self_improvement.commit` record when tests pass and a diff exists, and does not commit.
+- Failed self-improvement tests prevent commit action creation.
+- `improve overnight-plan` excludes HIGH/CRITICAL and personal-data work, ranks docs/tests/hardening candidates first, reads tracking docs through `ToolBroker`, and creates no branch, schedule, memory write, commit, or file edit.
+- Overnight runbook and report template existence tests verify safe-mode constraints and review fields are documented.
 
 ## Release-Gate Tests
 
 - All selected milestone tests pass or failures are documented.
 - Forbidden capabilities are absent.
 - Audit and policy checks pass.
+- Full release-gate maturity reviews run the full suite, startup policy validation, capability manifest validation, safe eval suite, command registry validation, native skill validation, unknown-tool denial, ToolBroker path scans, personal-data default checks, HIGH approval checks, and CRITICAL per-action/no-reuse checks.
 
 ## Prompt Tracking Tests
 
@@ -158,6 +177,23 @@
 - CLI tests cover `commands list`, `commands show`, `commands search`, `commands legacy`, `commands deprecated`, `commands validate`, `commands qa-plan`, and `commands qa-run`.
 - `commands qa-run` does not execute command examples in v1 and only prints SAFE/LOW active command examples for the requested group.
 
+## Native Skills Program Tests
+
+- `docs/native_skills/NATIVE_SKILLS_PROGRAM.md` exists.
+- `docs/native_skills/SKILL_INTAKE_PROCESS.md` exists.
+- `docs/native_skills/NATIVE_SKILL_CRITERIA.md` exists.
+- `docs/native_skills/NATIVE_SKILL_CANDIDATES.md` exists.
+- `docs/native_skills/SKILL_RISK_MODEL.md` exists.
+- `docs/templates/native_skill_record_template.md` exists.
+- Program docs define native skills as reviewed local workflows mapped to `ToolBroker`.
+- Program docs state native skills are not unreviewed external scripts, direct tool access, hidden network access, automatic installs, or approval bypasses.
+- Native skill vetter tests cover safe `SKILL.md` files, shell-command flags, network-call flags, secret references, filesystem escapes, prompt-injection language, approval-bypass language, opaque binaries, missing license warnings, no script execution, workspace-only reads, and audit logging.
+- Native skill manifest tests cover valid manifest loading, invalid manifest rejection, unknown capability rejection, missing risk/trust rejection, ToolBroker-bypass language rejection, personal-data disabled-by-default enforcement, and `skills list/show/validate/doctor` command behavior.
+- Native skill finder tests cover implemented manifest matches, planned candidate matches, maturity/readiness reporting, approval reporting, no-match candidate creation guidance, no external marketplace search/install, brokered execution, and audit logging of local docs read.
+- PDF workspace native skill tests cover path traversal, denied paths, PDF info fixtures, embedded text extraction, no-table extraction behavior, no-memory summaries, file-size limits, malformed PDFs, audit logging, no external binary execution, CLI broker path, and native manifest/docs validation.
+- Criteria docs include disqualifiers for unrestricted filesystem access, browser cookies/session tokens, Keychain/password access, private app database scraping, opaque binaries, unclear licenses, and unsandboxable behavior.
+- Risk model docs cover external skill supply-chain risk and prohibit running external code during intake.
+
 ## Scheduler Tests
 
 - Schedule create/list writes and reads explicit local schedule records.
@@ -167,3 +203,4 @@
 - Pause prevents runs and delete removes the local schedule record.
 - Scheduler v1 creates no LaunchAgent, cron, daemon, login item, or hidden persistence.
 - CLI tests cover schedule create/list with a test-local `SCHEDULE_PATH`.
+- Scheduler backup tests verify `backup_create` runs through brokered `backup.create`, writes a redacted backup, audits the provider call, reads no personal connectors, writes no memory, and rejects unredacted backup args.

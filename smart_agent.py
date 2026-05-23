@@ -1,16 +1,61 @@
 #!/usr/bin/env python
 from __future__ import annotations
 
+import sys
+
+
+MIN_PYTHON_VERSION = (3, 11)
+
+
+def _python_version_error_message(
+    version_info: tuple[int, int, int] | tuple[int, int],
+    executable: str,
+) -> str:
+    version = ".".join(str(part) for part in version_info[:3])
+    return f"""AI Super Agent requires Python 3.11 or newer.
+
+Detected Python: {version}
+Executable: {executable}
+
+Recommended local setup:
+  cd "/Users/sambehdjou/Documents/AI Super Agent"
+  python3.11 -m venv .venv
+  source .venv/bin/activate
+  python -m pip install -e '.[dev]'
+  export LMSTUDIO_BASE_URL="http://localhost:1234/v1"
+  export LMSTUDIO_MODEL="<model id from LM Studio>"
+  python smart_agent.py doctor
+
+If Python 3.11 is not installed, install it first:
+  brew install python@3.11
+
+If you are running inside Codex, this bundled runtime also works:
+  /Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py doctor
+
+To list LM Studio model IDs after starting the Developer Server:
+  curl http://localhost:1234/v1/models
+"""
+
+
+def _enforce_python_version() -> None:
+    if sys.version_info < MIN_PYTHON_VERSION:
+        print(_python_version_error_message(sys.version_info, sys.executable), file=sys.stderr)
+        raise SystemExit(2)
+
+
+_enforce_python_version()
+
 import argparse
 import json
 import os
-import sys
+from pathlib import Path
 
 from agent.config.runtime import RuntimeConfig, RuntimeConfigError
 from agent.core.lmstudio_client import LMStudioClient, LMStudioConfig, LMStudioError
 from agent.core.orchestrator import Orchestrator, OrchestratorResult, new_session_id
 from agent.core.tool_broker import ToolBroker
 from agent.config.loader import load_capabilities_config
+from agent.native_skills.registry import NativeSkillRegistry
 from agent.safety.audit import AuditLogError, AuditLogger
 from agent.safety.approvals import ApprovalManager, ApprovalStore
 from agent.safety.actions import ActionCenter
@@ -23,6 +68,16 @@ from agent.tools.weather.preferences import clear_default_location, set_default_
 from agent.ui.approvals_ui import ConsoleApprovalPrompt
 from agent.ui.cli_commands import dispatch_cli
 from agent.ui.interactive import InteractiveState, run_interactive
+from agent.ui.privacy_center import (
+    CONFIRM_DELETE_MEMORY,
+    format_privacy_json,
+    privacy_audit_summary,
+    privacy_delete_memory,
+    privacy_export,
+    privacy_inventory,
+    privacy_permissions,
+    privacy_status,
+)
 from agent.workflows.daily_briefing import briefing_config_load, briefing_config_set, daily_briefing_v2
 from agent.workflows.browser_clipping import (
     browser_clip_url_to_workspace,
@@ -74,12 +129,14 @@ from agent.workflows.message_handoff import (
 from agent.workflows.research import source_grounded_research
 from agent.workflows.self_improvement_backlog import self_improvement_backlog
 from agent.workflows.self_improvement_loop import (
+    build_overnight_plan,
+    create_self_improvement_commit_action,
     execute_self_improvement_commit,
     implement_approved_proposal,
     run_self_improvement_tests,
     show_self_improvement_diff,
 )
-from agent.workflows.tasks import TASK_CREATE_ACTION, draft_task_create, execute_task_action
+from agent.workflows.tasks import TASK_CREATE_ACTION, execute_task_action
 from agent.workflows.task_extraction import extract_personal_tasks
 
 
@@ -108,13 +165,19 @@ def main(argv: list[str] | None = None) -> int:
     except RuntimeConfigError as exc:
         print(str(exc), file=sys.stderr)
         return 2
+    audit_logger = AuditLogger(runtime_config.audit_log_path)
+    session_id = new_session_id()
+    action_center = ActionCenter(
+        audit_logger=audit_logger,
+        session_id=session_id,
+        model=config.model,
+        route="tasks_actions",
+    )
     try:
-        registry = default_registry()
+        registry = default_registry(action_center=action_center)
     except RuntimeConfigError as exc:
         print(str(exc), file=sys.stderr)
         return 2
-    audit_logger = AuditLogger(runtime_config.audit_log_path)
-    session_id = new_session_id()
     approval_store = ApprovalStore()
     approval_interactive = args.interactive or (
         bool(args.message) and args.message[0] in {"calendar", "contacts", "email", "messages", "tasks"} and sys.stdin.isatty()
@@ -151,6 +214,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_meeting_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "files":
         return _run_files_command(args.message[1:], broker, debug=debug_enabled)
+    if args.message and args.message[0] == "pdf":
+        return _run_pdf_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "memory":
         return _run_memory_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "calendar":
@@ -163,6 +228,15 @@ def main(argv: list[str] | None = None) -> int:
         return _run_messages_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "tasks":
         return _run_tasks_command(args.message[1:], broker, debug=debug_enabled)
+    if args.message and args.message[0] == "skills":
+        return _run_skills_command(args.message[1:], broker, debug=debug_enabled)
+    if args.message and args.message[0] == "privacy":
+        return _run_privacy_command(
+            args.message[1:],
+            broker,
+            runtime=runtime_config,
+            audit_logger=audit_logger,
+        )
     if args.message and args.message[0] == "improve":
         return _run_improve_command(args.message[1:], broker, debug=debug_enabled)
 
@@ -364,6 +438,11 @@ def _run_capture_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     file_parser.add_argument("path")
     file_parser.add_argument("--title", default="")
     file_parser.add_argument("--tag", action="append", default=[])
+    file_parser.add_argument(
+        "--trusted-user",
+        action="store_true",
+        help="Mark this workspace file as user-authored trusted content. Defaults to untrusted document data.",
+    )
 
     url_parser = subparsers.add_parser("from-url", help="Capture an explicit URL through web.fetch_url.")
     url_parser.add_argument("url")
@@ -388,7 +467,13 @@ def _run_capture_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
         if parsed.command == "note":
             payload = capture_note(broker, parsed.text, title=parsed.title, tags=parsed.tag)
         elif parsed.command == "from-file":
-            payload = capture_from_file(broker, parsed.path, title=parsed.title, tags=parsed.tag)
+            payload = capture_from_file(
+                broker,
+                parsed.path,
+                title=parsed.title,
+                tags=parsed.tag,
+                trusted_user=parsed.trusted_user,
+            )
         elif parsed.command == "from-url":
             payload = capture_from_url(broker, parsed.url, title=parsed.title, tags=parsed.tag)
         elif parsed.command == "list":
@@ -415,6 +500,60 @@ def _run_capture_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
             file=sys.stderr,
         )
     print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0 if payload.get("status") == "ok" else 2
+
+
+def _run_privacy_command(
+    argv: list[str],
+    broker: ToolBroker,
+    *,
+    runtime: RuntimeConfig,
+    audit_logger: AuditLogger,
+) -> int:
+    parser = argparse.ArgumentParser(
+        prog="smart_agent.py privacy",
+        description="Inspect local agent data inventory, privacy status, exports, and deletion options.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("status", help="Show high-level privacy status.")
+    subparsers.add_parser("inventory", help="Show metadata-only data inventory.")
+    subparsers.add_parser("export", help="Export a redacted local privacy report.")
+    delete_parser = subparsers.add_parser("delete-memory", help="Clear local memory through brokered memory.clear.")
+    delete_parser.add_argument("--scope", default="default")
+    delete_parser.add_argument("--confirm", default="")
+    audit_parser = subparsers.add_parser("audit-summary", help="Summarize audit metadata without raw args.")
+    audit_parser.add_argument("--limit", type=int, default=5000)
+    subparsers.add_parser("permissions", help="Show grants and personal/high/critical capability rules.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    try:
+        if parsed.command == "status":
+            payload = privacy_status(runtime=runtime, audit_logger=audit_logger)
+        elif parsed.command == "inventory":
+            payload = privacy_inventory(runtime=runtime, audit_logger=audit_logger)
+        elif parsed.command == "export":
+            payload = privacy_export(runtime=runtime, audit_logger=audit_logger)
+        elif parsed.command == "delete-memory":
+            payload = privacy_delete_memory(
+                broker,
+                scope=parsed.scope,
+                confirm=parsed.confirm,
+                audit_logger=audit_logger,
+            )
+        elif parsed.command == "audit-summary":
+            payload = privacy_audit_summary(runtime=runtime, audit_logger=audit_logger, limit=parsed.limit)
+        else:
+            payload = privacy_permissions(runtime=runtime, audit_logger=audit_logger)
+    except AuditLogError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    print(format_privacy_json(payload))
+    if parsed.command == "delete-memory" and parsed.confirm != CONFIRM_DELETE_MEMORY:
+        return 2
     return 0 if payload.get("status") == "ok" else 2
 
 
@@ -874,6 +1013,153 @@ def _run_files_command(argv: list[str], broker: ToolBroker, *, debug: bool = Fal
     if "allowed" in payload:
         return 0 if payload.get("allowed") else 2
     return 0
+
+
+def _run_pdf_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py pdf", description="Workspace-bounded PDF assistant.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    def add_common(command_parser: argparse.ArgumentParser) -> None:
+        command_parser.add_argument("path")
+        command_parser.add_argument("--max-bytes", type=int, default=10_000_000)
+        command_parser.add_argument("--max-pages", type=int, default=100)
+
+    info_parser = subparsers.add_parser("info", help="Read PDF metadata and page count inside approved roots.")
+    add_common(info_parser)
+
+    text_parser = subparsers.add_parser("extract-text", help="Extract embedded PDF text as untrusted document data.")
+    add_common(text_parser)
+    text_parser.add_argument("--max-chars", type=int, default=200_000)
+
+    summarize_parser = subparsers.add_parser("summarize", help="Summarize a workspace PDF without storing content in memory.")
+    add_common(summarize_parser)
+    summarize_parser.add_argument("--max-chars", type=int, default=200_000)
+
+    tables_parser = subparsers.add_parser("extract-tables", help="Extract text-delimited tables from a workspace PDF best-effort.")
+    add_common(tables_parser)
+    tables_parser.add_argument("--max-chars", type=int, default=200_000)
+
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    args: dict[str, object] = {
+        "path": parsed.path,
+        "max_bytes": parsed.max_bytes,
+        "max_pages": parsed.max_pages,
+    }
+    if hasattr(parsed, "max_chars"):
+        args["max_chars"] = parsed.max_chars
+    tool_by_command = {
+        "info": "documents.pdf.read",
+        "extract-text": "documents.pdf.extract_text",
+        "summarize": "documents.pdf.summarize",
+        "extract-tables": "documents.pdf.extract_tables",
+    }
+    payload = _execute_cli_tool(
+        broker,
+        f"cli_pdf_{parsed.command.replace('-', '_')}",
+        tool_by_command[parsed.command],
+        args,
+    )
+    if debug and isinstance(payload, dict):
+        debug_payload = payload.get("debug")
+        if debug_payload:
+            from agent.core.orchestrator import format_debug_payload
+
+            print("[debug] " + format_debug_payload({"event": "tool_broker", **debug_payload}), file=sys.stderr)
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
+
+
+def _run_skills_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    parser = argparse.ArgumentParser(
+        prog="smart_agent.py skills",
+        description="Review native skill candidates without installing or executing external code.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    subparsers.add_parser("list", help="List metadata-only native skill manifests.")
+
+    show_parser = subparsers.add_parser("show", help="Show one native skill manifest.")
+    show_parser.add_argument("skill_id")
+
+    subparsers.add_parser("validate", help="Validate native skill manifests.")
+    subparsers.add_parser("doctor", help="Check native skill discovery and validation status.")
+
+    vet_parser = subparsers.add_parser("vet", help="Vet a workspace SKILL.md file.")
+    vet_parser.add_argument("path")
+
+    folder_parser = subparsers.add_parser("vet-folder", help="Vet a workspace skill folder.")
+    folder_parser.add_argument("path")
+
+    score_parser = subparsers.add_parser("score", help="Score a workspace skill candidate file.")
+    score_parser.add_argument("path")
+
+    find_parser = subparsers.add_parser("find", help="Find local native skills and reviewed candidates for a requested capability.")
+    find_parser.add_argument("query")
+    find_parser.add_argument("--max-results", type=int, default=5)
+
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    if parsed.command in {"list", "show", "validate", "doctor"}:
+        registry = NativeSkillRegistry(Path("."))
+        if parsed.command == "list":
+            payload = {"status": "ok", "skills": registry.list()}
+        elif parsed.command == "show":
+            skill = registry.show(parsed.skill_id)
+            payload = {"status": "ok", "skill": skill} if skill else {"status": "error", "error": "native skill not found", "skill_id": parsed.skill_id}
+        elif parsed.command == "validate":
+            payload = registry.validate_all()
+        else:
+            payload = registry.doctor()
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0 if payload.get("status") == "ok" else 2
+
+    if parsed.command == "vet":
+        payload = _execute_cli_tool(broker, "cli_skills_vet", "native_skills.vet_skill_file", {"path": parsed.path})
+    elif parsed.command == "vet-folder":
+        payload = _execute_cli_tool(broker, "cli_skills_vet_folder", "native_skills.vet_skill_folder", {"path": parsed.path})
+    elif parsed.command == "score":
+        payload = _execute_cli_tool(broker, "cli_skills_score", "native_skills.score_candidate", {"path": parsed.path})
+    else:
+        payload = _execute_cli_tool(
+            broker,
+            "cli_skills_find",
+            "native_skills.find_skill",
+            {"query": parsed.query, "max_results": parsed.max_results},
+        )
+    if debug and isinstance(payload, dict) and payload.get("debug"):
+        from agent.core.orchestrator import format_debug_payload
+
+        print("[debug] " + format_debug_payload({"event": "tool_broker", **payload["debug"]}), file=sys.stderr)
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
+
+
+def _execute_cli_tool(broker: ToolBroker, call_id: str, tool_name: str, arguments: dict[str, object]) -> dict[str, object]:
+    result = broker.execute(
+        {
+            "id": call_id,
+            "type": "function",
+            "function": {"name": tool_name, "arguments": json.dumps(arguments)},
+        }
+    )
+    try:
+        content = json.loads(result.content)
+    except json.JSONDecodeError:
+        content = {"raw": result.content}
+    return {
+        "tool_name": result.tool_name,
+        "tool_call_id": result.tool_call_id,
+        "allowed": result.allowed,
+        "content": content,
+        "debug": result.debug,
+    }
 
 
 def _run_memory_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
@@ -1719,23 +2005,34 @@ def _run_tasks_command(argv: list[str], broker: ToolBroker, *, debug: bool = Fal
             print(str(payload.get("briefing", "Task extraction unavailable")))
         return 0 if payload.get("status") in {"ok", "limited", "dry_run"} else 2
     if parsed.command == "draft-create":
-        center = ActionCenter(
-            audit_logger=broker.audit_logger,
-            session_id=broker.session_id,
-            model=broker.model,
-            route="tasks_actions",
-        )
-        record = draft_task_create(
-            center,
-            title=" ".join(parsed.task),
-            due=parsed.due,
-            notes=parsed.notes,
-            list_name=parsed.list_name,
-            source_workflow=parsed.source_workflow,
-            allow_notes=parsed.allow_notes,
-        )
-        print(json.dumps(record.to_dict(), indent=2, sort_keys=True))
-        return 0
+        tool_call = {
+            "id": "cli_tasks_draft_create",
+            "type": "function",
+            "function": {
+                "name": "tasks.draft_create",
+                "arguments": json.dumps(
+                    {
+                        "title": " ".join(parsed.task),
+                        "due": parsed.due,
+                        "notes": parsed.notes,
+                        "list_name": parsed.list_name,
+                        "source_workflow": parsed.source_workflow,
+                        "allow_notes": bool(parsed.allow_notes),
+                    }
+                ),
+            },
+        }
+        try:
+            result = broker.execute(tool_call)
+        except AuditLogError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        if debug and result.debug:
+            from agent.core.orchestrator import format_debug_payload
+
+            print("[debug] " + format_debug_payload({"event": "tool_broker", **result.debug}), file=sys.stderr)
+        print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
+        return 0 if result.allowed else 2
     if parsed.command == "create":
         center = ActionCenter(
             audit_logger=broker.audit_logger,
@@ -1828,6 +2125,18 @@ def _run_improve_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     diff_parser = subparsers.add_parser("show-diff", help="Show brokered git diff for the current implementation.")
     diff_parser.add_argument("--max-chars", type=int, default=50_000)
     diff_parser.add_argument("--json", action="store_true")
+    overnight_parser = subparsers.add_parser("overnight-plan", help="Build a safe overnight self-improvement candidate plan.")
+    overnight_parser.add_argument("--max-items", type=int, default=8)
+    overnight_parser.add_argument("--json", action="store_true")
+    create_action_parser = subparsers.add_parser(
+        "create-action-for-commit",
+        help="Run brokered tests/diff and create a pending Action Center commit action.",
+    )
+    create_action_parser.add_argument("--message", default="Self-improvement changes")
+    create_action_parser.add_argument("--test-path", default="tests/test_self_improvement.py")
+    create_action_parser.add_argument("--timeout", type=int, default=120)
+    create_action_parser.add_argument("--max-diff-chars", type=int, default=50_000)
+    create_action_parser.add_argument("--json", action="store_true")
     commit_parser = subparsers.add_parser("commit", help="Execute an approved self-improvement commit action.")
     commit_parser.add_argument("--from-action", required=True)
     commit_parser.add_argument("--json", action="store_true")
@@ -1881,6 +2190,52 @@ def _run_improve_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
         else:
             print(payload.get("content", {}).get("stdout", ""))
         return 0 if payload.get("allowed") else 2
+    if parsed.command == "overnight-plan":
+        payload = build_overnight_plan(broker, max_items=parsed.max_items)
+        if debug:
+            print(
+                "[debug] "
+                f"improve overnight-plan status={payload.get('status')} "
+                f"candidates={len(payload.get('candidates', []))} "
+                "plan_only=true personal_data=false commits=false",
+                file=sys.stderr,
+            )
+        if parsed.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(_format_overnight_plan(payload))
+        return 0 if payload.get("status") == "ok" else 2
+    if parsed.command == "create-action-for-commit":
+        center = ActionCenter(
+            audit_logger=broker.audit_logger,
+            session_id=broker.session_id,
+            model=broker.model,
+            route="self_improvement_actions",
+        )
+        try:
+            payload = create_self_improvement_commit_action(
+                broker,
+                center,
+                message=parsed.message,
+                test_path=parsed.test_path,
+                timeout_seconds=parsed.timeout,
+                max_diff_chars=parsed.max_diff_chars,
+            )
+        except ToolError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        if debug:
+            print(
+                "[debug] "
+                f"improve create-action-for-commit status={payload.get('status')} "
+                f"action_created={payload.get('action_created')} commit_executed=false",
+                file=sys.stderr,
+            )
+        if parsed.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(_format_improvement_commit_action(payload))
+        return 0 if payload.get("status") == "ok" else 2
     if parsed.command == "commit":
         center = ActionCenter(
             audit_logger=broker.audit_logger,
@@ -1915,6 +2270,27 @@ def _run_improve_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     return 0 if payload.get("status") in {"ok", "dry_run"} else 2
 
 
+def _format_improvement_commit_action(payload: dict[str, object]) -> str:
+    lines = [f"Self-improvement commit action ({payload.get('status')})"]
+    if payload.get("status") != "ok":
+        lines.append(str(payload.get("error", "commit action was not created")))
+        return "\n".join(lines)
+    commit_action = payload.get("commit_action")
+    if isinstance(commit_action, dict):
+        lines.append(f"Action: {commit_action.get('action_id')} ({commit_action.get('status')})")
+        preview = commit_action.get("preview")
+        if isinstance(preview, dict):
+            diff_summary = preview.get("diff_summary")
+            if isinstance(diff_summary, dict):
+                lines.append(
+                    "Diff: "
+                    f"{diff_summary.get('files_changed_count', 0)} files, "
+                    f"+{diff_summary.get('lines_added', 0)}/-{diff_summary.get('lines_removed', 0)}"
+                )
+        lines.append("Approve it in Action Center, then run improve commit --from-action <action_id>.")
+    return "\n".join(lines)
+
+
 def _format_improvement_implementation(payload: dict[str, object]) -> str:
     lines = [
         f"Self-improvement implement ({payload.get('status')})",
@@ -1933,6 +2309,34 @@ def _format_improvement_implementation(payload: dict[str, object]) -> str:
         lines.extend(["", f"Commit action: {commit_action.get('action_id')} ({commit_action.get('status')})"])
         lines.append("Approve it in Action Center, then run improve commit --from-action <action_id>.")
     return "\n".join(str(line) for line in lines)
+
+
+def _format_overnight_plan(payload: dict[str, object]) -> str:
+    lines = [
+        f"Overnight self-improvement plan ({payload.get('status')})",
+        "Mode: plan only, safe-mode, no execution",
+        f"Sources read: {', '.join(str(path) for path in payload.get('source_files', []))}",
+        "",
+        "Recommended candidates:",
+    ]
+    candidates = payload.get("candidates", [])
+    if isinstance(candidates, list) and candidates:
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            lines.extend(
+                [
+                    f"{candidate.get('rank')}. {candidate.get('title')} [{candidate.get('risk_level')}]",
+                    f"   Category: {candidate.get('category')}",
+                    f"   Why: {candidate.get('why')}",
+                    f"   Tests: {', '.join(str(item) for item in candidate.get('tests_needed', []))}",
+                    "",
+                ]
+            )
+    else:
+        lines.append("- none")
+    lines.append("Stop if approval, personal data, package installs, policy changes, or unclear requirements appear.")
+    return "\n".join(lines).rstrip()
 
 
 def _format_improvement_backlog(payload: dict[str, object]) -> str:

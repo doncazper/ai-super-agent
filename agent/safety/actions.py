@@ -262,6 +262,21 @@ class ActionRecord:
         payload["status"] = self.status.value
         payload["risk_level"] = self.risk_level.value
         payload["trust_level"] = self.trust_level.value
+        payload["tool"] = self.tool_name
+        return payload
+
+    def to_export_dict(self) -> dict[str, Any]:
+        payload = _minimize_action_payload(self.to_dict())
+        preview = payload.get("preview")
+        if isinstance(preview, dict):
+            preview["summary"] = _minimize_preview_summary(self.action_type, str(preview.get("summary", "")))
+        return payload
+
+    def to_audit_dict(self) -> dict[str, Any]:
+        payload = _minimize_action_payload(self.to_dict())
+        preview = payload.get("preview")
+        if isinstance(preview, dict):
+            preview["summary"] = _minimize_preview_summary(self.action_type, str(preview.get("summary", "")))
         return payload
 
     @classmethod
@@ -537,7 +552,7 @@ class ActionCenter:
         return count
 
     def export(self) -> dict[str, Any]:
-        records = [record.to_dict() for record in self.store.list()]
+        records = [record.to_export_dict() for record in self.store.list()]
         self._audit_system("exported", f"exported {len(records)} action record(s)")
         return {"actions": records}
 
@@ -607,7 +622,7 @@ class ActionCenter:
                 trust_level=record.trust_level.value,
                 policy_decision=decision.value,
                 approval_result=record.approval_result,
-                sanitized_args=record.to_dict(),
+                sanitized_args=record.to_audit_dict(),
                 result_summary=summary,
             )
         )
@@ -643,3 +658,41 @@ def _load_capability_entries() -> dict[str, dict[str, Any]]:
     if not isinstance(tools, dict):
         return {}
     return {str(name): dict(entry) for name, entry in tools.items() if isinstance(entry, dict)}
+
+
+_SENSITIVE_ACTION_KEYS = {
+    "body",
+    "content",
+    "draft",
+    "message_text",
+    "notes",
+    "reply_context",
+    "thread_body",
+}
+_SENSITIVE_SUMMARY_ACTIONS = {
+    "email.send_approved",
+    "messages.send_approved",
+    "messages.save_draft",
+    "messages.copy_draft",
+    "memory.write_personal",
+}
+
+
+def _minimize_action_payload(value: Any) -> Any:
+    if isinstance(value, dict):
+        redacted: dict[str, Any] = {}
+        for key, item in value.items():
+            if str(key) in _SENSITIVE_ACTION_KEYS:
+                redacted[key] = "[ACTION_FIELD_REDACTED]"
+            else:
+                redacted[key] = _minimize_action_payload(item)
+        return redacted
+    if isinstance(value, list):
+        return [_minimize_action_payload(item) for item in value]
+    return value
+
+
+def _minimize_preview_summary(action_type: str, summary: str) -> str:
+    if action_type not in _SENSITIVE_SUMMARY_ACTIONS:
+        return summary
+    return "sensitive preview details redacted from audit; review Action Center record for exact approval text"

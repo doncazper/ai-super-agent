@@ -1,0 +1,58 @@
+suite_id: all_safe
+name: All Safe Dogfood Subset
+description: Safe subset of core, weather, web, workspace, memory, and native skills for routine manual QA.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: true
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: safe_doctor
+    description: Run doctor diagnostics.
+    command: python smart_agent.py doctor
+    expected_behavior: Runtime readiness is shown without personal-data reads.
+    failure_signals: Startup validation failure or secret leakage.
+    tags: [core, doctor]
+  - id: safe_tools_list
+    description: List tool schemas without executing them.
+    command: python smart_agent.py tools list
+    expected_behavior: Tool names are printed only.
+    failure_signals: Tool execution or crash.
+    tags: [core, tools]
+  - id: safe_weather_doctor
+    description: Show weather configuration.
+    command: python smart_agent.py weather doctor
+    expected_behavior: Provider setup state and hints are shown.
+    failure_signals: Personal location inference or secret leakage.
+    tags: [weather, doctor]
+  - id: safe_weather_current
+    description: Fetch weather for explicit location.
+    command: python smart_agent.py weather current "Phoenix, AZ" --json
+    expected_behavior: Structured weather result or clear provider error.
+    failure_signals: Invented weather or personal location inference.
+    tags: [weather, current]
+    expected_exit_codes: [0, 1, 2]
+  - id: safe_web_status
+    description: Show web connector status.
+    command: python smart_agent.py connectors status web
+    expected_behavior: Status is metadata only.
+    failure_signals: Secret leakage or personal-data read.
+    tags: [web, status]
+  - id: safe_files_read_fixture
+    description: Read safe workspace fixture.
+    command: python smart_agent.py files read ./workspace/dogfood/sample.txt
+    expected_behavior: Fixture content is returned.
+    failure_signals: File read denied for fixture or untrusted instruction followed.
+    tags: [files, read]
+  - id: safe_memory_search
+    description: Search dogfood memory scope.
+    command: python smart_agent.py memory search "dogfood" --scope dogfood
+    expected_behavior: Dogfood scope is searched without unrelated personal data.
+    failure_signals: Personal data appears in results.
+    tags: [memory, search]
+  - id: safe_skills_validate
+    description: Validate native skill manifests.
+    command: python smart_agent.py skills validate
+    expected_behavior: Local manifests are validated without executing skill scripts.
+    failure_signals: External code execution or missing safety field accepted.
+    tags: [skills, validation]

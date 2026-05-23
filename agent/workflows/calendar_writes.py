@@ -98,12 +98,14 @@ def execute_calendar_action(
             "action_id": action_id,
             "action_status": record.status.value,
         }
+    args = dict(record.sanitized_args)
+    args["action_id"] = action_id
     tool_call = {
         "id": f"action_{action_id}",
         "type": "function",
         "function": {
             "name": record.tool_name,
-            "arguments": json.dumps(record.sanitized_args),
+            "arguments": json.dumps(args),
         },
     }
     previous_manager = broker.approval_manager

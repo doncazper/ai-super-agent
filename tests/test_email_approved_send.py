@@ -5,7 +5,7 @@ import json
 from agent.config.loader import load_capabilities_config
 from agent.core.tool_broker import ToolBroker
 from agent.safety.actions import ActionCenter, ActionCenterStore, ActionStatus
-from agent.safety.approvals import ApprovalStore
+from agent.safety.approvals import ApprovalManager, ApprovalStore
 from agent.safety.audit import AuditLogger
 from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
@@ -27,9 +27,9 @@ def _center(tmp_path) -> ActionCenter:
     )
 
 
-def _broker(tmp_path, *, enabled: bool = True) -> ToolBroker:
+def _broker(tmp_path, *, enabled: bool = True, center: ActionCenter | None = None) -> ToolBroker:
     return ToolBroker(
-        default_registry(project_root=tmp_path),
+        default_registry(project_root=tmp_path, action_center=center),
         PolicyEngine(
             {
                 EMAIL_SEND_ACTION: Capability(
@@ -162,8 +162,8 @@ def test_approved_mock_email_send_executes_once(tmp_path) -> None:
     action = draft_email_new(center, provider="mock", to="sam@example.com", subject="Hi", body="Reviewed body")
     center.approve(action.action_id)
 
-    first = execute_email_send_action(_broker(tmp_path), center, action_id=action.action_id)
-    second = execute_email_send_action(_broker(tmp_path), center, action_id=action.action_id)
+    first = execute_email_send_action(_broker(tmp_path, center=center), center, action_id=action.action_id)
+    second = execute_email_send_action(_broker(tmp_path, center=center), center, action_id=action.action_id)
 
     assert first["status"] == "ok"
     assert first["executed"] is True
@@ -175,8 +175,6 @@ def test_approved_mock_email_send_executes_once(tmp_path) -> None:
 
 
 def test_direct_approved_email_send_without_action_center_is_blocked(tmp_path) -> None:
-    from agent.safety.approvals import ApprovalManager
-
     broker = ToolBroker(
         default_registry(project_root=tmp_path),
         PolicyEngine(
@@ -198,11 +196,52 @@ def test_direct_approved_email_send_without_action_center_is_blocked(tmp_path) -
     )
 
     result = broker.execute(
-        _call(EMAIL_SEND_ACTION, {"provider": "mock", "to": "sam@example.com", "subject": "Hi", "body": "Reviewed body"})
+        _call(
+            EMAIL_SEND_ACTION,
+            {
+                "action_id": "act_fake",
+                "provider": "mock",
+                "from_account": "configured_default",
+                "to": "sam@example.com",
+                "cc": [],
+                "bcc": [],
+                "subject": "Hi",
+                "body": "Reviewed body",
+                "attachments": [],
+                "thread_id": "",
+                "reply_context": "new_message",
+                "source_trust_level": "MODEL_OUTPUT",
+                "rollback_available": False,
+                "rollback_note": "Email sending is irreversible after provider acceptance.",
+                "stored_in_memory": False,
+            },
+        )
     )
 
     assert result.allowed is False
     assert "Action Center" in json.loads(result.content)["error"]
+
+
+def test_email_send_arguments_must_match_approved_preview(tmp_path) -> None:
+    center = _center(tmp_path)
+    action = draft_email_new(center, provider="mock", to="sam@example.com", subject="Hi", body="Reviewed body")
+    center.approve(action.action_id)
+    broker = _broker(tmp_path, center=center)
+    broker.approval_manager = ApprovalManager(auto_approve={EMAIL_SEND_ACTION})
+    broker.approval_manager.configure_audit(
+        broker.audit_logger,
+        session_id=broker.session_id,
+        model=broker.model,
+        route=broker.route,
+    )
+    tampered_args = dict(action.sanitized_args)
+    tampered_args["action_id"] = action.action_id
+    tampered_args["body"] = "Changed after approval"
+
+    result = broker.execute(_call(EMAIL_SEND_ACTION, tampered_args))
+
+    assert result.allowed is False
+    assert "approved Action Center preview" in json.loads(result.content)["error"]
 
 
 def test_email_reply_action_labels_thread_content_untrusted(tmp_path) -> None:
@@ -223,10 +262,10 @@ def test_email_reply_action_labels_thread_content_untrusted(tmp_path) -> None:
 def test_email_send_audits_draft_approval_send_and_failure(tmp_path) -> None:
     center = _center(tmp_path)
     pending = draft_email_new(center, provider="mock", to="pending@example.com", subject="Pending", body="Body")
-    execute_email_send_action(_broker(tmp_path), center, action_id=pending.action_id)
+    execute_email_send_action(_broker(tmp_path, center=center), center, action_id=pending.action_id)
     approved = draft_email_new(center, provider="mock", to="sam@example.com", subject="Hi", body="Reviewed body")
     center.approve(approved.action_id)
-    execute_email_send_action(_broker(tmp_path), center, action_id=approved.action_id)
+    execute_email_send_action(_broker(tmp_path, center=center), center, action_id=approved.action_id)
 
     action_events = [json.loads(line)["tool_name"] for line in (tmp_path / "action-audit.jsonl").read_text(encoding="utf-8").splitlines()]
     broker_events = [json.loads(line)["tool_name"] for line in (tmp_path / "broker-audit.jsonl").read_text(encoding="utf-8").splitlines()]

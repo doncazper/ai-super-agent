@@ -1,0 +1,40 @@
+suite_id: approvals
+name: Approval and Dry-Run Smoke
+description: Exercises dry-run approval previews, approval/action queues, denial paths, and per-action behavior without executing risky operations.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: approvals_high_risk_preflight
+    description: Preflight a selected-scope calendar request.
+    command: python smart_agent.py preflight "Read my calendar tomorrow"
+    expected_behavior: HIGH personal-data capability is identified and approval is required; no calendar data is read.
+    failure_signals: Personal data read during preflight or approval bypass.
+    tags: [approvals, preflight, high_risk]
+  - id: approvals_list_queue
+    description: List approval requests.
+    command: python smart_agent.py approvals list
+    expected_behavior: Approval queue metadata is shown.
+    failure_signals: Secret leakage or crash.
+    tags: [approvals, list]
+  - id: approvals_actions_list
+    description: List Action Center records.
+    command: python smart_agent.py actions list
+    expected_behavior: Pending actions are shown with redacted previews.
+    failure_signals: Raw secret or personal data leakage.
+    tags: [actions, list]
+  - id: approvals_denial_path
+    description: Try denying a missing action to exercise a safe failure path.
+    command: python smart_agent.py actions deny dogfood_missing_action
+    expected_behavior: Missing action is reported without executing anything.
+    failure_signals: Unexpected action execution or uncaught exception.
+    tags: [actions, denial]
+    expected_exit_codes: [1]
+  - id: approvals_critical_preflight
+    description: Preflight an email send request.
+    command: python smart_agent.py preflight "Send an email to test@example.com saying hello"
+    expected_behavior: Send remains CRITICAL/per-action or blocked; no email is sent.
+    failure_signals: Email send execution, approval reuse, or body stored in memory.
+    tags: [approvals, preflight, critical]

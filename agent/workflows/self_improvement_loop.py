@@ -26,6 +26,26 @@ PERSISTENCE_PATH_TOKENS = (
     ".service",
     "authorized_keys",
 )
+OVERNIGHT_PLAN_SOURCE_FILES = (
+    "docs/FEATURE_MATURITY.md",
+    "docs/PROJECT_STATE.md",
+    "docs/FEATURE_REGISTRY.md",
+    "docs/FEATURE_ROADMAP.md",
+)
+OVERNIGHT_FORBIDDEN_WORK = (
+    "personal-data connector implementation",
+    "email or text sending",
+    "calendar/contact writes",
+    "policy weakening",
+    "approval bypass",
+    "audit disabling",
+    "package installs",
+    "external scripts",
+    "full disk access",
+    "background persistence",
+    "commits without approval",
+    "unplanned network access",
+)
 
 
 def implement_approved_proposal(
@@ -103,6 +123,124 @@ def run_self_improvement_tests(broker: ToolBroker, *, test_path: str = "tests", 
 
 def show_self_improvement_diff(broker: ToolBroker, *, max_chars: int = 50_000) -> dict[str, Any]:
     return _execute_tool(broker, "self_improve_show_diff", "git.diff", {"max_chars": max_chars})
+
+
+def build_overnight_plan(broker: ToolBroker, *, max_items: int = 8) -> dict[str, Any]:
+    """Build a safe overnight candidate list from project tracking docs.
+
+    The result is a plan only. It does not create branches, edit files, run tests,
+    execute prompts, create schedules, or commit changes.
+    """
+    reads: list[dict[str, Any]] = []
+    source_text: dict[str, str] = {}
+    for path in OVERNIGHT_PLAN_SOURCE_FILES:
+        step = _execute_tool(
+            broker,
+            f"overnight_plan_read_{_safe_call_id(path)}",
+            "filesystem.read",
+            {"path": path, "max_bytes": 200_000},
+        )
+        reads.append(step)
+        if step.get("allowed") and isinstance(step.get("content"), dict):
+            source_text[path] = str(step["content"].get("content", ""))
+
+    candidates = _overnight_candidates_from_sources(source_text)
+    safe_candidates = [candidate for candidate in candidates if _is_safe_overnight_candidate(candidate)]
+    safe_candidates = sorted(safe_candidates, key=lambda item: int(item["rank"]))[: max(1, max_items)]
+    for index, candidate in enumerate(safe_candidates, start=1):
+        candidate["rank"] = index
+
+    return {
+        "status": "ok" if safe_candidates else "no_candidates",
+        "workflow": "self_improvement_overnight_plan",
+        "safe_mode": True,
+        "plan_only": True,
+        "source_files": list(source_text),
+        "read_steps": reads,
+        "candidates": safe_candidates,
+        "excluded_work": [
+            {"title": item, "reason": "forbidden by overnight safe-mode constraints"}
+            for item in OVERNIGHT_FORBIDDEN_WORK
+        ],
+        "stop_conditions": [
+            "approval required",
+            "personal data needed",
+            "package install needed",
+            "policy change needed",
+            "tests failing after one safe fix attempt",
+            "unclear requirements",
+        ],
+        "sandbox": {
+            "recommended": "workspace-write",
+            "full_access": False,
+            "approval_bypass": False,
+        },
+    }
+
+
+def create_self_improvement_commit_action(
+    broker: ToolBroker,
+    center: ActionCenter,
+    *,
+    message: str,
+    test_path: str = "tests/test_self_improvement.py",
+    timeout_seconds: int = 120,
+    max_diff_chars: int = 50_000,
+) -> dict[str, Any]:
+    if not message.strip():
+        raise ToolError("commit message is required")
+    tests = run_self_improvement_tests(broker, test_path=test_path, timeout_seconds=timeout_seconds)
+    diff = show_self_improvement_diff(broker, max_chars=max_diff_chars)
+    tests_ok = bool(tests.get("allowed") and tests.get("content", {}).get("returncode") == 0)
+    diff_text = str(diff.get("content", {}).get("stdout", "") if isinstance(diff.get("content"), dict) else "")
+    if not tests_ok:
+        return {
+            "status": "tests_failed",
+            "workflow": "self_improvement_create_commit_action",
+            "action_created": False,
+            "test_step": tests,
+            "diff": diff,
+            "error": "self-improvement tests must pass before creating a commit action",
+        }
+    if not diff.get("allowed"):
+        return {
+            "status": "error",
+            "workflow": "self_improvement_create_commit_action",
+            "action_created": False,
+            "test_step": tests,
+            "diff": diff,
+            "error": "self-improvement diff could not be generated through ToolBroker",
+        }
+    if not diff_text.strip():
+        return {
+            "status": "no_changes",
+            "workflow": "self_improvement_create_commit_action",
+            "action_created": False,
+            "test_step": tests,
+            "diff": diff,
+            "error": "no unstaged git diff found for self-improvement commit review",
+        }
+    commit_action = center.create_action(
+        SELF_IMPROVEMENT_COMMIT_ACTION,
+        {"message": message.strip()},
+        source_workflow="self_improvement.create_action_for_commit",
+    )
+    commit_action.preview["test_result"] = {
+        "test_path": test_path,
+        "returncode": tests.get("content", {}).get("returncode"),
+        "passed": True,
+    }
+    commit_action.preview["diff_summary"] = _diff_summary(diff_text)
+    center.store.update(commit_action)
+    return {
+        "status": "ok",
+        "workflow": "self_improvement_create_commit_action",
+        "action_created": True,
+        "test_step": tests,
+        "diff": diff,
+        "commit_action": commit_action.to_dict(),
+        "commit_executed": False,
+    }
 
 
 def execute_self_improvement_commit(broker: ToolBroker, center: ActionCenter, *, action_id: str) -> dict[str, Any]:
@@ -264,6 +402,145 @@ def _implementation_status(write_steps: list[dict[str, Any]], test_steps: list[d
     if any(step.get("content", {}).get("returncode", 0) != 0 for step in test_steps):
         return "tests_failed"
     return "ok"
+
+
+def _diff_summary(diff_text: str) -> dict[str, Any]:
+    added = sum(1 for line in diff_text.splitlines() if line.startswith("+") and not line.startswith("+++"))
+    removed = sum(1 for line in diff_text.splitlines() if line.startswith("-") and not line.startswith("---"))
+    files = []
+    for line in diff_text.splitlines():
+        if line.startswith("diff --git "):
+            parts = line.split()
+            if len(parts) >= 4:
+                files.append(parts[3][2:] if parts[3].startswith("b/") else parts[3])
+    return {
+        "files_changed": files,
+        "files_changed_count": len(files),
+        "lines_added": added,
+        "lines_removed": removed,
+        "truncated": len(diff_text) >= 50_000,
+    }
+
+
+def _overnight_candidates_from_sources(source_text: dict[str, str]) -> list[dict[str, Any]]:
+    combined = "\n".join(source_text.values()).casefold()
+    candidates: list[dict[str, Any]] = [
+        {
+            "rank": 1,
+            "title": "Refresh tracking docs and maturity evidence",
+            "category": "docs",
+            "risk_level": RiskLevel.LOW.value,
+            "why": "Tracking docs are the safest overnight work and prevent future prompt drift.",
+            "expected_work": [
+                "check PROJECT_STATE/FEATURE_MATURITY/FEATURE_REGISTRY consistency",
+                "clarify known limitations and next-work notes",
+            ],
+            "tests_needed": ["docs validation", "command registry validation"],
+            "source_signal": "feature registry, project state, and maturity tracking",
+        },
+        {
+            "rank": 2,
+            "title": "Add or tighten low-risk regression tests",
+            "category": "tests",
+            "risk_level": RiskLevel.LOW.value,
+            "why": "Additional denial, docs-validation, and formatting tests improve safety without touching providers.",
+            "expected_work": ["add mocks/fixtures", "cover existing error messages", "avoid live-network tests"],
+            "tests_needed": ["targeted pytest", "full pytest if time allows"],
+            "source_signal": "test plan and release checklist",
+        },
+        {
+            "rank": 3,
+            "title": "Harden diagnostics and safe error messages",
+            "category": "hardening",
+            "risk_level": RiskLevel.LOW.value,
+            "why": "Doctor/eval/reporting polish is useful and does not require private connectors or new capabilities.",
+            "expected_work": ["improve structured errors", "redact secret-like values", "add setup hints"],
+            "tests_needed": ["doctor/eval/command tests"],
+            "source_signal": "diagnostics and release-gate docs",
+        },
+        {
+            "rank": 4,
+            "title": "Improve safe eval fixtures and scorecard reporting",
+            "category": "evals",
+            "risk_level": RiskLevel.LOW.value,
+            "why": "Safe evals can catch regressions without live services or private connectors.",
+            "expected_work": ["add fixture prompts", "improve skipped/failure reasons", "refresh report templates"],
+            "tests_needed": ["eval tests"],
+            "source_signal": "golden eval and model-router quality docs",
+        },
+        {
+            "rank": 5,
+            "title": "Polish README/setup and command examples",
+            "category": "docs",
+            "risk_level": RiskLevel.LOW.value,
+            "why": "Setup clarity improves local startup without changing policy or connectors.",
+            "expected_work": ["verify examples", "add troubleshooting notes", "link registry/runbooks"],
+            "tests_needed": ["docs validation"],
+            "source_signal": "README and command registry",
+        },
+        {
+            "rank": 6,
+            "title": "Add mocks and fixtures for existing safe workflows",
+            "category": "tests",
+            "risk_level": RiskLevel.LOW.value,
+            "why": "Better fixture coverage improves reliability without live web or personal data.",
+            "expected_work": ["add deterministic fixtures", "avoid provider calls", "document fixture purpose"],
+            "tests_needed": ["targeted workflow tests"],
+            "source_signal": "test plan",
+        },
+        {
+            "rank": 7,
+            "title": "Refactor low-risk helper code without behavior changes",
+            "category": "low_risk_refactor",
+            "risk_level": RiskLevel.LOW.value,
+            "why": "Small readability/type-hint changes can reduce maintenance risk when tests already cover behavior.",
+            "expected_work": ["type hints", "deduplicate formatting helpers", "keep diffs small"],
+            "tests_needed": ["targeted tests for touched modules"],
+            "source_signal": "feature maturity limitations",
+        },
+    ]
+    if "features needing live validation" in combined:
+        candidates.append(
+            {
+                "rank": 8,
+                "title": "Document live-validation gaps without running live services",
+                "category": "docs",
+                "risk_level": RiskLevel.LOW.value,
+                "why": "Live validation can be prepared as checklists while avoiding unattended network or personal-data access.",
+                "expected_work": ["clarify live smoke prerequisites", "mark personal-data evals skipped by default"],
+                "tests_needed": ["docs validation"],
+                "source_signal": "features needing live validation",
+            }
+        )
+    return candidates
+
+
+def _is_safe_overnight_candidate(candidate: dict[str, Any]) -> bool:
+    risk = str(candidate.get("risk_level", "")).upper()
+    if risk in {"HIGH", "CRITICAL", "FORBIDDEN"}:
+        return False
+    text = " ".join(
+        str(candidate.get(key, ""))
+        for key in ("title", "category", "why", "source_signal")
+    ).casefold()
+    forbidden_tokens = (
+        "personal-data",
+        "personal data",
+        "email send",
+        "text send",
+        "message send",
+        "calendar write",
+        "contact write",
+        "full disk",
+        "package install",
+        "external script",
+        "background",
+        "persistence",
+        "approval bypass",
+        "policy weakening",
+        "audit disabling",
+    )
+    return not any(token in text for token in forbidden_tokens)
 
 
 def _safe_call_id(value: str) -> str:

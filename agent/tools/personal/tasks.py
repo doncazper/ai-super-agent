@@ -197,6 +197,44 @@ def list_tasks(
     }
 
 
+def draft_create_task(
+    *,
+    title: str,
+    due: str = "",
+    notes: str = "",
+    list_name: str = "",
+    source_workflow: str = "manual",
+    allow_notes: bool = False,
+    action_center: Any | None = None,
+) -> dict[str, object]:
+    _require_title(title)
+    center = action_center
+    if center is None:
+        from agent.safety.actions import ActionCenter
+
+        center = ActionCenter(route="tasks_actions")
+    args: dict[str, Any] = {
+        "title": title,
+        "due": due,
+        "list_name": list_name,
+    }
+    if allow_notes and notes:
+        args["notes"] = notes
+    elif notes:
+        args["notes_omitted"] = True
+    record = center.create_action("tasks.create", args, source_workflow=f"tasks.{source_workflow}")
+    return {
+        "status": "ok",
+        "executed": False,
+        "action_id": record.action_id,
+        "action_status": record.status.value,
+        "action": record.to_dict(),
+        "stored_in_memory": False,
+        "connector_accessed": False,
+        "_audit": {"result_summary": "Task create action drafted for Action Center review."},
+    }
+
+
 def create_task(
     connector: TasksConnector,
     *,

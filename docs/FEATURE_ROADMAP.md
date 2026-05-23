@@ -26,6 +26,7 @@ Durable project tracking and connector-foundation cleanup.
 | 8 | Prompt Pack import and splitting | complete | Prompt ledger/queue tracking | Import-only pack validation, splitting, ledger/queue/audit integration, and prompt pack tests pass |
 | 9 | PromptOps Workbench v1 | complete | Prompt pack import and splitting | One-command import/next/copy/status workflow complete; runner disabled by default; autopilot stops at safety gates |
 | 10 | Command Registry + Manual QA System | complete | PromptOps and tracking docs complete | Command catalog/test matrix/legacy/runbook generated; registry validation and CLI tests pass |
+| 11 | Live Session Logging and Replay | complete | Command Registry + Manual QA System | Redacted session capture/replay complete; raw reports ignored by git; manual dogfood QA pending |
 
 ## Next Batch
 
@@ -56,21 +57,73 @@ Durable project tracking and connector-foundation cleanup.
 | Order | Feature / Task | Status | Prerequisites | Approval / Gate |
 |---:|---|---|---|---|
 | 1 | Live validation and eval harness | complete | Current tracking release gate passed | Safe evals implemented; personal-data evals skipped by default; live runs opt-in |
-| 2 | Unified Action Center | complete | Live validation harness scoped | Review/approval queue complete; actions do not execute directly and future execution must still go through ToolBroker |
-| 3 | Calendar approved writes | complete | Action Center and per-action approval UX | CRITICAL per-action write drafts, exact preview, rollback notes, brokered stub execution; live native writes deferred |
-| 4 | Reminders/tasks connector | complete | Connector decision notes and Action Center | Adapter/mock v1, selected-scope list approval, Action Center task creation, CRITICAL per-action writes; native provider deferred |
-| 5 | Contacts approved edits | complete | Contacts read-only validated and Action Center ready | CRITICAL per-action draft/update/create stubs; field-level previews; live native provider and delete deferred |
-| 6 | Email approved send | complete | Email draft-only live validation and Action Center ready | CRITICAL per-action Action Center send drafts, no bulk send, mock provider only; real provider deferred |
-| 7 | Messages safe handoff / send decision | complete | Safe implementation decision record | Save/copy handoff only; automatic send remains deferred |
+| 2 | Unified Action Center | complete | Live validation harness scoped | Review/approval queue complete; actions do not execute directly, future execution must still go through ToolBroker, and export/audit payloads minimize sensitive bodies/drafts |
+| 3 | Calendar approved writes | complete | Action Center and per-action approval UX | CRITICAL per-action write drafts, exact preview, rollback notes, brokered stub execution with Action Center action-id verification; live native writes deferred |
+| 4 | Reminders/tasks connector | complete | Connector decision notes and Action Center | Adapter/mock v1, selected-scope list approval, brokered Action Center task drafts, CRITICAL per-action writes; native provider deferred |
+| 5 | Contacts approved edits | complete | Contacts read-only validated and Action Center ready | CRITICAL per-action draft/update/create stubs; field-level previews; direct broker writes without verified Action Center action ids rejected; live native provider and delete deferred |
+| 6 | Email approved send | complete | Email draft-only live validation and Action Center ready | CRITICAL per-action Action Center send drafts, low-level sends require verified Action Center action ids, no bulk send, mock provider only; real provider deferred |
+| 7 | Messages safe handoff / send decision | complete | Safe implementation decision record | Save/copy handoff only; low-level tools require verified Action Center action ids; automatic send remains deferred |
 | 8 | Browser selected-tab / clipping connector | complete | Connector decision record and untrusted-content review | Explicit URL read/summarize/clip workflow complete; selected-tab native integration remains stubbed, disabled, and no history/cookie/profile access is added |
-| 9 | Notes / knowledge capture | complete | Memory v2 and file policy review | Workspace-only capture inbox complete; no Apple Notes/private DB scraping; memory promotion goes through Memory v2 policy |
+| 9 | Notes / knowledge capture | complete | Memory v2 and file policy review | Workspace-only capture inbox complete; no Apple Notes/private DB scraping; file captures are untrusted by default with explicit `--trusted-user` opt-in; memory promotion goes through Memory v2 policy |
 | 10 | Daily briefing v2 | complete | Live validation for v1 sources | Configurable opt-in sections complete; personal sections approval-gated; no hidden personal access or writes |
 | 11 | Meeting follow-up workflow | complete | Meeting prep v1 and Action Center | Draft-only follow-up complete; suggested writes/sends become Action Center records only |
 | 12 | Personal task extraction | complete | Email/messages/calendar selected-scope review | Extraction complete; task writes remain Action Center drafts only |
 | 13 | Controlled self-improvement implementation loop | complete | Action Center, release gate, branch workflow | Branch-based implementation complete; cannot weaken policy, disable audit, grant permissions, or commit without approval |
-| 14 | Scheduler / automation v1 | complete | Automation threat model and approval rules | Manual-run only; no background persistence; scheduled tool workflows still use ToolBroker; CRITICAL actions never execute automatically |
+| 14 | Scheduler / automation v1 | complete | Automation threat model and approval rules | Manual-run only; no background persistence; scheduled tool workflows still use ToolBroker; optional redacted `backup_create`; CRITICAL actions never execute automatically |
 | 15 | Full feature maturity review | complete | Previous batch complete | Full tests, startup policy, capability manifest, safe eval, command registry validation, ToolBroker/default/approval scans, and docs sync passed |
-| 16 | Native Skills Program foundation | queued | Prompt ledger/queue complete | Do not auto-install or enable unvetted skills |
+| 16 | Native Skills Program foundation | complete | Prompt ledger/queue complete | Governance docs, intake criteria, candidate registry, and risk model created; no external skills installed or run |
+
+## Native Skills Track
+
+| Order | Feature / Task | Status | Prerequisites | Approval / Gate |
+|---:|---|---|---|---|
+| 1 | Native Skills Program foundation | complete | Full feature maturity review | Docs/intake foundation only; no external skills installed or run |
+| 2 | Skill marketplace survey | complete | Native Skills Program foundation | Research-only survey, matrix, and shortlist complete; no external skills installed or run |
+| 3 | Native skill vetter | complete | Skill marketplace survey | Static workspace-only vetter complete; no external code execution, dependency install, or skill enablement |
+| 4 | Native skill manifest and loader | complete | Native skill vetter | Metadata-only discovery complete; manifests cannot grant permissions, execute code, or auto-enable tools |
+| 5 | Skill finder native skill | complete | Native skill manifest | Local-only finder complete; external marketplace search remains out of scope |
+| 6 | PDF workspace native skill | complete | Native skill manifest | Read-only workspace PDF skill complete; OCR/split/merge/writes deferred |
+
+## Next Product Feature Track
+
+This track is the next product-facing feature set to keep synchronized before implementation work resumes. Completed rows are already present in the repo and remain subject to future live validation or provider-specific decision records.
+
+| Order | Feature / Task | Status | Prerequisites | Approval / Gate |
+|---:|---|---|---|---|
+| 1 | Golden eval suite + quality scorecards | complete | Current release-gate sync passed | Data-backed safe evals and scorecards added; personal-data evals skipped unless explicitly approved; live LM Studio remains opt-in |
+| 2 | Unified Action Center v1 | complete | Approval UI and dry-run foundation | Action Center is review-only, does not execute actions directly, and minimizes sensitive export/audit payloads |
+| 3 | Tasks / Reminders connector v1 | complete | Action Center and task connector decision notes | Provider access disabled by default; reads HIGH approval; brokered draft-create queues Action Center only; writes CRITICAL per-action; native provider deferred |
+| 4 | Calendar approved writes v1 | complete | Action Center and calendar read-only | Disabled by default; CRITICAL per-action; direct broker writes without verified Action Center actions are rejected; live native writes deferred |
+| 5 | Contacts approved edits v1 | complete | Action Center and contacts read-only | Disabled by default; CRITICAL per-action; low-level writes require verified Action Center action ids; live native edits deferred |
+| 6 | Email approved send v1 | complete | Action Center and email draft-only | Disabled by default; CRITICAL per-action; low-level sends require verified Action Center action ids; mock provider only |
+| 7 | Messages safe handoff v1 | complete | Messages draft-only and send decision record | No automatic send; save/copy handoff only with verified Action Center action ids |
+| 8 | Browser selected-tab / clipping v1 | complete | Web fetch and workspace file policy | Explicit URL workflow complete; selected-tab native integration remains stubbed |
+| 9 | Notes / knowledge capture v1 | complete | Workspace file policy and Memory v2 | Workspace-only capture; explicit trusted-user file marker added; Apple Notes integration deferred |
+| 10 | Privacy Center / data inventory v1 | complete | Dashboard, connector registry, audit/memory metadata | Metadata/status only; no personal connector reads; redacted export; memory deletion requires confirmation and uses brokered `memory.clear` |
+| 11 | Backup / restore / migration v1 | complete | Workspace file policy and audit review | Brokered redacted archive create/list/inspect/verify/export plus approval-gated restore with integrity and policy-weakening checks |
+| 12 | Model-router benchmark and prompt quality evals | complete | Eval harness and model diagnostics | Fixture-backed benchmark complete; live LM Studio answer-quality smoke remains opt-in and no provider secrets are logged |
+| 13 | Scheduler / automation v1 | complete | Automation threat model and approval rules | Manual-run only; no hidden persistence; optional redacted `backup_create`; CRITICAL actions never automatic |
+| 14 | Controlled self-improvement implementation loop | complete | Action Center, release gate, branch workflow | Approved proposal required; brokered test/diff checkpoint can queue commit action; commit approval-gated |
+| 15 | Overnight self-improvement runbook | complete | Scheduler v1 and self-improvement loop | Safe-mode runbook, report template, `improve overnight-plan`, and one approved bounded docs/tests/tracking run complete; no background autonomy granted |
+| 16 | Full release gate + maturity review | complete | This product feature track | Full tests, startup policy, manifest validation, safe eval, command registry/native skill validation, ToolBroker/default/approval scans, and docs sync passed on 2026-05-23 |
+
+## Overnight Self-Improvement Track
+
+| Order | Feature / Task | Status | Prerequisites | Approval / Gate |
+|---:|---|---|---|---|
+| 1 | Overnight self-improvement runbook | complete | Scheduler v1, PromptOps, controlled self-improvement loop | Planning-only runbook and planner complete; no hidden persistence, background runner, or 6-hour run approval |
+| 2 | Safe 6-hour overnight self-improvement run | complete | Overnight runbook complete and explicitly approved by user | Completed bounded safe-only docs/tests/diagnostics/tracking run on `agent/overnight-2026-05-23`; no background persistence, personal-data access, package install, send/write path, policy weakening, or commit; future overnight runs require separate explicit approval |
+| 3 | Overnight self-improvement release gate | planned | Any approved overnight run completes | Full tests, audit review, diff review, prompt/action review, and no policy weakening |
+
+## Dogfood and QA Track
+
+| Order | Feature / Task | Status | Prerequisites | Approval / Gate |
+|---:|---|---|---|---|
+| 1 | Live Session Logging and Replay | complete | Command Registry + Manual QA System | Redacted capture/replay tested locally; no AuditLogger replacement; no personal-data defaults |
+| 2 | Manual dogfood command suites | complete | Live Session Logging and Replay | Curated YAML suites and `dogfood list/show/run` commands complete; first manual `all_safe --session` run still recommended |
+| 3 | Feedback capture and ratings | complete | Manual dogfood command suites | Redacted session feedback capture complete; no memory writes and unsafe feedback escalates severity |
+| 4 | Session review and bug generator | complete | Feedback capture and ratings | Redacted session review and local bug generation complete; no auto-fixes, no external sends, no personal-data connector reads |
+| 5 | Regression test generator from bugs | queued | Session review and bug generator | Generate tests only from reviewed bug records |
 
 ## Completed Features
 
@@ -84,7 +137,7 @@ Durable project tracking and connector-foundation cleanup.
 - Personal connector readiness gate.
 - Calendar read-only selected-range connector.
 - Calendar approved writes v1 with Action Center-gated draft/create/update/delete commands and no live external writes by default.
-- Reminders / Tasks connector v1 with adapter/mock provider, brokered list/create/update/complete/delete tools, Action Center task creation, and no native Reminders writes by default.
+- Reminders / Tasks connector v1 with adapter/mock provider, brokered list/draft-create/create/update/complete/delete tools, Action Center task creation, and no native Reminders writes by default.
 - Contacts read-only selected-scope connector.
 - Email metadata + selected-thread + draft-only assistant.
 - Messages/text draft-only assistant with manual workspace fallback.
@@ -98,13 +151,16 @@ Durable project tracking and connector-foundation cleanup.
 - Meeting Follow-Up v1 with brokered selected-event/workspace-notes reads and Action Center queued task/email/calendar suggestions.
 - Personal Task Extraction v1 with brokered source reads and Action Center queued task drafts.
 - Controlled Self-Improvement Implementation Loop v1 with approved proposal records, branch creation, brokered writes/tests/diff, and approval-gated commits.
-- Scheduler / Automation v1 with explicit local schedule records, manual `schedule run`, audited lifecycle/run events, safe supported workflows, and no background runner.
+- Overnight self-improvement runbook, `improve overnight-plan` safe-mode planner, and the 2026-05-23 approved bounded docs/tests/tracking run; future overnight runs still require explicit approval.
+- Scheduler / Automation v1 with explicit local schedule records, manual `schedule run`, audited lifecycle/run events, safe supported workflows including redacted `backup_create`, and no background runner.
 - Prompt Ledger, Prompt Queue, and Prompt Pack tracking with reconstructed prompt statuses, queued/blocked prompt groups, prompt record directories, prompt pack splitting, prompt CLI commands, and prompt audit docs.
 - PromptOps Workbench v1 with one-command prompt import from stdin/file/clipboard, next/copy/status/review commands, disabled-by-default runner, and safe-only autopilot guardrails.
 - Command Registry + Manual QA System with 150 cataloged commands, generated command test matrix, legacy tracker, QA runbook, and read-only `commands` CLI inspection/validation commands.
 - Disabled-by-default selected-scope calendar, contacts, email draft-only, and messages draft-only interfaces.
 - Connector framework generalization.
 - Feature maturity tracking.
+- Native Skills Program foundation with intake process, selection criteria, risk model, candidate registry, and record template.
+- Skill marketplace survey and native candidate shortlist with category scoring, defer list, and first-implementation recommendation.
 
 ## High-Risk Features Requiring Approval
 
@@ -173,3 +229,9 @@ Durable project tracking and connector-foundation cleanup.
 34. PromptOps Workbench v1.
 35. Scheduler / automation v1.
 36. Full feature maturity review.
+37. Native Skills Program foundation.
+38. Skill marketplace survey.
+39. Native skill vetter.
+40. Native skill manifest and loader.
+41. Skill finder native skill.
+42. PDF workspace native skill.

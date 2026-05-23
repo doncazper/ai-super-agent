@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "category": "workflows",
+  "cases": [
+    {
+      "id": "workflows.file_write_preflight",
+      "title": "Workflow preflight shows a workspace write without executing it.",
+      "risk_level": "LOW",
+      "expect": {
+        "tool_name": "filesystem.write",
+        "args": {
+          "path": "workspace/eval/workflow_preflight.txt",
+          "content": "preview only",
+          "overwrite": true
+        },
+        "would_execute": true
+      }
+    }
+  ]
+}

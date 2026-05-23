@@ -31,7 +31,14 @@ def capture_note(broker: ToolBroker, text: str, *, title: str = "", tags: list[s
     )
 
 
-def capture_from_file(broker: ToolBroker, path: str, *, title: str = "", tags: list[str] | None = None) -> dict[str, Any]:
+def capture_from_file(
+    broker: ToolBroker,
+    path: str,
+    *,
+    title: str = "",
+    tags: list[str] | None = None,
+    trusted_user: bool = False,
+) -> dict[str, Any]:
     read = _execute(broker, "capture_read_file", "filesystem.read", {"path": path, "max_bytes": 200000})
     if not read["allowed"]:
         return _error("from_file", read["content"].get("error", "file read failed"), steps=[read])
@@ -42,10 +49,11 @@ def capture_from_file(broker: ToolBroker, path: str, *, title: str = "", tags: l
         source_type="file",
         title=title or Path(path).name or "Workspace file",
         content=content,
-        source_trust=payload.get("trust_level", "UNTRUSTED_DOCUMENT"),
+        source_trust="TRUSTED_USER" if trusted_user else payload.get("trust_level", "UNTRUSTED_DOCUMENT"),
         source_ref=str(payload.get("path") or path),
         tags=tags or [],
         extra_steps=[read],
+        metadata={"trusted_user_marked": trusted_user},
     )
     stored["source_file"] = payload.get("path") or path
     return stored

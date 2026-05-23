@@ -26,7 +26,14 @@ from agent.workflows.daily_briefing import daily_briefing_v2
 
 SCHEDULE_PATH = Path("data/schedules.json")
 SCHEDULE_PATH_ENV = "SCHEDULE_PATH"
-SUPPORTED_WORKFLOWS = {"daily_briefing", "connector_doctor", "eval_safe", "memory_cleanup", "audit_summary"}
+SUPPORTED_WORKFLOWS = {
+    "daily_briefing",
+    "connector_doctor",
+    "eval_safe",
+    "memory_cleanup",
+    "audit_summary",
+    "backup_create",
+}
 PERSONAL_BRIEFING_SECTIONS = {"calendar", "tasks", "email"}
 
 
@@ -289,6 +296,45 @@ def _run_workflow(
                 }
                 for event in events
             ],
+        }
+    if record.workflow == "backup_create":
+        if args.get("redacted") is False:
+            return {
+                "status": "error",
+                "workflow": "backup_create",
+                "scheduled_workflow": True,
+                "error": "scheduled backup_create supports redacted backups only",
+                "critical_actions_executed": False,
+            }
+        backup_args = {
+            "backup_dir": str(args.get("backup_dir") or ""),
+            "include_captures": bool(args.get("include_captures", False)),
+            "include_audit_metadata": bool(args.get("include_audit_metadata", False)),
+            "redacted": True,
+        }
+        result = broker.execute(
+            {
+                "id": f"schedule_{record.schedule_id}_backup_create",
+                "type": "function",
+                "function": {
+                    "name": "backup.create",
+                    "arguments": json.dumps(backup_args),
+                },
+            }
+        )
+        try:
+            payload = json.loads(result.content)
+        except json.JSONDecodeError:
+            payload = {"error": "invalid backup.create response", "raw": result.content}
+        return {
+            "status": "ok" if result.allowed and payload.get("status") == "ok" else "error",
+            "workflow": "backup_create",
+            "scheduled_workflow": True,
+            "toolbroker_used": True,
+            "personal_connectors_read": False,
+            "memory_written": False,
+            "critical_actions_executed": False,
+            "backup": payload,
         }
     return {"status": "error", "error": f"unsupported scheduled workflow: {record.workflow}"}
 

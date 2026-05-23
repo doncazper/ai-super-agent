@@ -1,0 +1,47 @@
+suite_id: weather
+name: Weather Connector Smoke
+description: Exercises configured weather provider diagnostics, current/forecast, error handling, cache, and alerts limitations.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: true
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: weather_doctor
+    description: Show weather provider configuration and readiness.
+    command: python smart_agent.py weather doctor
+    expected_behavior: Provider name, configuration state, setup hints, and policy status are shown.
+    failure_signals: Secret leakage, personal location inference, or crash.
+    tags: [weather, doctor]
+  - id: weather_current
+    description: Fetch current weather for an explicit location.
+    command: python smart_agent.py weather current "Phoenix, AZ" --json
+    expected_behavior: Structured current weather includes provider and retrieved_at metadata.
+    failure_signals: Missing provider error when Open-Meteo should be available, or invented location.
+    tags: [weather, current]
+  - id: weather_forecast
+    description: Fetch a short forecast for an explicit location.
+    command: python smart_agent.py weather forecast "Phoenix, AZ" --days 3 --json
+    expected_behavior: Structured forecast includes daily high/low and source metadata.
+    failure_signals: Missing provider metadata, malformed JSON, or live network crash.
+    tags: [weather, forecast]
+  - id: weather_bad_location
+    description: Verify a bad location returns a clear structured error.
+    command: python smart_agent.py weather current "NotARealDogfoodPlaceXYZ" --json
+    expected_behavior: Clear bad-location or geocoding error without hallucinated weather.
+    failure_signals: Invented weather data or uncaught exception.
+    tags: [weather, errors]
+    expected_exit_codes: [0, 1, 2]
+  - id: weather_cache_clear
+    description: Clear weather cache to verify cache command behavior.
+    command: python smart_agent.py weather cache clear
+    expected_behavior: Cache clear reports completion without touching memory.
+    failure_signals: Memory write, personal data access, or crash.
+    tags: [weather, cache]
+  - id: weather_alerts
+    description: Fetch alerts or provider limitation for explicit location.
+    command: python smart_agent.py weather alerts "Phoenix, AZ" --json
+    expected_behavior: Active alerts are summarized or unsupported-alert limitation is stated.
+    failure_signals: Invented alerts or emergency certainty beyond source data.
+    tags: [weather, alerts]
+    expected_exit_codes: [0, 1, 2]

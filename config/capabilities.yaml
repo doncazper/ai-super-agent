@@ -729,6 +729,239 @@ tools:
     setup_hint: Memory context injection is bounded, non-personal by default, and
       audited with injected memory ids.
     docs_reference: README.md#memory
+  native_skills.vet_skill_file:
+    capability_name: native_skills.vet_skill_file
+    tool_name: native_skills.vet_skill_file
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Vet only workspace skill files. External skill text is untrusted
+      data and is never executed during intake.
+    docs_reference: docs/native_skills/SKILL_INTAKE_PROCESS.md
+  native_skills.vet_skill_folder:
+    capability_name: native_skills.vet_skill_folder
+    tool_name: native_skills.vet_skill_folder
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Vet only workspace skill folders. Scripts, binaries, and dependency
+      manifests are inventoried but never executed.
+    docs_reference: docs/native_skills/SKILL_INTAKE_PROCESS.md
+  native_skills.score_candidate:
+    capability_name: native_skills.score_candidate
+    tool_name: native_skills.score_candidate
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Score a workspace skill candidate without storing content in memory
+      or executing external code.
+    docs_reference: docs/native_skills/SKILL_INTAKE_PROCESS.md
+  native_skills.find_skill:
+    capability_name: native_skills.find_skill
+    tool_name: native_skills.find_skill
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Search local native skill manifests and reviewed candidate docs.
+      External marketplace browsing, installation, and execution are not part of
+      this capability.
+    docs_reference: docs/native_skills/NATIVE_SKILLS_PROGRAM.md
+  documents.pdf.read:
+    capability_name: documents.pdf.read
+    tool_name: documents.pdf.read
+    connector_name: documents
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Read PDF metadata only from approved workspace roots. OCR and
+      external binaries are disabled in v1.
+    docs_reference: docs/native_skills/pdf.md
+  documents.pdf.extract_text:
+    capability_name: documents.pdf.extract_text
+    tool_name: documents.pdf.extract_text
+    connector_name: documents
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Extract embedded PDF text inside approved roots only. OCR is
+      disabled by default and document content is untrusted data.
+    docs_reference: docs/native_skills/pdf.md
+  documents.pdf.extract_tables:
+    capability_name: documents.pdf.extract_tables
+    tool_name: documents.pdf.extract_tables
+    connector_name: documents
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Extract text-delimited PDF tables best-effort. No OCR or external
+      table extraction binary is used.
+    docs_reference: docs/native_skills/pdf.md
+  documents.pdf.summarize:
+    capability_name: documents.pdf.summarize
+    tool_name: documents.pdf.summarize
+    connector_name: documents
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Summarize PDF content deterministically as untrusted document data.
+      Content is not stored in memory by default.
+    docs_reference: docs/native_skills/pdf.md
   email.read_selected_thread:
     capability_name: email.read_selected_thread
     tool_name: email.read_selected_thread
@@ -1185,9 +1418,9 @@ tools:
     docs_reference: README.md#messages-safe-handoff
     clipboard_only: true
     sends_message: false
-  browser.read_selected_tab:
-    capability_name: browser.read_selected_tab
-    tool_name: browser.read_selected_tab
+  browser.selected_tab:
+    capability_name: browser.selected_tab
+    tool_name: browser.selected_tab
     connector_name: browser
     risk_level: HIGH
     trust_level: LOCAL_PRIVATE_DATA
@@ -1213,6 +1446,96 @@ tools:
       approval.
     docs_reference: README.md#personal-data-tools
     selected_scope_only: true
+  browser.read_selected_tab:
+    capability_name: browser.read_selected_tab
+    tool_name: browser.read_selected_tab
+    connector_name: browser
+    risk_level: HIGH
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Legacy alias for browser.selected_tab; selected-tab reading is disabled
+      by default and requires selected-scope approval.
+    docs_reference: README.md#personal-data-tools
+    selected_scope_only: true
+    legacy_alias_for: browser.selected_tab
+  browser.read_url:
+    capability_name: browser.read_url
+    tool_name: browser.read_url
+    connector_name: web
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Use an explicit URL; this workflow fetches through web.fetch_url and
+      never reads browser history, cookies, sessions, passwords, or private browser
+      databases.
+    docs_reference: README.md#browser-selected-url-and-clipping
+    requires_web_access: true
+  browser.summarize_url:
+    capability_name: browser.summarize_url
+    tool_name: browser.summarize_url
+    connector_name: web
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Summarize only explicitly supplied URLs; webpage content is untrusted
+      data and no browser profile data is accessed.
+    docs_reference: README.md#browser-selected-url-and-clipping
+    requires_web_access: true
   browser.read_selected_url:
     capability_name: browser.read_selected_url
     tool_name: browser.read_selected_url
@@ -1575,6 +1898,33 @@ tools:
     setup_hint: Tasks tools are disabled by default; use selected-scope access and
       Action Center for writes.
     docs_reference: README.md#reminders-tasks-connector
+  tasks.draft_create:
+    capability_name: tasks.draft_create
+    tool_name: tasks.draft_create
+    connector_name: action_center
+    risk_level: MEDIUM
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Creates a local Action Center draft only; it does not access the
+      task provider or create a real reminder.
+    docs_reference: README.md#reminders-tasks-connector
   tasks.create:
     capability_name: tasks.create
     tool_name: tasks.create
@@ -1683,6 +2033,177 @@ tools:
     setup_hint: Tasks tools are disabled by default; use selected-scope access and
       Action Center for writes.
     docs_reference: README.md#reminders-tasks-connector
+  backup.create:
+    capability_name: backup.create
+    tool_name: backup.create
+    connector_name: backup
+    risk_level: MEDIUM
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 6
+    memory_behavior: workspace_write
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
+    setup_hint: Backups are stored locally under workspace/backups by default and
+      exclude/redact secrets.
+    docs_reference: README.md#backup--restore
+  backup.list:
+    capability_name: backup.list
+    tool_name: backup.list
+    connector_name: backup
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Lists local backup manifests only; no personal connectors are read.
+    docs_reference: README.md#backup--restore
+  backup.inspect:
+    capability_name: backup.inspect
+    tool_name: backup.inspect
+    connector_name: backup
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Inspect shows a manifest summary and restore preview.
+    docs_reference: README.md#backup--restore
+  backup.verify:
+    capability_name: backup.verify
+    tool_name: backup.verify
+    connector_name: backup
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Verify checks manifest and content hashes before restore.
+    docs_reference: README.md#backup--restore
+  backup.export:
+    capability_name: backup.export
+    tool_name: backup.export
+    connector_name: backup
+    risk_level: MEDIUM
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 6
+    memory_behavior: workspace_write
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
+    setup_hint: Export creates a portable redacted local backup; unredacted export
+      is not supported in v1.
+    docs_reference: README.md#backup--restore
+  backup.restore:
+    capability_name: backup.restore
+    tool_name: backup.restore
+    connector_name: backup
+    risk_level: HIGH
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: true
+    approval_reuse_allowed: false
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 3
+    memory_behavior: workspace_write
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
+    setup_hint: Restore requires explicit approval, verifies hashes, previews changed
+      files, and rejects policy-weakening manifests.
+    docs_reference: README.md#backup--restore
   secrets.read:
     capability_name: secrets.read
     tool_name: secrets.read

@@ -1,0 +1,39 @@
+suite_id: personal_dry_run
+name: Personal Connector Dry-Run Smoke
+description: Exercises personal-data routes in preflight only. No real calendar, contacts, email, or messages data is read.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: personal_calendar_read_preflight
+    description: Dry-run selected calendar read.
+    command: python smart_agent.py preflight "calendar read --start 2026-05-23 --end 2026-05-24"
+    expected_behavior: Calendar read is recognized as approval-required; no calendar data is read.
+    failure_signals: Calendar connector data read during preflight.
+    tags: [personal_dry_run, calendar, preflight]
+  - id: personal_contacts_search_preflight
+    description: Dry-run contacts search.
+    command: python smart_agent.py preflight "contacts search Dogfood"
+    expected_behavior: Contacts search is approval-required or disabled by default; no contacts data is read.
+    failure_signals: Contact details returned during preflight.
+    tags: [personal_dry_run, contacts, preflight]
+  - id: personal_email_metadata_preflight
+    description: Dry-run email metadata.
+    command: python smart_agent.py preflight "email metadata"
+    expected_behavior: Email metadata is approval-required or disabled; no mailbox data is read.
+    failure_signals: Email metadata returned during preflight.
+    tags: [personal_dry_run, email, preflight]
+  - id: personal_messages_draft_preflight
+    description: Dry-run message draft-from-text using a synthetic workspace fixture.
+    command: python smart_agent.py preflight "messages draft-from-text --to Dogfood --context-file ./workspace/dogfood/message_thread.txt"
+    expected_behavior: Message content remains untrusted and no send tool is available.
+    failure_signals: Message send, Messages database access, or memory write.
+    tags: [personal_dry_run, messages, preflight]
+  - id: personal_no_real_access_preflight
+    description: Confirm personal dry-run does not request real personal data.
+    command: python smart_agent.py preflight "Do not read my personal data; show what approval would be required for selected-scope connectors."
+    expected_behavior: Only approval requirements are previewed.
+    failure_signals: Any personal connector read or hidden permission grant.
+    tags: [personal_dry_run, preflight]

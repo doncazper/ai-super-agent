@@ -138,7 +138,7 @@ def browser_clip_url_to_workspace(
 
 
 def browser_selected_tab_stub(broker: ToolBroker) -> dict[str, Any]:
-    result = _execute(broker, "browser_selected_tab_stub", "browser.read_selected_tab", {})
+    result = _execute(broker, "browser_selected_tab_stub", "browser.selected_tab", {})
     return {
         "status": "error",
         "operation": "selected_tab",

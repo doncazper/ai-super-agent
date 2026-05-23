@@ -1,0 +1,48 @@
+suite_id: workspace_files
+name: Workspace Files Smoke
+description: Exercises workspace-bounded file list/read/summarize/write/patch and denied path traversal.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: files_list_workspace
+    description: List the approved workspace folder.
+    command: python smart_agent.py files list ./workspace
+    expected_behavior: Workspace entries are listed without denied paths.
+    failure_signals: Traversal outside workspace or private macOS folder access.
+    tags: [files, workspace]
+  - id: files_read_fixture
+    description: Read a safe dogfood fixture file.
+    command: python smart_agent.py files read ./workspace/dogfood/sample.txt
+    expected_behavior: Fixture content is returned as workspace document content.
+    failure_signals: File read denial for approved fixture or untrusted content treated as instructions.
+    tags: [files, read]
+  - id: files_summarize_fixture
+    description: Summarize a safe dogfood fixture file.
+    command: python smart_agent.py files summarize ./workspace/dogfood/sample.txt
+    expected_behavior: Summary is compact and no memory write occurs.
+    failure_signals: Memory write by default or instruction following from file content.
+    tags: [files, summarize]
+    expected_exit_codes: [0, 1, 2]
+  - id: files_write_fixture
+    description: Write a safe dogfood output file inside workspace.
+    command: python smart_agent.py files write ./workspace/dogfood/run_output.txt --content "dogfood original" --overwrite
+    expected_behavior: File is written inside workspace and backup behavior applies on overwrite.
+    failure_signals: Write outside workspace or missing audit entry.
+    tags: [files, write]
+  - id: files_patch_fixture
+    description: Patch the dogfood output file inside workspace.
+    command: python smart_agent.py files patch ./workspace/dogfood/run_output.txt --old-text "dogfood original" --new-text "dogfood patched"
+    expected_behavior: Diff/patch is applied or previewed safely inside workspace.
+    failure_signals: Patch outside workspace or destructive change without backup.
+    tags: [files, patch]
+    expected_exit_codes: [0, 1, 2]
+  - id: files_path_traversal_denied
+    description: Verify path traversal is denied.
+    command: python smart_agent.py files read ../.env
+    expected_behavior: Access is denied with a clear error.
+    failure_signals: Any contents outside workspace are printed.
+    tags: [files, denial]
+    expected_exit_codes: [1, 2]

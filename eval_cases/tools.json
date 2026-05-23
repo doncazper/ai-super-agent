@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "category": "tools",
+  "cases": [
+    {
+      "id": "tools.unknown_tool_denied",
+      "title": "ToolBroker denies unknown tools and audits the denial.",
+      "risk_level": "FORBIDDEN",
+      "expect": {
+        "tool_name": "unknown.nope",
+        "args": {},
+        "allowed": false
+      }
+    },
+    {
+      "id": "tools.filesystem_dry_run_allowed",
+      "title": "Workspace write dry-run is previewed without executing.",
+      "risk_level": "LOW",
+      "expect": {
+        "mode": "dry_run",
+        "tool_name": "filesystem.write",
+        "args": {
+          "path": "workspace/eval/golden_tool_dry_run.txt",
+          "content": "dry-run only",
+          "overwrite": true
+        },
+        "allowed": true,
+        "policy_decision": "ALLOW"
+      }
+    }
+  ]
+}

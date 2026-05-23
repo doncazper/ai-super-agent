@@ -4,11 +4,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
+from agent.tools.backup import BACKUP_SCHEMAS, make_backup_tools
 from agent.tools.low_risk.git_tools import GIT_SCHEMAS, make_git_tools
 from agent.tools.low_risk.test_runner import TEST_RUNNER_SCHEMAS, make_test_tools
 from agent.tools.low_risk.time_tool import OPENAI_TOOL_SCHEMA, TOOL_NAME, get_current_time
 from agent.tools.low_risk.workspace_files import FILESYSTEM_SCHEMAS, make_filesystem_tools
+from agent.tools.documents.pdf import PDF_SCHEMAS, make_pdf_tools
 from agent.memory.tools import MEMORY_SCHEMAS, make_memory_tools
+from agent.tools.native_skills import NATIVE_SKILL_SCHEMAS, make_native_skill_tools
 from agent.tools.personal.calendar import CalendarConnector
 from agent.tools.personal.contacts import ContactsConnector
 from agent.tools.personal.email import EmailConnector
@@ -61,6 +64,7 @@ def default_registry(
     email_connector: EmailConnector | None = None,
     messages_connector: MessagesConnector | None = None,
     tasks_connector: TasksConnector | None = None,
+    action_center: Any | None = None,
 ) -> ToolRegistry:
     registry = ToolRegistry()
     registry.register(
@@ -78,6 +82,8 @@ def default_registry(
         registry.register(ToolSpec(name=name, capability=name, schema=GIT_SCHEMAS[name], handler=handler))
     for name, handler in make_test_tools(root, python_executable).items():
         registry.register(ToolSpec(name=name, capability=name, schema=TEST_RUNNER_SCHEMAS[name], handler=handler))
+    for name, handler in make_pdf_tools(root).items():
+        registry.register(ToolSpec(name=name, capability=name, schema=PDF_SCHEMAS[name], handler=handler))
     registry.register(
         ToolSpec(
             name="web.search",
@@ -98,6 +104,10 @@ def default_registry(
         registry.register(ToolSpec(name=name, capability=name, schema=WEATHER_SCHEMAS[name], handler=handler))
     for name, handler in make_memory_tools(memory_path).items():
         registry.register(ToolSpec(name=name, capability=name, schema=MEMORY_SCHEMAS[name], handler=handler))
+    for name, handler in make_native_skill_tools(root).items():
+        registry.register(ToolSpec(name=name, capability=name, schema=NATIVE_SKILL_SCHEMAS[name], handler=handler))
+    for name, handler in make_backup_tools(root).items():
+        registry.register(ToolSpec(name=name, capability=name, schema=BACKUP_SCHEMAS[name], handler=handler))
     for name, handler in make_personal_tools(
         project_root=root,
         calendar_connector=calendar_connector,
@@ -105,8 +115,9 @@ def default_registry(
         email_connector=email_connector,
         messages_connector=messages_connector,
         tasks_connector=tasks_connector,
+        action_center=action_center,
     ).items():
         registry.register(ToolSpec(name=name, capability=name, schema=PERSONAL_SCHEMAS[name], handler=handler))
-    for name, handler in make_write_action_tools().items():
+    for name, handler in make_write_action_tools(action_center=action_center).items():
         registry.register(ToolSpec(name=name, capability=name, schema=WRITE_ACTION_SCHEMAS[name], handler=handler))
     return registry

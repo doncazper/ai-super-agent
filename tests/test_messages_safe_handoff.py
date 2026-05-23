@@ -27,7 +27,7 @@ def _center(tmp_path) -> ActionCenter:
     )
 
 
-def _broker(tmp_path, *, enabled: bool = True) -> ToolBroker:
+def _broker(tmp_path, *, enabled: bool = True, center: ActionCenter | None = None) -> ToolBroker:
     capabilities = {
         "messages.draft_from_text": Capability(
             "messages.draft_from_text",
@@ -49,7 +49,7 @@ def _broker(tmp_path, *, enabled: bool = True) -> ToolBroker:
         ),
     }
     return ToolBroker(
-        default_registry(project_root=tmp_path),
+        default_registry(project_root=tmp_path, action_center=center),
         PolicyEngine(capabilities),
         AuditLogger(tmp_path / "broker-audit.jsonl"),
         session_id="broker-session",
@@ -152,7 +152,7 @@ def test_approved_save_draft_stays_inside_workspace_and_no_memory_write(tmp_path
     center.approve(actions["save"].action_id)
 
     report = execute_message_handoff_action(
-        _broker(tmp_path),
+        _broker(tmp_path, center=center),
         center,
         action_id=actions["save"].action_id,
         expected_action_type=MESSAGE_SAVE_DRAFT_ACTION,
@@ -167,8 +167,20 @@ def test_approved_save_draft_stays_inside_workspace_and_no_memory_write(tmp_path
 
 
 def test_save_draft_blocks_outside_workspace(tmp_path) -> None:
-    result = _broker(tmp_path).execute(
-        _call(MESSAGE_SAVE_DRAFT_ACTION, {"to": "Sam", "draft": "Reviewed draft", "path": "outside.txt"})
+    center = _center(tmp_path)
+    actions = draft_message_handoff_actions(center, to="Sam", draft="Reviewed draft", save_path="outside.txt")
+    center.approve(actions["save"].action_id)
+
+    result = _broker(tmp_path, center=center).execute(
+        _call(
+            MESSAGE_SAVE_DRAFT_ACTION,
+            {
+                "to": "Sam",
+                "draft": "Reviewed draft",
+                "path": "outside.txt",
+                "source_action_id": actions["save"].action_id,
+            },
+        )
     )
 
     assert result.allowed is False
@@ -182,7 +194,7 @@ def test_approved_copy_draft_uses_mock_clipboard_and_does_not_send(tmp_path, mon
     center.approve(actions["copy"].action_id)
 
     report = execute_message_handoff_action(
-        _broker(tmp_path),
+        _broker(tmp_path, center=center),
         center,
         action_id=actions["copy"].action_id,
         expected_action_type=MESSAGE_COPY_DRAFT_ACTION,
@@ -202,7 +214,7 @@ def test_handoff_audits_draft_approval_save_and_copy(tmp_path, monkeypatch) -> N
     actions = draft_message_handoff_actions(center, to="Sam", draft="Reviewed draft")
     center.approve(actions["save"].action_id)
     center.approve(actions["copy"].action_id)
-    broker = _broker(tmp_path)
+    broker = _broker(tmp_path, center=center)
 
     execute_message_handoff_action(
         broker,
@@ -224,3 +236,55 @@ def test_handoff_audits_draft_approval_save_and_copy(tmp_path, monkeypatch) -> N
     assert "action.used" in action_events
     assert MESSAGE_SAVE_DRAFT_ACTION in broker_events
     assert MESSAGE_COPY_DRAFT_ACTION in broker_events
+
+
+def test_save_draft_direct_broker_requires_action_center_item(tmp_path) -> None:
+    result = _broker(tmp_path).execute(
+        _call(
+            MESSAGE_SAVE_DRAFT_ACTION,
+            {"to": "Sam", "draft": "Reviewed draft", "path": "workspace/drafts/sam.txt"},
+        )
+    )
+
+    payload = json.loads(result.content)
+    assert result.allowed is False
+    assert "approved Action Center item" in payload["error"]
+
+
+def test_copy_draft_direct_broker_requires_action_center_item(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("MESSAGES_CLIPBOARD_MODE", "mock")
+
+    result = _broker(tmp_path).execute(
+        _call(MESSAGE_COPY_DRAFT_ACTION, {"to": "Sam", "draft": "Reviewed draft"})
+    )
+
+    payload = json.loads(result.content)
+    assert result.allowed is False
+    assert "approved Action Center item" in payload["error"]
+
+
+def test_message_handoff_arguments_must_match_approved_preview(tmp_path) -> None:
+    center = _center(tmp_path)
+    actions = draft_message_handoff_actions(
+        center,
+        to="Sam",
+        draft="Reviewed draft",
+        save_path="workspace/drafts/sam.txt",
+    )
+    center.approve(actions["save"].action_id)
+
+    result = _broker(tmp_path, center=center).execute(
+        _call(
+            MESSAGE_SAVE_DRAFT_ACTION,
+            {
+                "to": "Sam",
+                "draft": "Changed after approval",
+                "path": "workspace/drafts/sam.txt",
+                "source_action_id": actions["save"].action_id,
+            },
+        )
+    )
+
+    payload = json.loads(result.content)
+    assert result.allowed is False
+    assert "arguments must match" in payload["error"]

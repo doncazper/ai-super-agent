@@ -6,6 +6,7 @@ import json
 from agent.config.loader import load_capabilities_config
 from agent.core.tool_broker import ToolBroker
 from agent.safety.actions import ActionCenter, ActionCenterStore, ActionStatus
+from agent.safety.approvals import ApprovalManager
 from agent.safety.approvals import ApprovalStore
 from agent.safety.audit import AuditLogger
 from agent.safety.policy import Capability, PolicyEngine, RiskLevel
@@ -31,7 +32,7 @@ def _center(tmp_path) -> ActionCenter:
     )
 
 
-def _broker(tmp_path, *, enabled: bool = True) -> ToolBroker:
+def _broker(tmp_path, *, enabled: bool = True, center: ActionCenter | None = None) -> ToolBroker:
     capabilities = {
         name: Capability(
             name,
@@ -43,7 +44,7 @@ def _broker(tmp_path, *, enabled: bool = True) -> ToolBroker:
         for name in (CALENDAR_CREATE_ACTION, CALENDAR_UPDATE_ACTION, CALENDAR_DELETE_ACTION)
     }
     return ToolBroker(
-        default_registry(project_root=tmp_path),
+        default_registry(project_root=tmp_path, action_center=center),
         PolicyEngine(capabilities),
         AuditLogger(tmp_path / "broker-audit.jsonl"),
         session_id="broker-session",
@@ -85,7 +86,7 @@ def test_calendar_create_requires_approval(tmp_path) -> None:
     center = _center(tmp_path)
     action = draft_calendar_create(center, title="Planning", start="2026-05-22T10:00", end="2026-05-22T10:30")
 
-    report = execute_calendar_action(_broker(tmp_path), center, action_id=action.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
+    report = execute_calendar_action(_broker(tmp_path, center=center), center, action_id=action.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
 
     assert report["status"] == "error"
     assert report["executed"] is False
@@ -96,7 +97,7 @@ def test_calendar_update_requires_approval(tmp_path) -> None:
     center = _center(tmp_path)
     action = draft_calendar_update(center, event_id=_event_token(), changes={"title": "New title"})
 
-    report = execute_calendar_action(_broker(tmp_path), center, action_id=action.action_id, expected_action_type=CALENDAR_UPDATE_ACTION)
+    report = execute_calendar_action(_broker(tmp_path, center=center), center, action_id=action.action_id, expected_action_type=CALENDAR_UPDATE_ACTION)
 
     assert report["status"] == "error"
     assert report["executed"] is False
@@ -106,7 +107,7 @@ def test_calendar_delete_requires_approval(tmp_path) -> None:
     center = _center(tmp_path)
     action = draft_calendar_delete(center, event_id=_event_token())
 
-    report = execute_calendar_action(_broker(tmp_path), center, action_id=action.action_id, expected_action_type=CALENDAR_DELETE_ACTION)
+    report = execute_calendar_action(_broker(tmp_path, center=center), center, action_id=action.action_id, expected_action_type=CALENDAR_DELETE_ACTION)
 
     assert report["status"] == "error"
     assert report["executed"] is False
@@ -117,7 +118,7 @@ def test_denial_prevents_calendar_write(tmp_path) -> None:
     action = draft_calendar_create(center, title="Planning", start="2026-05-22T10:00", end="2026-05-22T10:30")
     center.deny(action.action_id)
 
-    report = execute_calendar_action(_broker(tmp_path), center, action_id=action.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
+    report = execute_calendar_action(_broker(tmp_path, center=center), center, action_id=action.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
 
     assert report["status"] == "error"
     assert report["executed"] is False
@@ -129,8 +130,8 @@ def test_approved_calendar_create_executes_once(tmp_path) -> None:
     action = draft_calendar_create(center, title="Planning", start="2026-05-22T10:00", end="2026-05-22T10:30")
     center.approve(action.action_id)
 
-    first = execute_calendar_action(_broker(tmp_path), center, action_id=action.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
-    second = execute_calendar_action(_broker(tmp_path), center, action_id=action.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
+    first = execute_calendar_action(_broker(tmp_path, center=center), center, action_id=action.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
+    second = execute_calendar_action(_broker(tmp_path, center=center), center, action_id=action.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
 
     assert first["status"] == "ok"
     assert first["executed"] is True
@@ -174,10 +175,10 @@ def test_event_notes_body_not_included_unless_allowed(tmp_path) -> None:
 def test_calendar_write_audits_draft_approval_execution_and_failure(tmp_path) -> None:
     center = _center(tmp_path)
     pending = draft_calendar_create(center, title="Pending", start="2026-05-22T09:00", end="2026-05-22T09:30")
-    execute_calendar_action(_broker(tmp_path), center, action_id=pending.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
+    execute_calendar_action(_broker(tmp_path, center=center), center, action_id=pending.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
     approved = draft_calendar_create(center, title="Approved", start="2026-05-22T10:00", end="2026-05-22T10:30")
     center.approve(approved.action_id)
-    execute_calendar_action(_broker(tmp_path), center, action_id=approved.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
+    execute_calendar_action(_broker(tmp_path, center=center), center, action_id=approved.action_id, expected_action_type=CALENDAR_CREATE_ACTION)
 
     action_events = [json.loads(line)["tool_name"] for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
     broker_events = [json.loads(line)["tool_name"] for line in (tmp_path / "broker-audit.jsonl").read_text(encoding="utf-8").splitlines()]
@@ -195,3 +196,34 @@ def test_calendar_write_capabilities_disabled_by_default() -> None:
         assert tools[name]["default_enabled"] is False
         assert tools[name]["approval_required"] == "per_action"
         assert tools[name]["approval_reuse_allowed"] is False
+
+
+def test_direct_calendar_write_rejected_without_action_center_item(tmp_path) -> None:
+    broker = _broker(tmp_path)
+    broker.approval_manager = ApprovalManager(auto_approve={CALENDAR_CREATE_ACTION})
+    broker.approval_manager.configure_audit(
+        broker.audit_logger,
+        session_id=broker.session_id,
+        model=broker.model,
+        route=broker.route,
+    )
+
+    result = broker.execute(
+        {
+            "id": "direct_calendar_create",
+            "type": "function",
+            "function": {
+                "name": CALENDAR_CREATE_ACTION,
+                "arguments": json.dumps(
+                    {
+                        "title": "Planning",
+                        "start": "2026-05-22T10:00",
+                        "end": "2026-05-22T10:30",
+                    }
+                ),
+            },
+        }
+    )
+
+    assert result.allowed is False
+    assert "Action Center" in json.loads(result.content)["error"]

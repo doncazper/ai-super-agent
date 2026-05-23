@@ -85,12 +85,14 @@ def execute_contact_action(
             "action_id": action_id,
             "action_status": record.status.value,
         }
+    arguments = dict(record.sanitized_args)
+    arguments["action_id"] = action_id
     tool_call = {
         "id": f"action_{action_id}",
         "type": "function",
         "function": {
             "name": record.tool_name,
-            "arguments": json.dumps(record.sanitized_args),
+            "arguments": json.dumps(arguments),
         },
     }
     previous_manager = broker.approval_manager

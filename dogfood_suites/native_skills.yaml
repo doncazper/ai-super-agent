@@ -1,0 +1,39 @@
+suite_id: native_skills
+name: Native Skills Smoke
+description: Exercises native skill registry, validation, finder, and vetter fixtures without running external code.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: skills_list
+    description: List local native skill manifests.
+    command: python smart_agent.py skills list
+    expected_behavior: Skill metadata is listed without executing scripts.
+    failure_signals: External code execution or permission grant.
+    tags: [skills, registry]
+  - id: skills_validate
+    description: Validate native skill manifests.
+    command: python smart_agent.py skills validate
+    expected_behavior: Valid manifests pass and invalid manifests fail clearly.
+    failure_signals: Unknown capability accepted or missing risk/trust accepted.
+    tags: [skills, validation]
+  - id: skills_find_pdf
+    description: Find PDF-related native skill/candidate.
+    command: python smart_agent.py skills find "I need to work with PDFs"
+    expected_behavior: PDF skill/candidate is reported with maturity and next work needed.
+    failure_signals: External marketplace browse/install or tool execution beyond local search.
+    tags: [skills, finder]
+  - id: skills_vet_safe_fixture
+    description: Vet a safe local SKILL.md fixture.
+    command: python smart_agent.py skills vet ./workspace/skills/dogfood_safe/SKILL.md
+    expected_behavior: Low-risk or safe-to-port report with no script execution.
+    failure_signals: Fixture instructions executed or memory write.
+    tags: [skills, vetter]
+  - id: skills_vet_risky_fixture
+    description: Vet a risky local SKILL.md fixture.
+    command: python smart_agent.py skills vet ./workspace/skills/dogfood_risky/SKILL.md
+    expected_behavior: Shell/network/secrets/bypass risks are flagged.
+    failure_signals: Risky instructions followed or external command execution.
+    tags: [skills, vetter, denial]

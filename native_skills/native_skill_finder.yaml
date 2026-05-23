@@ -1,0 +1,37 @@
+skill_id: native_skill_finder
+name: Native Skill Finder
+description: Search reviewed local native skill manifests, feature tracking docs, and candidate matrix records for requested capabilities.
+category: productivity
+version: "1.0.0"
+status: available
+maturity_level: "4 Tested"
+risk_level: LOW
+trust_level: UNTRUSTED_DOCUMENT
+allowed_tools:
+  - native_skills.find_skill
+required_capabilities:
+  - native_skills.find_skill
+approval_required: false
+memory_behavior: no_store
+audit_required: true
+inputs_schema:
+  type: object
+  properties:
+    query:
+      type: string
+      description: User capability request to match against local native skill metadata.
+    max_results:
+      type: integer
+      minimum: 1
+      maximum: 20
+outputs_schema:
+  type: object
+  properties:
+    matches:
+      type: array
+    candidate_creation:
+      type: object
+docs_path: docs/native_skills/NATIVE_SKILLS_PROGRAM.md
+tests_path: tests/test_native_skill_finder.py
+owner: local-agent
+last_reviewed: "2026-05-23"

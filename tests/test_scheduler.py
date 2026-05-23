@@ -159,6 +159,62 @@ def test_scheduler_creates_no_hidden_persistence(tmp_path: Path) -> None:
     assert not (tmp_path / "cron").exists()
 
 
+def test_schedule_backup_create_runs_through_broker_and_audits(tmp_path: Path) -> None:
+    store = ScheduleStore(tmp_path / "schedules.json")
+    audit_path = tmp_path / "logs" / "audit.jsonl"
+    audit = AuditLogger(audit_path)
+    schedule = create_schedule(
+        workflow="backup_create",
+        args={"backup_dir": str(tmp_path / "workspace" / "scheduled_backups")},
+        store=store,
+        audit_logger=audit,
+    )["schedule"]
+
+    result = run_schedule(
+        schedule["schedule_id"],
+        store=store,
+        runtime=runtime(tmp_path),
+        registry=registry(tmp_path),
+        audit_logger=audit,
+    )
+
+    assert result["status"] == "ok"
+    payload = result["workflow_result"]
+    assert payload["workflow"] == "backup_create"
+    assert payload["toolbroker_used"] is True
+    assert payload["personal_connectors_read"] is False
+    assert payload["memory_written"] is False
+    assert payload["critical_actions_executed"] is False
+    assert payload["backup"]["status"] == "ok"
+    assert payload["backup"]["redacted"] is True
+    events = audit_events(audit_path)
+    assert any(event["tool_name"] == "backup.create" for event in events)
+    assert any(event["tool_name"] == "schedule.run.finish" for event in events)
+
+
+def test_schedule_backup_create_rejects_unredacted_arg(tmp_path: Path) -> None:
+    store = ScheduleStore(tmp_path / "schedules.json")
+    audit = AuditLogger(tmp_path / "logs" / "audit.jsonl")
+    schedule = create_schedule(
+        workflow="backup_create",
+        args={"redacted": False},
+        store=store,
+        audit_logger=audit,
+    )["schedule"]
+
+    result = run_schedule(
+        schedule["schedule_id"],
+        store=store,
+        runtime=runtime(tmp_path),
+        registry=registry(tmp_path),
+        audit_logger=audit,
+    )
+
+    assert result["status"] == "error"
+    assert "redacted backups only" in result["workflow_result"]["error"]
+    assert result["critical_actions_executed"] is False
+
+
 def test_schedule_cli_uses_local_store_and_lists(tmp_path: Path, monkeypatch, capsys) -> None:
     monkeypatch.setenv("SCHEDULE_PATH", str(tmp_path / "schedules.json"))
     monkeypatch.setenv("AUDIT_LOG_PATH", str(tmp_path / "audit.jsonl"))

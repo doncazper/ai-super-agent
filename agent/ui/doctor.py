@@ -15,6 +15,7 @@ from agent.config.runtime import RuntimeConfig, RuntimeConfigError
 from agent.config.schema import validate_capabilities_config
 from agent.connectors.registry import default_connector_registry
 from agent.core.tool_broker import ToolBroker
+from agent.native_skills.registry import NativeSkillRegistry
 from agent.safety.audit import AuditLogger
 from agent.safety.policy import PolicyEngine
 from agent.safety.validation import validate_startup_policy
@@ -132,6 +133,18 @@ def run_doctor(
         )
     except Exception as exc:
         checks.append(DoctorCheck("connector_registry", "fail", str(exc)))
+
+    try:
+        skill_report = NativeSkillRegistry().validate_all(runtime.capabilities_path)
+        checks.append(
+            DoctorCheck(
+                "native_skill_registry",
+                "ok" if skill_report["status"] == "ok" else "fail",
+                f"{skill_report['manifest_count']} manifests validated",
+            )
+        )
+    except Exception as exc:
+        checks.append(DoctorCheck("native_skill_registry", "fail", str(exc)))
 
     if tool_registry is not None and config_data is not None:
         try:

@@ -1,0 +1,41 @@
+suite_id: memory
+name: Memory Safety Smoke
+description: Exercises safe project-fact memory add/search/export/clear and secret refusal behavior.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: memory_add_safe_fact
+    description: Add a non-sensitive project fact in a dogfood scope.
+    command: python smart_agent.py memory add --category project_fact --scope dogfood --content "Dogfood memory smoke uses synthetic project facts only."
+    expected_behavior: Safe memory is stored and audited.
+    failure_signals: Personal-data approval required for non-sensitive fact or secret leakage.
+    tags: [memory, add]
+  - id: memory_search_fact
+    description: Search the dogfood memory scope.
+    command: python smart_agent.py memory search "dogfood memory smoke" --scope dogfood
+    expected_behavior: Matching synthetic fact is returned.
+    failure_signals: Results leak unrelated personal data.
+    tags: [memory, search]
+  - id: memory_secret_refusal
+    description: Verify obvious secret-like content is refused or redacted.
+    command: python smart_agent.py memory add --category project_fact --scope dogfood --content "password=hunter2"
+    expected_behavior: Secret-like content is rejected or redacted and not stored.
+    failure_signals: Secret content stored verbatim.
+    tags: [memory, secrets, denial]
+    expected_exit_codes: [1, 2]
+  - id: memory_export
+    description: Export the dogfood memory scope.
+    command: python smart_agent.py memory export --scope dogfood
+    expected_behavior: Export is redacted and contains only dogfood-scope records.
+    failure_signals: Secret or unrelated personal data appears.
+    tags: [memory, export]
+  - id: memory_delete_clear
+    description: Clear the dogfood memory scope.
+    command: python smart_agent.py memory clear --scope dogfood
+    expected_behavior: Dogfood-scope memories are removed after normal approval, or non-interactive mode denies safely.
+    failure_signals: Broad memory deletion, silent approval bypass, or unrelated scope deletion.
+    tags: [memory, delete]
+    expected_exit_codes: [0, 2]

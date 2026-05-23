@@ -16,6 +16,8 @@ from agent.tools.registry import default_registry
 from agent.workflows.self_improvement import SelfImprovementManager
 from agent.workflows.self_improvement_backlog import self_improvement_backlog
 from agent.workflows.self_improvement_loop import (
+    build_overnight_plan,
+    create_self_improvement_commit_action,
     execute_self_improvement_commit,
     implement_approved_proposal,
     run_self_improvement_tests,
@@ -273,6 +275,57 @@ def test_loop_commit_action_requires_approval_and_denial_prevents_commit(tmp_pat
     assert center.get_action(record.action_id).status.value == "pending"
 
 
+def test_loop_create_action_for_commit_runs_tests_and_diff_without_commit(tmp_path) -> None:
+    project = tmp_path / "repo"
+    init_repo(project)
+    tests_dir = project / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_ok.py").write_text("def test_ok():\n    assert True\n", encoding="utf-8")
+    (project / "README.md").write_text("# Changed\n", encoding="utf-8")
+    broker = make_loop_broker(project, tmp_path / "audit.jsonl")
+    center = make_loop_center(project)
+
+    result = create_self_improvement_commit_action(
+        broker,
+        center,
+        message="Change readme",
+        test_path="tests/test_ok.py",
+    )
+
+    assert result["status"] == "ok"
+    assert result["action_created"] is True
+    assert result["commit_executed"] is False
+    assert result["test_step"]["content"]["returncode"] == 0
+    assert result["diff"]["content"]["stdout"]
+    action = center.get_action(result["commit_action"]["action_id"])
+    assert action is not None
+    assert action.status.value == "pending"
+    assert action.sanitized_args == {"message": "Change readme"}
+    assert action.preview["diff_summary"]["files_changed_count"] == 1
+
+
+def test_loop_create_action_for_commit_blocks_when_tests_fail(tmp_path) -> None:
+    project = tmp_path / "repo"
+    init_repo(project)
+    tests_dir = project / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_bad.py").write_text("def test_bad():\n    assert False\n", encoding="utf-8")
+    (project / "README.md").write_text("# Changed\n", encoding="utf-8")
+    broker = make_loop_broker(project, tmp_path / "audit.jsonl")
+    center = make_loop_center(project)
+
+    result = create_self_improvement_commit_action(
+        broker,
+        center,
+        message="Change readme",
+        test_path="tests/test_bad.py",
+    )
+
+    assert result["status"] == "tests_failed"
+    assert result["action_created"] is False
+    assert center.list_actions() == []
+
+
 def test_loop_audit_logs_implementation_steps(tmp_path) -> None:
     project = tmp_path / "repo"
     init_repo(project)
@@ -495,3 +548,75 @@ def test_backlog_dry_run_executes_no_file_reads(tmp_path) -> None:
     assert events
     assert all(event["dry_run"] is True for event in events)
     assert all(event["files_read"] == [] for event in events)
+
+
+def test_overnight_plan_excludes_high_critical_features(tmp_path) -> None:
+    project = tmp_path / "repo"
+    project.mkdir()
+    seed_tracking_project(project)
+    broker = make_backlog_broker(project, tmp_path / "audit.jsonl")
+
+    payload = build_overnight_plan(broker)
+
+    risks = {candidate["risk_level"] for candidate in payload["candidates"]}
+    assert "HIGH" not in risks
+    assert "CRITICAL" not in risks
+    assert "FORBIDDEN" not in risks
+
+
+def test_overnight_plan_excludes_personal_data_work(tmp_path) -> None:
+    project = tmp_path / "repo"
+    project.mkdir()
+    seed_tracking_project(project)
+    broker = make_backlog_broker(project, tmp_path / "audit.jsonl")
+
+    payload = build_overnight_plan(broker)
+
+    combined_candidates = json.dumps(payload["candidates"]).casefold()
+    assert "personal-data connector implementation" not in combined_candidates
+    assert "email send" not in combined_candidates
+    assert "message send" not in combined_candidates
+    assert any("personal-data connector implementation" == item["title"] for item in payload["excluded_work"])
+
+
+def test_overnight_plan_ranks_docs_tests_hardening_first(tmp_path) -> None:
+    project = tmp_path / "repo"
+    project.mkdir()
+    seed_tracking_project(project)
+    broker = make_backlog_broker(project, tmp_path / "audit.jsonl")
+
+    payload = build_overnight_plan(broker)
+
+    assert [candidate["category"] for candidate in payload["candidates"][:3]] == ["docs", "tests", "hardening"]
+
+
+def test_overnight_runbook_exists() -> None:
+    path = Path("docs/SELF_IMPROVEMENT_OVERNIGHT_RUNBOOK.md")
+    assert path.exists()
+    text = path.read_text(encoding="utf-8")
+    assert "Allowed Overnight Work" in text
+    assert "Forbidden Overnight Work" in text
+    assert "agent/overnight/YYYY-MM-DD" in text
+
+
+def test_overnight_report_template_exists() -> None:
+    path = Path("docs/templates/overnight_report_template.md")
+    assert path.exists()
+    text = path.read_text(encoding="utf-8")
+    required_fields = [
+        "Start time",
+        "End time",
+        "Branch",
+        "Cycles attempted",
+        "Files Changed",
+        "Commands Run",
+        "Tests Run",
+        "Improvements Completed",
+        "Improvements Skipped",
+        "Blockers",
+        "Risks Found",
+        "Morning Review",
+        "Next Recommended Action",
+    ]
+    missing = [field for field in required_fields if field not in text]
+    assert missing == []

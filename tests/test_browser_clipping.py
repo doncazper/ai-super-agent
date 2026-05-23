@@ -125,8 +125,23 @@ def test_selected_tab_stub_returns_clear_message_and_audits_denial(tmp_path) -> 
     assert "selected-tab reading is not configured" in report["error"]
     assert "cookies" in " ".join(report["setup"])
     events = _audit_events(tmp_path)
-    assert events[-1]["tool_name"] == "browser.read_selected_tab"
+    assert events[-1]["tool_name"] == "browser.selected_tab"
     assert events[-1]["policy_decision"] == "DENY"
+
+
+def test_browser_capability_manifest_has_canonical_names() -> None:
+    tools = load_capabilities_config("config/capabilities.yaml")["tools"]
+
+    for capability in (
+        "browser.read_url",
+        "browser.summarize_url",
+        "browser.clip_url_to_workspace",
+        "browser.selected_tab",
+    ):
+        assert capability in tools
+    assert tools["browser.selected_tab"]["default_enabled"] is False
+    assert tools["browser.selected_tab"]["approval_required"] is True
+    assert tools["browser.read_selected_tab"]["legacy_alias_for"] == "browser.selected_tab"
 
 
 def test_browser_cli_summarize_url_command(tmp_path, capsys) -> None:

@@ -452,6 +452,10 @@ class ToolBroker:
             sanitized = redact_contact_args(sanitized)
         if tool_name.startswith("memory.") and "content" in sanitized:
             sanitized["content"] = "[MEMORY_CONTENT_REDACTED]"
+        if tool_name == "native_skills.find_skill" and "query" in sanitized:
+            from agent.safety.redaction import SecretRedactor
+
+            sanitized["query"] = SecretRedactor().redact(sanitized["query"])
         if tool_name.startswith(("email.", "messages.")):
             for key in ("thread_text", "body", "content"):
                 if key in sanitized:
@@ -467,11 +471,15 @@ class ToolBroker:
             return TrustLevel.UNTRUSTED_MESSAGE
         if tool_name.startswith(("web.", "weather.")):
             return TrustLevel.UNTRUSTED_WEB
+        if tool_name.startswith(("native_skills.", "documents.pdf.")):
+            return TrustLevel.UNTRUSTED_DOCUMENT
         if tool_name == "filesystem.read":
             return TrustLevel.UNTRUSTED_DOCUMENT
         if tool_name.startswith("filesystem."):
             return TrustLevel.LOCAL_PRIVATE_DATA
         if tool_name.startswith(("contacts.", "browser.", "tasks.")):
+            return TrustLevel.LOCAL_PRIVATE_DATA
+        if tool_name.startswith("backup."):
             return TrustLevel.LOCAL_PRIVATE_DATA
         return TrustLevel.MODEL_OUTPUT
 

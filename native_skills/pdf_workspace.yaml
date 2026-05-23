@@ -1,0 +1,45 @@
+skill_id: pdf_workspace
+name: PDF Workspace Skill
+description: Read PDF metadata, extract embedded text, summarize, and perform best-effort table extraction for PDFs inside approved workspace roots.
+category: documents
+version: "1.0.0"
+status: available
+maturity_level: "4 Tested"
+risk_level: MEDIUM
+trust_level: UNTRUSTED_DOCUMENT
+allowed_tools:
+  - documents.pdf.read
+  - documents.pdf.extract_text
+  - documents.pdf.extract_tables
+  - documents.pdf.summarize
+required_capabilities:
+  - documents.pdf.read
+  - documents.pdf.extract_text
+  - documents.pdf.extract_tables
+  - documents.pdf.summarize
+approval_required: "none for read-only v1; OCR, split/merge, and generated output writes are deferred for separate approval design"
+memory_behavior: no_store
+audit_required: true
+inputs_schema:
+  type: object
+  properties:
+    path:
+      type: string
+      description: Workspace-bounded PDF path.
+outputs_schema:
+  type: object
+  properties:
+    trust_level:
+      type: string
+    page_count:
+      type: integer
+    text:
+      type: string
+    summary:
+      type: object
+    tables:
+      type: array
+docs_path: docs/native_skills/pdf.md
+tests_path: tests/test_pdf_documents.py
+owner: local-agent
+last_reviewed: "2026-05-23"

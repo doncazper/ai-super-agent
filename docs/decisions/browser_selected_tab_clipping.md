@@ -27,9 +27,10 @@ The connector does not access browser history, cookies, sessions, password manag
 
 ## Read Capabilities
 
-- `browser.read_selected_url`
-- `browser.summarize_selected_url`
-- `browser.read_selected_tab`, stubbed and disabled by default.
+- `browser.read_url`
+- `browser.summarize_url`
+- `browser.selected_tab`, stubbed and disabled by default.
+- Legacy aliases retained for compatibility: `browser.read_selected_url`, `browser.summarize_selected_url`, and `browser.read_selected_tab`.
 
 ## Write Capabilities
 
@@ -71,7 +72,7 @@ No memory writes by default. Clipped content remains a workspace document and is
 
 - `web.fetch_url` audits network domains.
 - `filesystem.write` audits files written.
-- The selected-tab stub audits a denied/disabled `browser.read_selected_tab` attempt.
+- The selected-tab stub audits a denied/disabled `browser.selected_tab` attempt.
 
 ## Approval Requirements
 

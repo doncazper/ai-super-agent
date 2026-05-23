@@ -1,5 +1,568 @@
 # Completion Report
 
+## Run: 2026-05-23 11:35 PDT Session Review and Bug Generator
+
+- Date/time: 2026-05-23 11:35 PDT.
+- Scope confirmed:
+  - Add redacted session review and local bug generation for dogfood sessions, command results, feedback, failures, and audit links.
+  - Add `session review`, `bugs list`, `bugs show`, and `bugs export` commands.
+- Non-goals confirmed:
+  - No external data sending, no raw secret or personal-data bug reports, no automatic fixes, no policy weakening, no personal-data tool enablement, no memory writes, and no ToolBroker/PolicyEngine/ApprovalManager/AuditLogger bypass.
+- Prompt tracking:
+  - prompt_id: `SESSION-REVIEW-BUG-GENERATOR`.
+  - next_prompt_id: `REGRESSION-TEST-GENERATOR`.
+- Files changed:
+  - `.gitignore`
+  - `agent/session_logs/review.py`
+  - `agent/ui/cli_commands.py`
+  - `agent/ui/command_registry.py`
+  - `tests/test_session_logs.py`
+  - `tests/test_prompt_tracking.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/BUG_TRIAGE.md`
+  - `docs/SESSION_LOGGING.md`
+  - `docs/dogfood/DOGFOOD_GUIDE.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/COMPLETION_REPORT.md`
+  - `reports/session_reviews/.gitkeep`
+  - `bugs/.gitkeep`
+- Commands run:
+  - Required governance, tracking, session logging, feedback, CLI, command registry, and tests inspected with `sed`/`rg`.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... write_command_docs('.') ... PY`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py tests/test_command_registry.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py tests/test_command_registry.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py tests/test_command_registry.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q && /Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate && git diff --check`
+- Tests and validation:
+  - Focused session review tests: 21 passed in 1.19s.
+  - Focused session/command registry tests: 26 passed in 1.14s.
+  - Focused session/command/prompt/maturity validation: 40 passed in 1.23s.
+  - Command registry validation: status ok, 215 commands, no problems.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok.
+  - Full suite: 645 passed in 20.13s.
+  - Final focused docs/registry validation after tracking updates: 40 passed in 1.20s; command registry ok; `git diff --check` passed.
+- Results:
+  - Added `python smart_agent.py session review <session_id>`.
+  - Added `python smart_agent.py session review --last`.
+  - Added `python smart_agent.py session review --last --create-bugs`.
+  - Added `python smart_agent.py bugs list`.
+  - Added `python smart_agent.py bugs show <bug_id>`.
+  - Added `python smart_agent.py bugs export`.
+  - Created `docs/BUG_TRIAGE.md`, `reports/session_reviews/.gitkeep`, and `bugs/.gitkeep`.
+  - Session review summarizes clean/failing sessions, feedback, repeated failure patterns, tool/routing failures, poor response flags, confusing UX, approval friction, missing docs, suspected bugs, and regression-test suggestions.
+  - Bug generation uses stable local `BUG-0001` style ids, redacts secret/personal-looking content, and classifies bypass/data-leak signals as P0.
+- Blockers:
+  - None for local implementation.
+  - First real dogfood review session remains pending for user-run QA.
+- Next recommended action:
+  - Run `REGRESSION-TEST-GENERATOR` after reviewing generated bug reports.
+
+## Run: 2026-05-23 11:05 PDT User Feedback Capture for Live Sessions
+
+- Date/time: 2026-05-23 11:05 PDT.
+- Scope confirmed:
+  - Add redacted user feedback capture for live/dogfood session commands.
+  - Allow feedback on the last command or a specific command id, and make it visible in session show/replay/export.
+- Non-goals confirmed:
+  - No new risky agent capability, no personal-data tool enablement, no send/write path, no memory write, no policy weakening, and no ToolBroker/ApprovalManager/AuditLogger bypass.
+- Prompt tracking:
+  - prompt_id: `FEEDBACK-CAPTURE-RATINGS`.
+  - next_prompt_id: `SESSION-REVIEW-BUG-GENERATOR`.
+- Files changed:
+  - `agent/session_logs/feedback.py`
+  - `agent/session_logs/models.py`
+  - `agent/session_logs/recorder.py`
+  - `agent/session_logs/replay.py`
+  - `agent/session_logs/store.py`
+  - `agent/ui/cli_commands.py`
+  - `agent/ui/command_registry.py`
+  - `tests/test_session_logs.py`
+  - `docs/SESSION_LOGGING.md`
+  - `docs/dogfood/DOGFOOD_GUIDE.md`
+  - `CHANGELOG.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Required docs and session logging files inspected with `rg`/`sed`.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... write_command_docs('.') ... PY`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py tests/test_command_registry.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py tests/test_command_registry.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q && /Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate && git diff --check`
+- Tests and validation:
+  - Focused session feedback tests: 14 passed in 0.69s.
+  - Focused session/command/prompt/maturity validation: 33 passed in 0.81s.
+  - Command registry validation: status ok, 210 commands, no problems.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok (77 capabilities).
+  - Full suite: 638 passed in 19.15s.
+  - Final focused docs/registry validation after tracking updates: 33 passed in 0.77s; command registry ok; `git diff --check` passed.
+- Results:
+  - Added `python smart_agent.py feedback good --last`.
+  - Added `python smart_agent.py feedback bad --last --reason "..."`.
+  - Added `python smart_agent.py feedback bug --last --title "..."`.
+  - Added `python smart_agent.py feedback confusing --last --reason "..."`.
+  - Added `python smart_agent.py feedback slow --last --reason "..."`.
+  - Added `python smart_agent.py feedback unsafe --last --reason "..."`.
+  - Added `python smart_agent.py feedback rate --last --score 1-5`.
+  - Added `python smart_agent.py feedback add <command_id> --tag poor_response --note "..."`.
+  - Added `python smart_agent.py feedback list --session <session_id>`.
+  - Added `python smart_agent.py feedback export --session <session_id>`.
+  - Feedback is stored redacted in session-local `feedback.jsonl`, updates command feedback summaries, appears in session show/export/replay, and logs feedback add/list/export events.
+- Blockers:
+  - None so far.
+  - First real dogfood feedback session remains pending for user-run QA.
+- Next recommended action:
+  - Run `SESSION-REVIEW-BUG-GENERATOR` to turn reviewed feedback/session evidence into bug candidates without weakening policy.
+
+## Run: 2026-05-23 10:36 PDT Manual Dogfood Command Suites
+
+- Date/time: 2026-05-23 10:36 PDT.
+- Scope confirmed:
+  - Build curated manual dogfood command suites, docs, fixtures, and CLI commands for list/show/run.
+  - Support dry-run previews and active-session capture through the existing session logger.
+- Non-goals confirmed:
+  - No new agent capabilities outside dogfood QA orchestration.
+  - No personal-data tool enablement, email/text sending, calendar/contact writes, ToolBroker bypass, policy weakening, approval bypass, audit bypass, or default personal-data access.
+- Prompt tracking:
+  - prompt_id: `DOGFOOD-COMMAND-SUITES`.
+  - next_prompt_id: `FEEDBACK-CAPTURE-RATINGS`.
+- Files changed:
+  - `agent/dogfood/__init__.py`
+  - `agent/dogfood/models.py`
+  - `agent/dogfood/runner.py`
+  - `agent/dogfood/suites.py`
+  - `agent/ui/cli_commands.py`
+  - `agent/ui/command_registry.py`
+  - `tests/test_dogfood_suites.py`
+  - `dogfood_suites/*.yaml`
+  - `workspace/dogfood/sample.txt`
+  - `workspace/dogfood/message_thread.txt`
+  - `workspace/skills/dogfood_safe/SKILL.md`
+  - `workspace/skills/dogfood_risky/SKILL.md`
+  - `docs/dogfood/DOGFOOD_GUIDE.md`
+  - `docs/dogfood/COMMAND_SUITES.md`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Required docs and implementation files inspected with `rg`/`sed`.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_dogfood_suites.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... write_command_docs('.') ... PY`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py dogfood list`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py dogfood run all_safe --dry-run`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_dogfood_suites.py tests/test_command_registry.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_dogfood_suites.py tests/test_command_registry.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q && /Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate && git diff --check`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_dogfood_suites.py -q && git diff --check`
+- Tests and validation:
+  - Focused dogfood tests: 8 passed in 0.30s.
+  - Focused dogfood/command/prompt/maturity validation: 27 passed in 0.35s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok (77 capabilities).
+  - Command registry validation: status ok, 201 commands, no problems.
+  - Full suite: 634 passed in 20.12s.
+  - Final focused docs/registry validation after tracking updates: 27 passed in 0.33s; command registry ok; `git diff --check` passed.
+  - Final dogfood focused rerun after suite YAML adjustment: 8 passed in 0.22s; `git diff --check` passed.
+- Results:
+  - Added `python smart_agent.py dogfood list`.
+  - Added `python smart_agent.py dogfood show <suite>`.
+  - Added `python smart_agent.py dogfood run <suite>`.
+  - Added `python smart_agent.py dogfood run <suite> --session`.
+  - Added `python smart_agent.py dogfood run <suite> --dry-run`.
+  - Created required suites: `core`, `weather`, `web`, `workspace_files`, `memory`, `approvals`, `native_skills`, `personal_dry_run`, and `all_safe`.
+  - Dogfood runner accepts only `python smart_agent.py ...` commands, continues through failures, supports expected safe-failure exit codes, and can capture redacted output into an active session.
+- Blockers:
+  - None so far.
+  - First real manual dogfood session is intentionally left for the user to run.
+- Next recommended action:
+  - Run `FEEDBACK-CAPTURE-RATINGS` after final validation passes.
+
+## Run: 2026-05-23 10:05 PDT Approved bounded overnight self-improvement run
+
+- Date/time: 2026-05-23 10:05 PDT.
+- Scope confirmed:
+  - Run the user-approved bounded overnight safe-mode process for low-risk docs, tests, diagnostics, evals, maturity tracking, changelog accuracy, project state accuracy, README/setup clarity, and doctor/eval/reporting improvements.
+  - Stop after a small number of useful cycles rather than drifting into feature work.
+- Non-goals confirmed:
+  - No personal-data connector implementation, email/text sending, calendar/contact writes, package install, external script, unexpected network access, private macOS app access, Full Disk Access, hidden persistence, background service, remote push, commit, policy weakening, approval bypass, audit bypass, or memory behavior change.
+- Prompt tracking:
+  - prompt_id: `OVERNIGHT-SAFE-6H`.
+  - next_prompt_id: `SESSION-LOGGING-REPLAY`.
+- Files changed:
+  - `CHANGELOG.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/COMPLETION_REPORT.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/templates/overnight_report_template.md`
+  - `reports/overnight/overnight_2026-05-23.md`
+  - `tests/test_self_improvement.py`
+  - `tests/test_feature_maturity_docs.py`
+- Commands run:
+  - Required docs read with `sed` and `rg`.
+  - `git status --short --branch`
+  - `git switch -c agent/overnight-2026-05-23`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py improve overnight-plan --json`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_self_improvement.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py tests/test_command_registry.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_self_improvement.py tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py tests/test_command_registry.py -q`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest`
+- Tests and validation:
+  - Focused self-improvement tests: 28 passed in 2.95s.
+  - Focused self-improvement plus prompt/maturity/command docs validation after final docs updates: 47 passed in 3.04s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok (77 capabilities).
+  - Command registry validation: status ok, 189 commands, no problems.
+  - Full suite: 616 passed in 18.63s on the final run.
+- Results:
+  - Completed two safe cycles: prompt/project tracking sync for the approved bounded overnight run, and stricter overnight report-template validation.
+  - Created `reports/overnight/overnight_2026-05-23.md`.
+  - Updated `OVERNIGHT-SAFE-6H` from blocked to completed for this specific user-approved run; future overnight runs still require explicit approval.
+  - Improved prompt-tracking validation to count unique active prompt IDs so mirrored queue/ledger status does not appear as multiple active prompts.
+- Blockers:
+  - None encountered.
+  - The worktree still contains broad pre-existing uncommitted feature-batch changes, so morning review should inspect the full diff before any commit.
+- Next recommended action:
+  - Run `SESSION-LOGGING-REPLAY` to build redacted, workspace-bounded session logging and replay without personal-data access by default.
+
+## Run: 2026-05-23 09:57 PDT Full release gate and feature maturity review
+
+- Date/time: 2026-05-23 09:57 PDT.
+- Scope confirmed:
+  - Run the full release gate and feature maturity review for the controlled actions, product quality, native skills, and safe self-improvement planning batch.
+  - Update source-of-truth tracking docs only; do not add product runtime features.
+- Non-goals confirmed:
+  - No new connector, send/write path, personal-data access, memory behavior, background automation, package install, external script, policy relaxation, or ToolBroker/PolicyEngine/ApprovalManager/AuditLogger bypass was added.
+  - No feature was promoted beyond the evidence supported by tests, docs, policy/audit behavior, and release gates.
+- Prompt tracking:
+  - prompt_id: `FULL-RELEASE-GATE-MATURITY-REVIEW`.
+  - next_prompt_id: `SESSION-LOGGING-REPLAY`.
+- Files changed:
+  - `CHANGELOG.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/COMPLETION_REPORT.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/EVAL_REPORT.md`
+- Commands run:
+  - Required docs read with `sed`.
+  - `git status --short && git branch --show-current`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py skills validate`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py eval run --safe`
+  - Personal-data default-enabled manifest check.
+  - HIGH approval manifest check.
+  - CRITICAL per-action/no-reuse manifest check.
+  - Unknown tool denial check through `ToolBroker`.
+  - ToolBroker path scan with `rg`.
+- Tests and validation:
+  - Full suite: 616 passed in 18.31s after docs updates.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok (77 capabilities).
+  - Safe eval suite: 21 passed, 0 failed, 8 skipped.
+  - Command registry validation: status ok, 189 commands, no problems.
+  - Native skill validation: status ok, 3 manifests valid.
+  - Unknown tool denial: ok.
+  - Personal-data connector/default-enabled check: ok; `tasks.draft_create` remains a documented non-personal Action Center draft exception.
+  - HIGH approval manifest check: ok.
+  - CRITICAL per-action/no-reuse manifest check: ok.
+  - ToolBroker path scan: registered tool handlers execute only inside `ToolBroker`; preflight/status code performs metadata lookups only.
+- Maturity changes:
+  - Marked `Full release gate + maturity review` complete in the roadmap.
+  - Refreshed `Release-gate tracking sync` maturity evidence and readiness score.
+  - Refreshed Golden Eval Suite evidence with the safe eval result.
+  - Added a batch release-gate section and conservative maturity decisions for the requested feature list.
+- Results:
+  - Most mature patterns remain ToolBroker/PolicyEngine/AuditLogger, capability manifest startup validation, weather connector/provider pattern, Action Center review pattern, connector metadata/status, PromptOps/Command Registry tracking, and workspace path policy.
+  - Early or stubbed areas remain WeatherKit signing, native selected-tab access, native task/calendar/contact/email/message providers, and real send/write provider integrations.
+  - Features needing live validation remain LM Studio no-tool chat, web provider search/fetch, NWS live alerts/forecast, selected-scope calendar/contacts, email metadata/draft-only, and any real write/send provider after separate approval.
+- Blockers:
+  - Live LM Studio evals skipped because `LMSTUDIO_MODEL` is not set.
+  - Personal-data evals skipped by default by design.
+  - No commit was created because the worktree already contains broad pre-existing feature-batch changes and this release-gate sync is not a clean standalone commit boundary.
+- Next recommended action:
+  - Run `SESSION-LOGGING-REPLAY` to build redacted, workspace-bounded session logging and replay before deeper dogfood automation.
+
+## Run: 2026-05-23 09:50 PDT Overnight self-improvement runbook and safe-mode constraints
+
+- Date/time: 2026-05-23 09:50 PDT.
+- Scope confirmed:
+  - Create the overnight self-improvement safe-mode runbook, report template, report directory, and read-only planner command.
+  - Keep the work to planning, diagnostics, docs/tests/hardening candidate selection, and tracking updates.
+- Non-goals confirmed:
+  - No unattended run was started or approved.
+  - No background persistence, LaunchAgent, cron, daemon, or scheduler runner was added.
+  - No personal-data connector implementation, email/text sending, calendar/contact writes, package installs, external scripts, network automation, memory writes, or commits were added.
+  - No ToolBroker, PolicyEngine, ApprovalManager, or AuditLogger restrictions were weakened.
+- Prompt tracking:
+  - prompt_id: `OVERNIGHT-RUNBOOK`.
+  - next_prompt_id: `SESSION-LOGGING-REPLAY`.
+- Files changed:
+  - `agent/workflows/self_improvement_loop.py`
+  - `smart_agent.py`
+  - `agent/ui/command_registry.py`
+  - `tests/test_self_improvement.py`
+  - `docs/SELF_IMPROVEMENT_OVERNIGHT_RUNBOOK.md`
+  - `docs/templates/overnight_report_template.md`
+  - `reports/overnight/.gitkeep`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+- Commands run:
+  - Required docs read with `sed` and `rg`.
+  - Self-improvement workflow, CLI, command registry, docs, and tests inspected with `sed` and `rg`.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_self_improvement.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... write_command_docs('.') ... PY`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py improve overnight-plan --json`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py tests/test_command_registry.py -q`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest`
+  - Personal-data connector/default-enabled manifest check.
+  - HIGH/CRITICAL approval manifest check.
+  - `git diff --check`
+  - `git status --short`
+- Tests and validation:
+  - Focused self-improvement tests: 28 passed in 3.37s.
+  - Focused prompt/maturity/command docs validation: 19 passed in 0.19s.
+  - Full suite: 616 passed in 18.51s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok (77 capabilities).
+  - Command registry validation: status ok, 189 commands, no problems.
+  - Personal-data connector/default-enabled check: ok; `tasks.draft_create` is a non-personal Action Center draft exception.
+  - HIGH/CRITICAL approval manifest check: ok.
+  - Diff whitespace check: passed.
+- Results:
+  - Added `python smart_agent.py improve overnight-plan`.
+  - The planner reads tracking docs through brokered `filesystem.read` calls and returns safe docs/tests/hardening/evals candidates.
+  - HIGH, CRITICAL, FORBIDDEN, personal-data, send/write, package-install, persistence, approval-bypass, and policy-weakening work is excluded from candidates.
+  - Added the overnight runbook and report template with sandbox guidance, branch naming, loop behavior, stop conditions, and morning review.
+- Blockers:
+  - `OVERNIGHT-SAFE-6H` remains blocked until the user explicitly approves a bounded unattended run.
+- Next recommended action:
+  - Run `SESSION-LOGGING-REPLAY` to build redacted session logging and replay before deeper dogfood automation.
+
+## Run: 2026-05-23 09:37 PDT Controlled self-improvement commit-action checkpoint
+
+- Date/time: 2026-05-23 09:37 PDT.
+- Scope confirmed:
+  - Add the explicit `improve create-action-for-commit` checkpoint to the existing controlled self-improvement loop.
+  - Keep implementation branch-based, brokered, audited, and approval-gated.
+- Non-goals confirmed:
+  - No automatic commits.
+  - No package installs.
+  - No personal-data access.
+  - No policy, approval, audit, memory, or ToolBroker weakening.
+  - No email/text sending or hidden persistence.
+- Prompt tracking:
+  - prompt_id: `SELF-IMPROVE-COMMIT-ACTION-CHECKPOINT`.
+  - next_prompt_id: `SESSION-LOGGING-REPLAY`.
+- Files changed:
+  - `agent/workflows/self_improvement_loop.py`
+  - `smart_agent.py`
+  - `agent/ui/command_registry.py`
+  - `tests/test_self_improvement.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+- Commands run:
+  - Required docs read with `sed`.
+  - Self-improvement workflow, CLI, Action Center, command registry, tests, and tracking docs inspected with `rg` and `sed`.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_self_improvement.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... write_command_docs('.') ... PY`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_command_registry.py tests/test_feature_maturity_docs.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - Self-improvement path scan for direct subprocess/tool calls.
+  - Personal connector default-disabled manifest check.
+  - HIGH/CRITICAL approval manifest check.
+  - `git diff --check`
+- Tests and validation:
+  - Focused self-improvement tests: 23 passed in 3.18s.
+  - Command registry/docs validation: 14 passed in 0.13s.
+  - Full suite: 611 passed in 19.77s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok (77 capabilities).
+  - Command registry validation: status ok, 188 commands, no problems.
+  - Personal connector default-disabled check: ok.
+  - HIGH/CRITICAL approval manifest check: ok.
+  - Diff whitespace check: passed.
+- Results:
+  - Added `python smart_agent.py improve create-action-for-commit`.
+  - The command runs brokered self-improvement tests and brokered git diff before creating a pending Action Center `self_improvement.commit` action.
+  - Failed tests prevent commit action creation.
+  - The checkpoint does not execute `git.commit`; approval and execution remain separate through `improve commit --from-action <action_id>`.
+- Blockers:
+  - None for this scoped checkpoint.
+  - Live implementation still requires an approved proposal record and a disposable/test branch.
+- Next recommended action:
+  - Run `SESSION-LOGGING-REPLAY` to build redacted session logging and replay before deeper dogfood automation.
+
+## Run: 2026-05-23 09:19 PDT Scheduler / Automation v1 backup_create follow-up
+
+- Date/time: 2026-05-23 09:19 PDT, Scheduler / Automation v1 backup_create follow-up.
+- Scope confirmed:
+  - Add optional `backup_create` to Scheduler v1 without adding background autonomy.
+  - Keep schedules explicit, local, manual-run, auditable, and ToolBroker-routed where tools are used.
+- Non-goals confirmed:
+  - No LaunchAgent, cron, daemon, login item, or hidden background runner.
+  - No personal-data connector reads.
+  - No send/write actions beyond redacted local backup creation.
+  - No CRITICAL action execution.
+  - No policy, approval, audit, or ToolBroker bypass.
+- Prompt tracking:
+  - prompt_id: `SCHEDULER-V1-BACKUP-CREATE`.
+  - next_prompt_id: `SESSION-LOGGING-REPLAY`.
+- Files changed:
+  - `agent/workflows/scheduler.py`
+  - `agent/ui/cli_commands.py`
+  - `agent/ui/command_registry.py`
+  - `tests/test_scheduler.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/SCHEDULER.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/COMMAND_LEGACY.md`
+  - `docs/COMMAND_QA_RUNBOOK.md`
+  - `docs/templates/command_record_template.md`
+  - `docs/templates/command_test_record_template.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+- Commands run:
+  - `git status --short && git branch --show-current && git log --oneline -5`
+  - Required docs read with `sed`.
+  - Scheduler/code/docs inspected with `sed` and `rg`.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_scheduler.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... write_command_docs('.') ... PY`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... validate_startup_policy('config/capabilities.yaml') ... PY`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... validate_capabilities_config(...) ... PY`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+  - Manifest bypass, personal-data default-disabled, and HIGH/CRITICAL approval manifest scans.
+  - Temporary CLI smoke for `schedule create --workflow backup_create` and `schedule run <schedule_id>`.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py tests/test_command_registry.py -q`
+  - `git diff --check`
+- Tests and validation:
+  - Focused scheduler tests: 9 passed in 0.62s.
+  - Full suite: 609 passed in 19.59s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok (77 capabilities).
+  - Command registry validation: status ok, 187 commands, no problems.
+  - Manifest bypass scan: ok.
+  - Personal-data default-disabled check: ok.
+  - HIGH/CRITICAL approval manifest check: ok.
+  - Scheduled backup_create CLI smoke: ok, redacted backup created through brokered `backup.create` and audit evidence found.
+  - Focused docs validation after tracking updates: 19 passed in 0.19s.
+  - Diff whitespace check: passed.
+- Results:
+  - `backup_create` is now a supported Scheduler v1 workflow.
+  - CLI `schedule create --workflow backup_create` is accepted.
+  - Scheduled backup execution calls `backup.create` through `ToolBroker`.
+  - Scheduled backups force `redacted=true` and reject `redacted=false`.
+  - Scheduled backup results explicitly report no personal connector reads, no memory writes, and no CRITICAL actions.
+- Blockers:
+  - None for this scoped Scheduler v1 follow-up.
+  - Background/system-level automation remains deferred pending a decision record and explicit approval.
+- Next recommended action:
+  - Run `SESSION-LOGGING-REPLAY` to build redacted session logging and replay before deeper dogfood automation.
+
 ## Run: 2026-05-22
 
 - Date/time: 2026-05-22, initial repository bootstrap.
@@ -778,6 +1341,7 @@ Do not disable audit logging."
   - Startup policy validation with `validate_startup_policy('config/capabilities.yaml')`.
   - `printf ':help\n:approvals\n:exit\n' | LMSTUDIO_MODEL=smoke-model $PY smart_agent.py --interactive`
   - `git diff --check`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py tests/test_command_registry.py -q`
 - Tests run:
   - Final command: `$PY -m pytest -q`
   - Result: 129 passed in 1.38s.
@@ -3891,6 +4455,78 @@ Do not disable audit logging."
   - Run live `python smart_agent.py browser summarize-url "https://example.com"` when web access is available.
   - Continue with Notes / knowledge capture planning if following the roadmap.
 
+## Run: 2026-05-23 08:03 PDT Notes / Knowledge Capture trusted file marker
+
+- Date/time: 2026-05-23 08:03 PDT, Notes / Knowledge Capture trusted file marker.
+- Prompt id: `KNOWLEDGE-CAPTURE-TRUSTED-FILE`.
+- Next prompt id: `SESSION-LOGGING-REPLAY`.
+- Scope:
+  - Verified existing Knowledge Capture v1 implementation against the current task.
+  - Added explicit `--trusted-user` support for `python smart_agent.py capture from-file <path>`.
+  - Kept file captures `UNTRUSTED_DOCUMENT` by default.
+  - Updated Knowledge Capture tests, README, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, test plan, release checklist, prompt tracking, project state, changelog, and this report.
+- Non-goals confirmed:
+  - No Apple Notes integration.
+  - No private app database scraping.
+  - No personal connector access.
+  - No automatic memory storage.
+  - No policy weakening or ToolBroker bypass.
+- Approval gates checked:
+  - Capture file reads still go through brokered `filesystem.read`.
+  - Capture writes still go through brokered `filesystem.write` under `./workspace/captures`.
+  - URL captures still go through brokered `web.fetch_url`.
+  - Memory promotion still goes through brokered `memory.store`.
+  - Secrets remain rejected before capture writes.
+  - Personal-looking content remains blocked from default memory promotion.
+- Files changed:
+  - `agent/workflows/knowledge_capture.py`
+  - `smart_agent.py`
+  - `tests/test_knowledge_capture.py`
+  - `agent/ui/command_registry.py`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance and tracking docs with `sed` and `rg`.
+  - Inspected git status.
+  - Inspected Knowledge Capture workflow, CLI, tests, and command registry entries.
+  - Regenerated command registry docs with `write_command_docs(".")`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; if [ ! -x "$PY" ]; then PY="python3"; fi; "$PY" -m pytest tests/test_knowledge_capture.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; if [ ! -x "$PY" ]; then PY="python3"; fi; "$PY" -m pytest -q`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; if [ ! -x "$PY" ]; then PY="python3"; fi; "$PY" smart_agent.py commands validate`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; if [ ! -x "$PY" ]; then PY="python3"; fi; "$PY" -m pytest tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py tests/test_command_registry.py -q`
+  - `git diff --check`
+  - Searched for Apple Notes/private app access and Knowledge Capture tool paths with `rg`.
+- Tests run:
+  - Targeted Knowledge Capture tests: 11 passed in 0.83s.
+  - Full suite: 580 passed in 15.56s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok.
+  - Command registry validation: status ok, 170 commands, no problems.
+  - Focused prompt/maturity/command docs validation: 19 passed in 0.18s.
+  - Diff whitespace check: passed.
+- Results:
+  - Knowledge Capture v1 remains implemented and locally release-gated.
+  - File captures now have a precise user-authored trust opt-in without changing safe defaults.
+- Remaining follow-up work:
+  - Run live capture smoke on real workspace notes if desired.
+  - Continue with `SESSION-LOGGING-REPLAY` if following the prompt queue.
+
 ## Run: 2026-05-22 23:55 PDT Notes / Knowledge Capture v1
 
 - Date/time: 2026-05-22 23:55 PDT, Notes / Knowledge Capture v1.
@@ -4616,3 +5252,1416 @@ Do not disable audit logging."
   - Run `NATIVE-SKILLS-FOUNDATION` next as a planning-first prompt.
   - Do not auto-install or auto-enable unvetted skills.
   - Keep skill execution/actions behind `ToolBroker`, `PolicyEngine`, approval gates, and audit logging.
+
+## Run: 2026-05-23 00:25 PDT Native Skills Program Foundation
+
+- Date/time: 2026-05-23 00:25 PDT.
+- Prompt tracking:
+  - prompt_id: `NATIVE-SKILLS-FOUNDATION`.
+  - next_prompt_id: `SKILL-MARKETPLACE-SURVEY`.
+- Scope:
+  - Created the Native Skills Program foundation as SDLC/governance documentation.
+  - Defined native skills as reviewed, local, versioned workflow modules that map to existing `ToolBroker` capabilities and obey `PolicyEngine`, `PermissionManager`, `ApprovalManager`, `AuditLogger`, Memory rules, and `TrustLevel` labels.
+  - Confirmed non-goals: no external skill installation/execution, no external scripts, no new runtime capabilities, no policy weakening, no ToolBroker bypass, and no personal-data tools enabled by default.
+- Files created:
+  - `docs/native_skills/NATIVE_SKILLS_PROGRAM.md`
+  - `docs/native_skills/SKILL_INTAKE_PROCESS.md`
+  - `docs/native_skills/NATIVE_SKILL_CRITERIA.md`
+  - `docs/native_skills/NATIVE_SKILL_CANDIDATES.md`
+  - `docs/native_skills/SKILL_RISK_MODEL.md`
+  - `docs/templates/native_skill_record_template.md`
+  - `prompts/completed/NATIVE-SKILLS-FOUNDATION.md`
+- Files changed:
+  - `CHANGELOG.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/THREAT_MODEL.md`
+  - `tests/test_feature_maturity_docs.py`
+  - `tests/test_prompt_tracking.py`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance/tracking docs with `sed` and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-active NATIVE-SKILLS-FOUNDATION`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-complete NATIVE-SKILLS-FOUNDATION ...`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts next`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts audit`
+- Tests run:
+  - Native skills docs/prompt validation: 14 passed in 0.17s.
+  - Full suite: 530 passed in 10.68s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok (59 capabilities).
+  - Prompt audit: 90 prompt records, 54 completed, 33 queued, 3 blocked, 0 active, next prompt `SKILL-MARKETPLACE-SURVEY`.
+- Results:
+  - Native Skills Program foundation is complete and locally validated.
+  - External skill supply-chain risks and native-skill permission-bypass risks are documented.
+  - Feature maturity remains conservative: Native Skills Program foundation is scaffolded/specified, not live-validated or a mature runtime pattern.
+- Remaining follow-up work:
+  - Run `SKILL-MARKETPLACE-SURVEY` next.
+  - Continue to treat external skill text and skill packages as untrusted until vetted.
+  - Do not install, import, or run external skills in the survey prompt.
+
+## Run: 2026-05-23 00:25 PDT Skill Marketplace Survey
+
+- Date/time: 2026-05-23 00:25 PDT.
+- Prompt tracking:
+  - prompt_id: `SKILL-MARKETPLACE-SURVEY`.
+  - next_prompt_id: `NATIVE-SKILL-VETTER`.
+- Scope:
+  - Researched OpenClaw/ClawHub/LobeHub-style skill category signals as untrusted web research.
+  - Created a local-native candidate matrix and top shortlist.
+  - Did not install, import, run, clone, or execute external skills or scripts.
+  - Did not add runtime capabilities or weaken policy.
+- Files created:
+  - `docs/native_skills/SKILL_MARKETPLACE_SURVEY.md`
+  - `docs/native_skills/NATIVE_CANDIDATE_MATRIX.md`
+  - `docs/native_skills/TOP_NATIVE_SKILL_SHORTLIST.md`
+- Files changed:
+  - `CHANGELOG.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/native_skills/NATIVE_SKILL_CANDIDATES.md`
+  - `tests/test_feature_maturity_docs.py`
+  - `tests/test_prompt_tracking.py`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance, tracking, and native-skills docs with `sed`.
+  - Web search/open for OpenClaw ecosystem/category/security signals and LobeHub document/knowledge-base signals.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-active SKILL-MARKETPLACE-SURVEY`
+  - Focused docs/prompt validation.
+  - Full test suite.
+  - Startup policy validation.
+  - Capability manifest validation.
+  - Prompt next/audit checks.
+- Tests run:
+  - Focused docs/prompt validation: 14 passed in 0.15s.
+  - Full suite: 530 passed in 11.22s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok (59 capabilities).
+  - Prompt audit: 90 prompt records, 55 completed, 32 queued, 3 blocked, 0 active, next prompt `NATIVE-SKILL-VETTER`.
+- Results:
+  - Top first implementation recommendation: `skill-vetter native`.
+  - Top shortlist: skill vetter, skill finder, PDF native, Office documents native, TDD/test workflow, code review workflow, architecture review workflow, source-grounded research, workspace document summarizer, and knowledge capture.
+  - High-risk categories deferred: email send, message send, browser automation, cloud deployment, self-evolution, and unrestricted app automation.
+- Remaining follow-up work:
+  - Run `NATIVE-SKILL-VETTER` next as a local docs/data-only workflow.
+  - Continue to treat all external skill descriptions and marketplace pages as untrusted data.
+
+## Run: 2026-05-23 00:40 PDT Native Skill Vetter v1
+
+- Date/time: 2026-05-23 00:40 PDT.
+- Prompt tracking:
+  - prompt_id: `NATIVE-SKILL-VETTER`.
+  - next_prompt_id: `NATIVE-SKILL-MANIFEST`.
+- Scope:
+  - Built a local static native skill vetter for candidate `SKILL.md` files and skill folders.
+  - Confirmed non-goals: no external script execution, no dependency installation, no permissions granted, no skill enablement, no ToolBroker bypass, and no memory storage of skill content by default.
+- Commands added:
+  - `python smart_agent.py skills vet ./workspace/skills/example/SKILL.md`
+  - `python smart_agent.py skills vet-folder ./workspace/skills/example`
+  - `python smart_agent.py skills score ./workspace/skills/example/SKILL.md`
+- Files created:
+  - `agent/tools/native_skills.py`
+  - `tests/test_native_skills.py`
+  - `prompts/completed/NATIVE-SKILL-VETTER.md`
+- Files changed:
+  - `README.md`
+  - `CHANGELOG.md`
+  - `smart_agent.py`
+  - `agent/core/tool_broker.py`
+  - `agent/tools/registry.py`
+  - `agent/ui/command_registry.py`
+  - `config/capabilities.yaml`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/native_skills/SKILL_INTAKE_PROCESS.md`
+  - `docs/COMPLETION_REPORT.md`
+  - `tests/test_prompt_tracking.py`
+- Commands run:
+  - Read required governance, tracking, native-skills, registry, broker, and CLI files with `sed` and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-active NATIVE-SKILL-VETTER`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_native_skills.py -q`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - Regenerated command registry docs.
+  - Focused native skill/docs/command validation.
+  - Full test suite.
+  - CLI smoke for `skills vet` and `skills score` using a temporary workspace skill file; removed the temporary file afterward.
+  - `git diff --check`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-complete NATIVE-SKILL-VETTER ...`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts next`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts audit`
+- Tests run:
+  - Native skill vetter focused tests: 10 passed in 0.59s.
+  - Focused native skill/docs/command validation: 29 passed in 0.75s.
+  - Full suite: 540 passed in 12.46s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok.
+  - Command registry validation: status ok, 157 commands, no problems.
+  - CLI smoke: `skills vet` and `skills score` both returned allowed brokered results with `content.status=ok`, `risk_level=LOW`, and `safe_to_port=yes`.
+  - Diff whitespace check: passed.
+- Results:
+  - `native_skills.vet_skill_file`, `native_skills.vet_skill_folder`, and `native_skills.score_candidate` are registered LOW-risk, rate-limited, audited capabilities.
+  - Vetter input is workspace-bounded and returned analysis is labeled `UNTRUSTED_DOCUMENT`.
+  - Vetter flags requested tools, scripts, shell commands, package installs, network calls, secret references, filesystem escapes, personal-data access, browser cookie/session access, prompt-injection patterns, approval-bypass language, opaque binaries, and missing license information.
+  - No external skill scripts were executed, no dependencies were installed, no permissions were granted, and no skills were enabled.
+- Remaining follow-up work:
+  - Run `NATIVE-SKILL-MANIFEST` next.
+  - Keep native manifests unable to grant permissions, bypass ToolBroker, install dependencies, or auto-enable unvetted skills.
+
+## Run: 2026-05-23 01:05 PDT Native Skill Manifest and Discovery Loader
+
+- Date/time: 2026-05-23 01:05 PDT.
+- Prompt tracking:
+  - prompt_id: `NATIVE-SKILL-MANIFEST`.
+  - next_prompt_id: `SKILL-FINDER-NATIVE`.
+- Scope:
+  - Built metadata-only native skill manifest discovery and validation.
+  - Confirmed non-goals: no skill script execution, no marketplace installation, no permission grants, no automatic tool access, no ToolBroker bypass, no memory writes, and no workflow runner.
+- Commands added:
+  - `python smart_agent.py skills list`
+  - `python smart_agent.py skills show <skill_id>`
+  - `python smart_agent.py skills validate`
+  - `python smart_agent.py skills doctor`
+- Files created:
+  - `agent/native_skills/__init__.py`
+  - `agent/native_skills/models.py`
+  - `agent/native_skills/manifest.py`
+  - `agent/native_skills/loader.py`
+  - `agent/native_skills/validator.py`
+  - `agent/native_skills/registry.py`
+  - `native_skills/native_skill_vetter.yaml`
+  - `tests/test_native_skill_manifests.py`
+- Files changed:
+  - `README.md`
+  - `CHANGELOG.md`
+  - `smart_agent.py`
+  - `agent/ui/command_registry.py`
+  - `agent/ui/doctor.py`
+  - `agent/ui/dashboard.py`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/native_skills/NATIVE_SKILLS_PROGRAM.md`
+  - `docs/COMPLETION_REPORT.md`
+  - `tests/test_feature_maturity_docs.py`
+  - `tests/test_prompt_tracking.py`
+- Commands run:
+  - Read required governance, tracking, native-skills, CLI, doctor, dashboard, and registry files with `sed` and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-active NATIVE-SKILL-MANIFEST`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_native_skill_manifests.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py skills validate`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py skills show native_skill_vetter`
+  - Regenerated command registry docs.
+  - Focused native manifest/doctor/dashboard/command validation.
+- Tests run:
+  - Native skill manifest focused tests: 6 passed in 0.15s.
+  - Focused native manifest/doctor/dashboard/command validation: 22 passed in 0.38s.
+  - CLI smoke: `skills validate` returned `status=ok`; `skills show native_skill_vetter` returned `status=ok`.
+  - Full suite: 546 passed in 12.16s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok.
+  - Command registry validation: status ok, 160 commands, no problems.
+  - Skills doctor: status ok, one manifest validated.
+- Results:
+  - Native skill manifests are loaded from `native_skills/` and `docs/native_skills/manifests/`.
+  - The first built-in manifest is `native_skill_vetter`.
+  - Validation rejects unknown required or allowed capabilities, missing risk/trust/memory/audit fields, executable manifest fields, ToolBroker-bypass language, enabled personal-data manifests, and CRITICAL manifests without per-action approval.
+  - Native skill registry status is included in runtime doctor and dashboard metadata.
+- Remaining follow-up work:
+  - Run `SKILL-FINDER-NATIVE` next after validation passes.
+
+## Run: 2026-05-23 01:48 PDT Native Skill Finder v1
+
+- Date/time: 2026-05-23 01:48 PDT.
+- Prompt tracking:
+  - prompt_id: `SKILL-FINDER-NATIVE`.
+  - next_prompt_id: `PDF-WORKSPACE-SKILL`.
+- Scope:
+  - Built local-only native skill finder v1.
+  - Confirmed non-goals: no external marketplace browsing, no skill installation, no external code execution, no permission grants, no personal-data connectors, no memory writes, and no ToolBroker bypass.
+- Commands added:
+  - `python smart_agent.py skills find "<query>"`
+- Files created:
+  - `agent/native_skills/finder.py`
+  - `native_skills/native_skill_finder.yaml`
+  - `tests/test_native_skill_finder.py`
+- Files changed:
+  - `README.md`
+  - `CHANGELOG.md`
+  - `smart_agent.py`
+  - `agent/core/tool_broker.py`
+  - `agent/tools/native_skills.py`
+  - `agent/ui/command_registry.py`
+  - `config/capabilities.yaml`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/native_skills/NATIVE_SKILLS_PROGRAM.md`
+  - `docs/native_skills/NATIVE_SKILL_CANDIDATES.md`
+  - `docs/COMPLETION_REPORT.md`
+  - `tests/test_feature_maturity_docs.py`
+  - `tests/test_prompt_tracking.py`
+- Commands run:
+  - Read required governance/tracking/native skill docs with `sed` and `rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-active SKILL-FINDER-NATIVE`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py skills find "I need to work with PDFs"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py skills find "Can you help with meeting follow-up?"`
+  - Regenerated command registry docs with `write_command_docs('.')`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py skills validate`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_native_skill_finder.py tests/test_native_skill_manifests.py tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py tests/test_command_registry.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `git diff --check`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-complete SKILL-FINDER-NATIVE --test-result "551 passed; startup policy ok; capability manifest ok; command registry ok" --docs-updated yes`
+- Tests run:
+  - Native skill finder focused tests: 5 passed in 0.15s.
+  - Focused native skill/docs/prompt/command validation: 30 passed in 0.29s.
+  - Full suite: 551 passed in 12.26s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok.
+  - Command registry validation: status ok, 161 commands, no problems.
+  - Diff whitespace check: passed.
+- Results:
+  - Added `native_skills.find_skill` as a LOW-risk, enabled, rate-limited, audited capability.
+  - Added `skills find` as a brokered CLI command.
+  - Finder searches local native skill manifests, native candidate docs, feature registry, and feature maturity tracker.
+  - Finder returns maturity level, readiness score, implementation status, safe-to-use-now status, required approvals, required capabilities, and next work needed.
+  - Finder suggests a candidate creation path when no match exists.
+  - Finder writes no memory and does not browse marketplaces, install skills, execute external code, or grant permissions.
+- Remaining follow-up work:
+  - Run `PDF-WORKSPACE-SKILL` next.
+  - Keep PDF handling workspace-bounded and treat extracted document content as `UNTRUSTED_DOCUMENT`.
+
+## Run: 2026-05-23 02:16 PDT PDF Workspace Native Skill v1
+
+- Date/time: 2026-05-23 02:16 PDT.
+- Prompt tracking:
+  - prompt_id: `PDF-WORKSPACE-SKILL`.
+  - next_prompt_id: `SESSION-LOGGING-REPLAY`.
+- Scope:
+  - Implemented PDF workspace native skill v1.
+  - Confirmed non-goals: no file access outside approved roots, no OCR by default, no external binaries, no split/merge/write operations in v1, no memory storage, no personal-data connectors, and no ToolBroker bypass.
+- Commands added:
+  - `python smart_agent.py pdf info <path>`
+  - `python smart_agent.py pdf extract-text <path>`
+  - `python smart_agent.py pdf summarize <path>`
+  - `python smart_agent.py pdf extract-tables <path>`
+- Files created:
+  - `agent/tools/documents/__init__.py`
+  - `agent/tools/documents/pdf.py`
+  - `native_skills/pdf_workspace.yaml`
+  - `docs/native_skills/pdf.md`
+  - `tests/test_pdf_documents.py`
+- Files changed:
+  - `README.md`
+  - `CHANGELOG.md`
+  - `smart_agent.py`
+  - `agent/core/tool_broker.py`
+  - `agent/tools/registry.py`
+  - `agent/ui/command_registry.py`
+  - `config/capabilities.yaml`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/COMPLETION_REPORT.md`
+  - `tests/test_feature_maturity_docs.py`
+  - `tests/test_prompt_tracking.py`
+- Commands run:
+  - Checked PDF parser dependencies: `pypdf` and `reportlab` are available; `PyPDF2`, `pdfplumber`, and `fitz` are not available.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-active PDF-WORKSPACE-SKILL`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_pdf_documents.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py skills validate`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_pdf_documents.py tests/test_feature_maturity_docs.py tests/test_command_registry.py tests/test_prompt_tracking.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `git diff --check`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts mark-complete PDF-WORKSPACE-SKILL --test-result "focused PDF tests 10 passed; full suite 561 passed; startup policy ok; capability manifest ok; command registry ok" --docs-updated yes`
+- Tests run:
+  - Focused PDF tests: 10 passed in 0.69s.
+  - Focused PDF/docs/command/prompt validation: 29 passed in 0.75s.
+  - Full suite: 561 passed in 12.77s.
+  - Native skill validation: status ok, 3 manifests valid.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok.
+  - Command registry validation: status ok, 164 commands, no problems.
+  - Diff whitespace check: passed.
+- Results:
+  - Added brokered `documents.pdf.read`, `documents.pdf.extract_text`, `documents.pdf.extract_tables`, and `documents.pdf.summarize` capabilities.
+  - PDF CLI commands execute through `ToolBroker`, `PolicyEngine`, and `AuditLogger`.
+  - PDF paths are resolved through approved workspace roots; traversal, denied paths, oversized PDFs, encrypted PDFs, malformed PDFs, and unsupported non-PDF files are handled with structured errors.
+  - PDF content is labeled `UNTRUSTED_DOCUMENT`.
+  - Read-only v1 uses `pypdf` and does not execute external binaries.
+  - OCR, split/merge, generated PDF writes, and destructive operations are deferred.
+  - No memory storage is performed by default.
+- Remaining follow-up work:
+  - Run `SESSION-LOGGING-REPLAY` next.
+  - Consider OCR only behind an explicit approval/config gate and documented dependency review.
+  - Consider PDF split/merge/output writes only after workspace-write policy and Action Center previews are defined for document outputs.
+
+## Run: 2026-05-23 03:53 PDT Release-Gate Sync Before Next Feature Set
+
+- Date/time: 2026-05-23 03:53 PDT.
+- Scope confirmed:
+  - Documentation and validation-only release-gate sync.
+  - Confirmed current project state, native-skills queue, next product feature track, and overnight self-improvement track.
+- Non-goals confirmed:
+  - No new runtime features.
+  - No policy weakening.
+  - No ToolBroker, PolicyEngine, ApprovalManager, or AuditLogger bypass.
+  - No personal-data connectors enabled by default.
+  - No memory storage behavior changes.
+  - No email/text sends, private macOS database access, or background automation.
+- Files changed:
+  - `CHANGELOG.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/COMPLETION_REPORT.md`
+  - `docs/RELEASE_CHECKLIST.md`
+- Commands run:
+  - `git status --short`
+  - `git branch --show-current`
+  - `git log --oneline -5`
+  - Read required governance and tracking docs with `sed`/`rg`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - Manifest safety audit over `config/capabilities.yaml`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py skills validate`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts audit`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py prompts next`
+- Tests and validation:
+  - Full suite: 561 passed in 13.51s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok.
+  - Command registry validation: status ok, 164 commands, no problems.
+  - Native skill validation: status ok, 3 manifests valid.
+  - Prompt audit: 90 prompt records, 59 complete, 28 queued, 3 blocked, next `SESSION-LOGGING-REPLAY`.
+  - Manifest safety audit: 67 capabilities checked; no personal-data capabilities enabled by default; HIGH capabilities require approval; CRITICAL capabilities require per-action approval and no approval reuse.
+- Results:
+  - ToolBroker-only execution remains enforced by the central registry/broker path and validated by the full suite.
+  - Unknown tools/capabilities remain denied through `ToolBroker` and startup/capability validation.
+  - Personal-data tools remain disabled by default.
+  - HIGH actions remain approval-required.
+  - CRITICAL actions remain explicit per-action approval only with no approval reuse.
+  - `docs/FEATURE_ROADMAP.md` now explicitly includes Native Skills, Next Product Feature, and Overnight Self-Improvement tracks.
+  - `docs/PROJECT_STATE.md` now records the requested next feature set and current release-gate status.
+- Blockers:
+  - None for documentation/validation sync.
+  - Live LM Studio/web/weather/personal connector validation remains opt-in and environment-dependent.
+- Next recommended task:
+  - Run `SESSION-LOGGING-REPLAY` from the prompt queue, or if the user wants to start the product feature track immediately, begin `Golden eval suite + quality scorecards` as a separate mini-SDLC task.
+## Run: 2026-05-23 05:36 PDT Golden Eval Suite and Quality Scorecards
+
+- Scope confirmed:
+  - Build a validation-only Golden Eval Suite for chat quality guardrails, router behavior, policy behavior, ToolBroker/audit behavior, prompt-injection handling, workflow dry-runs, and regression reporting.
+  - Store eval cases as data files under `eval_cases/`.
+  - Add scorecard reporting and new eval category commands.
+- Non-goals confirmed:
+  - No new connectors.
+  - No personal-data access.
+  - No send/write actions.
+  - No policy weakening.
+  - No ToolBroker, PolicyEngine, ApprovalManager, or AuditLogger bypass.
+- Requirements implemented:
+  - Added data-backed cases for routing, policy, ToolBroker, prompt injection, and workflow dry-run checks.
+  - Added `eval run --routing`, `--policy`, `--tools`, `--workflows`, `--prompt-injection`, and `--lmstudio-live`.
+  - Kept `eval run --safe` as the safe aggregate path with personal-data evals skipped by default.
+  - Added category scorecards and `quality_score` to eval reports.
+  - Added per-run JSON report output under `reports/evals/`; generated JSON reports are ignored by git while `.gitkeep` preserves the directory.
+  - Updated command registry/test matrix to 170 commands.
+- Files changed:
+  - `agent/ui/evals.py`
+  - `agent/ui/cli_commands.py`
+  - `agent/ui/command_registry.py`
+  - `tests/test_eval_harness.py`
+  - `eval_cases/routing.json`
+  - `eval_cases/policy.json`
+  - `eval_cases/tools.json`
+  - `eval_cases/prompt_injection.json`
+  - `eval_cases/workflows.json`
+  - `reports/evals/.gitkeep`
+  - `reports/evals/.gitignore`
+  - `docs/EVAL_REPORT.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+- Commands run:
+  - `rg -n "eval run|eval list|EVAL|Eval|eval_report|run_eval|evals|argparse.*eval|subparsers.*eval" smart_agent.py agent tests docs README.md`
+  - `rg --files | rg "eval|scorecard|golden|EVAL"`
+  - `git status --short && git branch --show-current`
+  - `sed` reads of existing eval, router, CLI, registry, and tracking docs.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_eval_harness.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py eval run --routing --policy --tools --workflows --prompt-injection`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_eval_harness.py tests/test_command_registry.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - Startup policy validation via `validate_startup_policy("config/capabilities.yaml")`.
+  - Capability manifest validation via `validate_capabilities_config(load_capabilities_config("config/capabilities.yaml"))`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py skills validate`
+  - `git diff --check`
+- Tests run:
+  - Golden Eval focused tests: 12 passed in 0.84s.
+  - Golden Eval + command registry focused tests: 17 passed in 0.85s.
+  - Full suite: 565 passed in 12.90s.
+  - Post-doc focused docs/command validation: 14 passed in 0.12s.
+- Validation results:
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 170 commands, no problems.
+  - Native skill manifests: ok, 3 valid manifests.
+  - `git diff --check`: passed.
+- Safety result:
+  - Tool evals execute through `ToolBroker`.
+  - Personal-data evals are skipped by default.
+  - Live LM Studio/provider evals remain opt-in.
+  - No email/text sends or calendar/contact writes were added.
+  - No personal-data tools were enabled by default.
+- Feature maturity:
+  - Eval harness renamed/tracked as Golden Eval Suite and quality scorecards.
+  - Maturity remains conservative at `4 Tested`; readiness score raised from 72 to 78.
+  - Not marked Live-Validated because live LM Studio/provider evals were not run.
+- Blockers:
+  - None for local tested v1.
+  - Live validation still requires explicit local LM Studio/provider configuration and opt-in commands.
+- Next recommended task:
+  - `SESSION-LOGGING-REPLAY` remains the next prompt-queue item.
+  - Product-track alternative: `Privacy Center / data inventory v1`.
+
+## Run: 2026-05-23 08:16 PDT Privacy Center / Data Inventory v1
+
+- Prompt id: `PRIVACY-CENTER-V1`.
+- Next prompt id: `SESSION-LOGGING-REPLAY`.
+- Scope confirmed:
+  - Build a metadata-only Privacy Center and data inventory CLI.
+  - Show connectors, memory/capture counts, audit metadata, cache metadata, pending personal-data actions, approvals, permissions, redacted export, and deletion options.
+  - Keep every privacy operation audited and avoid live personal connector reads.
+- Non-goals confirmed:
+  - No new personal-data connector reads.
+  - No Apple Notes, browser history, private app database, email, message, contact, calendar, or task-provider access.
+  - No unconfirmed memory deletion.
+  - No policy weakening, approval bypass, audit bypass, or personal-data enablement by default.
+- Files changed:
+  - `agent/ui/privacy_center.py`
+  - `smart_agent.py`
+  - `agent/ui/command_registry.py`
+  - `tests/test_privacy_center.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance/tracking docs with `sed`.
+  - Inspected privacy-relevant runtime, connector registry, command registry, capability manifest, project state, and tests with `rg` and `sed`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_privacy_center.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_privacy_center.py tests/test_command_registry.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py tests/test_command_registry.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py privacy status`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py privacy delete-memory || true`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `git diff --check`
+- Tests run:
+  - Focused Privacy Center tests: 7 passed in 1.07s.
+  - Focused Privacy Center plus command registry tests: 12 passed in 0.92s.
+  - Focused prompt/maturity/command docs validation: 19 passed in 0.19s.
+  - Full suite: 587 passed in 16.95s.
+- Validation results:
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 176 commands, no problems.
+  - `git diff --check`: passed.
+- Safety result:
+  - Privacy status/inventory/export are metadata-only and do not read personal connector data.
+  - Export redacts secrets and returns memory/capture previews, not full raw data.
+  - Audit summary reports counts and metadata only, with raw args omitted.
+  - Memory deletion requires explicit `--confirm DELETE-MEMORY` and confirmed deletion routes through `ToolBroker.execute()` for `memory.clear`.
+  - The real repo smoke only checked the confirmation-required denial path; confirmed deletion ran only in isolated tests.
+  - Personal connector reads remain disabled by default and personal-data capabilities require approval.
+- Feature maturity:
+  - Privacy Center / Data Inventory v1 added at `4 Tested`, readiness score 74.
+  - Not marked live-validated because no external/live provider or real personal-data environment was exercised.
+- Blockers:
+  - None for local tested Privacy Center v1.
+  - Future work at the time was Backup / Restore / Migration v1 and live privacy export review before raising maturity; Backup / Restore / Migration v1 is now complete for local tested scope.
+- Next recommended task:
+  - `SESSION-LOGGING-REPLAY` remains the next prompt-queue item.
+  - Product-track alternative: `Backup / restore / migration v1`.
+
+## Run: 2026-05-23 Browser Clipping Capability Compatibility
+
+- Date/time: 2026-05-23, Browser selected URL / web clipping capability compatibility pass.
+- Prompt id: `BROWSER-CLIPPING-COMPAT`.
+- Scope:
+  - Confirmed Browser v1 remains explicit-URL only.
+  - Added canonical capability tracking for `browser.read_url`, `browser.summarize_url`, and disabled `browser.selected_tab`.
+  - Retained legacy selected-URL aliases for compatibility.
+  - Updated selected-tab stub auditing to use `browser.selected_tab`.
+  - Added manifest regression coverage for the canonical browser capability names.
+- Non-goals:
+  - No browser history access.
+  - No cookie/session/profile/password access.
+  - No form submission.
+  - No browser automation.
+  - No native selected-tab reader.
+  - No personal-data defaults, memory writes, send/write actions, or policy weakening.
+- Files changed:
+  - `agent/workflows/browser_clipping.py`
+  - `agent/tools/personal/read_only.py`
+  - `config/capabilities.yaml`
+  - `tests/test_browser_clipping.py`
+  - `tests/test_connectors.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/decisions/browser_selected_tab_clipping.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance/tracking docs with `sed` and `rg`.
+  - Inspected browser workflow, personal-tool registry, capability manifest, connector status, CLI dispatch, tests, and policy validation with `sed` and `rg`.
+  - Focused validation: browser clipping, connector status, and capability manifest tests.
+  - Full suite, startup policy validation, capability manifest validation, command registry validation, prompt/docs validation, direct browser-access scans, and diff whitespace check.
+- Tests run:
+  - Focused browser/connector/manifest tests: 20 passed in 1.55s.
+  - Full suite: 578 passed in 15.94s.
+  - Focused prompt/maturity/command docs validation: 19 passed in 0.20s.
+- Validation results:
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 170 commands, no problems.
+  - Direct browser-access scan: expected references only; no history/cookie/session/password/profile reader was added.
+  - Selected-tab CLI smoke: returned clear unavailable message and audited `browser.selected_tab` as disabled.
+  - `git diff --check`: passed.
+- Safety result:
+  - Explicit URL read/summarize still fetch through brokered `web.fetch_url`.
+  - URL clipping still writes through brokered `filesystem.write` under `./workspace`.
+  - Fetched content remains `UNTRUSTED_WEB`; saved clips remain `UNTRUSTED_DOCUMENT`.
+  - Selected-tab remains disabled by default, approval-gated, and unavailable as a native connector.
+  - No browser profile data, cookies, sessions, passwords, form data, history, or private browser databases are accessed.
+- Feature maturity:
+  - Browser selected URL and clipping remains conservatively `4 Tested`.
+  - Readiness score raised to 74 because canonical capability naming and alias compatibility are now covered.
+- Blockers:
+  - None for local compatibility hardening.
+  - Live webpage smoke remains pending.
+- Next recommended task:
+  - `SESSION-LOGGING-REPLAY` remains the next prompt-queue item.
+
+## Run: 2026-05-23 07:50 PDT Messages Safe Handoff v1 Action Center Verification Hardening
+
+- Scope confirmed:
+  - Harden Messages safe handoff v1 for reviewed workspace-save and clipboard-copy draft handoffs.
+  - Keep save/copy execution routed through ToolBroker, PolicyEngine, ApprovalManager, Action Center verification, and AuditLogger.
+  - Add regressions for direct broker denial and approved-preview argument matching.
+- Non-goals confirmed:
+  - No automatic text/iMessage/SMS sending.
+  - No live macOS Messages connector.
+  - No Messages database scraping or broad Full Disk Access dependency.
+  - No AppleScript or Accessibility send automation.
+  - No message-body memory storage by default.
+- Requirements implemented:
+  - `messages.save_draft` now requires a verified approved Action Center `source_action_id` at the low-level handoff tool handler.
+  - `messages.copy_draft` now requires a verified approved Action Center `source_action_id` at the low-level handoff tool handler.
+  - Message save/copy submitted args must match the approved Action Center preview before the workspace write or clipboard copy path is reached.
+  - The send-decision record remains the safety boundary: automatic message sending is deferred.
+- Files changed:
+  - `agent/tools/personal/read_only.py`
+  - `tests/test_messages_safe_handoff.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/decisions/messages_send_path.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance/tracking docs with `sed`.
+  - Inspected messages handoff workflow, personal message tools, capability manifest, command docs, decision record, and tests with `rg` and `sed`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; "$PY" -m pytest tests/test_messages_safe_handoff.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; "$PY" -m pytest tests/test_messages_safe_handoff.py tests/test_personal_modules.py::test_no_automatic_messages_send_tool_exists_or_is_disabled tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; "$PY" -m pytest tests/test_messages_safe_handoff.py tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; "$PY" -m pytest tests/test_command_registry.py tests/test_release_gate.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; "$PY" -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; "$PY" -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; "$PY" -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; "$PY" smart_agent.py commands validate`
+  - `git diff --check`
+  - `rg -n "messages\\.send\\(|messages_send|~/Library/Messages|Full Disk Access|Accessibility.*send|AppleScript.*send|pbcopy|messages\\.copy_draft|messages\\.save_draft" agent smart_agent.py tests docs/decisions/messages_send_path.md README.md -g '*.py' -g '*.md'`
+  - `rg -n "default_enabled: true" -C 2 config/capabilities.yaml | rg -C 3 "messages|email|contacts|calendar|tasks"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; "$PY" -m pytest tests/test_feature_maturity_docs.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; "$PY" -m pytest tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py -q`
+- Tests run:
+  - Focused Messages safe handoff tests: 12 passed in 0.52s.
+  - One stale targeted node id command failed before running tests: `tests/test_personal_modules.py::test_no_automatic_messages_send_tool_exists_or_is_disabled` was not found.
+  - Focused Messages plus docs/prompt validation: 26 passed in 0.60s.
+  - Focused command registry/release-gate tests: 12 passed in 0.20s.
+  - Full suite: 577 passed in 15.19s.
+  - Docs validation: 9 passed in 0.01s.
+  - Final docs/prompt validation after last tracking edits: 14 passed in 0.18s.
+- Validation results:
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 170 commands, no problems.
+  - `git diff --check`: passed.
+  - Personal default-enabled scan for messages/email/contacts/calendar/tasks returned no enabled personal-data capabilities.
+  - Message send/private database grep found only expected blocked/stubbed references, denylist docs/tests, `messages.send_approved` disabled stub code, and explicit clipboard handoff code; no `messages.send` execution path was added.
+- Safety result:
+  - `messages.save_draft` and `messages.copy_draft` remain disabled by default and HIGH approval-required.
+  - Direct broker execution without Action Center verification is now denied even if a separate approval manager approves the capability.
+  - Mutated submitted args are rejected when they do not match the approved reviewed draft.
+  - No message send tool was added or enabled.
+- Feature maturity:
+  - Messages safe handoff remains conservatively at `4 Tested`.
+  - Readiness score raised from 72 to 75 because direct broker bypass denial and approved-preview arg matching are now covered.
+- Blockers:
+  - None for local tested v1 hardening.
+  - Automatic Messages/iMessage/SMS sending remains deferred pending a separate decision record, provider design, CRITICAL per-action approval model, and explicit user approval.
+- Next recommended task:
+  - `SESSION-LOGGING-REPLAY` remains the next prompt-queue item.
+  - Product-track alternative: `Privacy Center / data inventory v1`.
+
+## Run: 2026-05-23 08:04 PDT Email Approved Send v1 Action Center Verification Hardening
+
+- Scope confirmed:
+  - Implement and harden Email approved send v1 for reviewed draft send actions.
+  - Keep every send reviewed through Action Center and executed only through ToolBroker.
+  - Add regressions for direct broker denial and approved-reviewed-draft argument matching.
+- Non-goals confirmed:
+  - No live email provider.
+  - No background sends.
+  - No bulk sends.
+  - No attachments in v1.
+  - No credentials, Keychain reads, or private Mail database access.
+  - No personal-data tools enabled by default.
+  - No memory storage of email body by default.
+- Requirements implemented:
+  - `email.send_approved` now requires a verified approved Action Center `action_id` at the low-level send tool handler.
+  - Email send submitted args must match the approved reviewed draft before mock/no-provider execution can be reached.
+  - `execute_email_send_action()` injects the approved `action_id` only after the Action Center record is approved and before brokered execution.
+  - Existing draft preview behavior still includes from account/provider, recipients, subject, full body, attachments, thread/reply context, and rollback impossibility.
+- Files changed:
+  - `agent/tools/personal/write_actions.py`
+  - `tests/test_email_approved_send.py`
+  - `agent/ui/command_registry.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance/tracking docs with `sed`.
+  - Inspected email send workflows, write action tools, CLI dispatch, command registry, feature tracking, and tests with `rg` and `sed`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_email_approved_send.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_email_approved_send.py tests/test_approved_write_actions.py tests/test_release_gate.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY - <<'PY' ... write_command_docs('.') ... PY`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_email_approved_send.py tests/test_command_registry.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - `git diff --check`
+  - `rg -n "email_send_approved\\(|EMAIL_SEND_ACTION|execute_email_send_action\\(|email.send_approved" agent smart_agent.py tests | sed -n '1,240p'`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py tests/test_command_registry.py -q`
+  - Final rerun after docs updates: `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+- Tests run:
+  - Focused email tests: 12 passed in 0.66s.
+  - Focused email/write/release-gate tests: 26 passed in 0.73s.
+  - Focused email plus command registry tests: 17 passed in 0.70s.
+  - Focused tracking/maturity/command docs validation: 19 passed in 0.19s.
+  - Full suite after docs updates: 574 passed in 14.93s.
+- Validation results:
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 170 commands, no problems.
+  - `git diff --check`: passed.
+  - Email send direct-call scan found send execution routed through `execute_email_send_action()` and low-level handler enforcement in `agent/tools/personal/write_actions.py`.
+- Safety result:
+  - `email.send_approved` remains disabled by default.
+  - Email send remains CRITICAL per-action.
+  - Action Center remains the required review surface.
+  - Direct broker execution without Action Center verification is now denied even if a separate approval manager approves the capability.
+  - Mutated submitted args are rejected when they do not match the approved reviewed draft.
+  - No live external email provider was added.
+- Feature maturity:
+  - Email approved send remains conservatively at `4 Tested`.
+  - Readiness score raised from 72 to 75 because direct broker bypass denial and approved-reviewed-draft arg matching are now covered.
+  - Not marked live-validated because no real provider send was exercised.
+- Blockers:
+  - None for local tested v1 hardening.
+  - Real email provider/OAuth/keychain strategy remains deferred and requires a separate decision, implementation, and approval-gated live validation.
+- Next recommended task:
+  - `SESSION-LOGGING-REPLAY` remains the next prompt-queue item.
+  - Product-track alternative: `Privacy Center / data inventory v1`.
+
+## Run: 2026-05-23 07:32 PDT Calendar Approved Writes v1 Action Center Verification
+
+- Scope confirmed:
+  - Implement and harden approved calendar create/update/delete actions after Action Center exists.
+  - Preserve draft-first workflow and require approved Action Center records for execution.
+  - Keep all calendar write execution brokered, audited, and approval-gated.
+- Non-goals confirmed:
+  - No live native Calendar.app/EventKit write provider.
+  - No private calendar database access.
+  - No default-enabled calendar write capabilities.
+  - No direct chat writes.
+  - No automatic invites, recurring events, full calendar export, or memory storage.
+- Requirements implemented:
+  - Hardened `calendar.create_event`, `calendar.update_event`, and `calendar.delete_event` handlers so direct broker calls are rejected unless Action Center verifies the matching approved action id.
+  - Updated `execute_calendar_action()` to inject the approved `action_id` into the brokered write call only after Action Center approval is present.
+  - Preserved one-shot approval consumption after successful brokered execution.
+  - Preserved no-external-change write connector stub behavior until a future native provider is explicitly designed and release-gated.
+  - Added focused regression coverage for direct broker write denial without Action Center verification.
+- Files changed:
+  - `agent/tools/personal/write_actions.py`
+  - `agent/workflows/calendar_writes.py`
+  - `tests/test_calendar_approved_writes.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance/tracking docs with `sed`.
+  - Inspected calendar write tools, Action Center, calendar write workflow, CLI, capability manifest, command registry, and tests with `rg` and `sed`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_calendar_approved_writes.py tests/test_approved_write_actions.py tests/test_release_gate.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - `git diff --check`
+- Tests run:
+  - Focused calendar/write/release-gate tests: 25 passed in 0.75s.
+  - Full suite: 571 passed in 14.99s.
+- Validation results:
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 170 commands, no problems.
+  - `git diff --check`: passed.
+- Safety result:
+  - Calendar write capabilities remain disabled by default.
+  - Calendar writes remain CRITICAL per-action.
+  - Action Center remains the required review surface.
+  - Direct broker execution without Action Center verification is now denied even if a separate approval manager approves the capability.
+  - No live external calendar write provider was added.
+- Feature maturity:
+  - Calendar approved writes remains conservatively at `4 Tested`.
+  - Readiness score raised from 72 to 74 because direct broker bypass denial is now covered.
+  - Not marked live-validated because no live Calendar.app write provider was exercised.
+- Blockers:
+  - None for local tested v1 hardening.
+  - Native Calendar.app/EventKit write provider remains deferred and requires a separate decision, implementation, and approval-gated live validation.
+- Next recommended task:
+  - `SESSION-LOGGING-REPLAY` remains the next prompt-queue item.
+  - Product-track alternative: `Privacy Center / data inventory v1`.
+
+## Run: 2026-05-23 07:26 PDT Tasks / Reminders Connector v1 Brokered Draft-Create
+
+- Scope confirmed:
+  - Build and harden Tasks / Reminders connector v1 behavior for listing, drafting, creating, updating, completing, and deleting tasks with correct approval gates.
+  - Ensure `tasks draft-create` creates a reviewed Action Center item instead of a task-provider write.
+  - Keep task-provider access disabled by default.
+- Non-goals confirmed:
+  - No native Reminders integration.
+  - No private app database access.
+  - No personal-data tools enabled by default.
+  - No immediate task creation/update/complete/delete from chat or CLI without Action Center approval.
+  - No memory storage of task contents by default.
+- Requirements implemented:
+  - Added brokered `tasks.draft_create` capability.
+  - Added `tasks.draft_create` schema and ToolBroker registry wiring.
+  - Updated `python smart_agent.py tasks draft-create "task"` to execute through ToolBroker before creating a pending Action Center `tasks.create` record.
+  - Kept `tasks.list`, `tasks.create`, `tasks.update`, `tasks.complete`, and `tasks.delete` disabled by default and approval-gated.
+  - Added audit summaries for brokered task draft creation and Action Center lifecycle creation.
+  - Confirmed draft-create does not access a task connector, does not create a real task/reminder, and does not write memory.
+- Files changed:
+  - `agent/tools/personal/tasks.py`
+  - `agent/tools/personal/read_only.py`
+  - `agent/tools/registry.py`
+  - `smart_agent.py`
+  - `config/capabilities.yaml`
+  - `tests/test_tasks_connector.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/decisions/2026-05-22_reminders_tasks_connector.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance/tracking docs with `sed`.
+  - Inspected Tasks connector, Action Center, ToolBroker, CLI, capability manifest, command registry, and tests with `rg` and `sed`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_tasks_connector.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_tasks_connector.py tests/test_command_registry.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY - <<'PY' ... write_command_docs('.') ... PY`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - `git diff --check`
+- Tests run:
+  - Focused Tasks connector tests: 11 passed in 0.93s.
+  - Focused Tasks connector plus Command Registry tests: 16 passed in 0.91s.
+  - Full suite: 570 passed in 14.74s.
+- Validation results:
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 170 commands, no problems.
+  - `git diff --check`: passed.
+- Safety result:
+  - `tasks.draft_create` routes through ToolBroker and PolicyEngine.
+  - Action Center records the pending `tasks.create` proposal; it does not execute task writes.
+  - Provider-backed task capabilities remain disabled by default and approval-gated.
+  - No personal-data tools were enabled by default.
+  - No memory writes were added.
+  - No send/write connector was added outside the requested pending-action path.
+- Feature maturity:
+  - Reminders/Tasks remains conservatively at `4 Tested`.
+  - Readiness score raised from 72 to 75 because brokered draft-create, manifest coverage, command registry coverage, and regression tests are now present.
+  - Not marked live-validated because no real task provider integration was exercised.
+- Blockers:
+  - None for local tested v1.
+  - Native Reminders/EventKit or another real task provider remains a future decision and approval-gated implementation.
+- Next recommended task:
+  - `SESSION-LOGGING-REPLAY` remains the next prompt-queue item.
+  - Product-track alternative: `Privacy Center / data inventory v1`.
+
+## Run: 2026-05-23 07:01 PDT Unified Action Center v1 Hardening
+
+- Scope confirmed:
+  - Build/verify Unified Action Center v1 as the single review surface for pending risky actions, approvals, drafts, dry-runs, and future write/send operations.
+  - Preserve Action Center as review-only; do not execute actions directly.
+  - Add regression coverage for sensitive export/audit minimization and required action metadata.
+- Non-goals confirmed:
+  - No new personal-data connectors.
+  - No new send/write execution paths.
+  - No policy weakening.
+  - No ToolBroker, PolicyEngine, ApprovalManager, or AuditLogger bypass.
+  - No personal-data tools enabled by default.
+- Requirements implemented:
+  - Added required `tool` alias in serialized action records while preserving `tool_name`.
+  - Added minimized `to_export_dict()` and `to_audit_dict()` action views.
+  - Redacted sensitive body/draft/content/notes fields from `actions export` and lifecycle audit records.
+  - Redacted sensitive preview summaries from exported/audited email/message/personal-memory action records.
+  - Verified Action Center still never executes actions directly, including after approval.
+  - Verified CRITICAL approvals remain one-shot and edits invalidate prior approvals.
+- Files changed:
+  - `agent/safety/actions.py`
+  - `tests/test_action_center.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance/tracking docs with `sed`.
+  - Inspected Action Center, approval, preview, redaction, CLI, README, and tests with `sed` and `rg`.
+  - `git diff -- agent/safety/actions.py tests/test_action_center.py`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_action_center.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - `git diff --check`
+- Tests run:
+  - Focused Action Center tests: 14 passed in 0.79s.
+  - Full suite: 569 passed in 14.04s.
+- Validation results:
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 170 commands, no problems.
+  - `git diff --check`: passed.
+- Safety result:
+  - Action Center remains review-only and does not execute tools.
+  - Any future execution must still go through ToolBroker, PolicyEngine, ApprovalManager, and AuditLogger.
+  - HIGH and CRITICAL approval behavior remains unchanged.
+  - No personal-data tools were enabled by default.
+  - No send/write connector was added.
+- Feature maturity:
+  - Unified Action Center remains conservatively at `4 Tested`.
+  - Readiness score raised from 73 to 76 because export/audit minimization and no-direct-execution regressions are now covered.
+- Blockers:
+  - None for local tested Action Center v1 hardening.
+  - Live approved write/send execution remains intentionally deferred and requires separate connector-specific release gates.
+- Next recommended task:
+  - `SESSION-LOGGING-REPLAY` remains the next prompt-queue item.
+  - Product-track alternative: `Privacy Center / data inventory v1`.
+
+## Run: 2026-05-23 07:39 PDT Contacts Approved Edits v1 Action Center Verification Hardening
+
+- Scope confirmed:
+  - Implement and harden Contacts approved edits v1 for selected contact update/create stubs.
+  - Keep every edit reviewed through Action Center and executed only through ToolBroker.
+  - Add regressions for direct broker denial and approved-preview argument matching.
+- Non-goals confirmed:
+  - No live native Contacts write provider.
+  - No contact delete implementation.
+  - No bulk contact export or bulk edit.
+  - No personal-data tools enabled by default.
+  - No memory storage of contact details by default.
+- Requirements implemented:
+  - `contacts.update_selected` now requires a verified approved Action Center `action_id` at the low-level write tool handler.
+  - `contacts.create` now requires a verified approved Action Center `action_id` at the low-level write tool handler.
+  - Contact write submitted args must match the approved Action Center preview before the no-external-change stub is reached.
+  - `execute_contact_action()` injects the approved `action_id` only after the Action Center record is approved and before brokered execution.
+  - Contact write schemas now expose `action_id` for approved execution paths.
+- Files changed:
+  - `agent/tools/personal/write_actions.py`
+  - `agent/workflows/contact_edits.py`
+  - `agent/ui/command_registry.py`
+  - `tests/test_contacts_approved_edits.py`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read required governance/tracking docs with `sed`.
+  - Inspected contacts write workflows, write action tools, CLI dispatch, command registry, feature tracking, and tests with `rg`, `sed`, and `nl`.
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_contacts_approved_edits.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_approved_write_actions.py tests/test_calendar_approved_writes.py tests/test_release_gate.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY - <<'PY' ... write_command_docs('.') ... PY`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_contacts_approved_edits.py tests/test_command_registry.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - `git diff --check`
+  - `rg -n "contacts_update_selected\\(|contacts_create\\(|CONTACT_UPDATE_ACTION|CONTACT_CREATE_ACTION" agent smart_agent.py tests | sed -n '1,200p'`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py tests/test_command_registry.py -q`
+- Tests run:
+  - Focused contacts tests: 13 passed in 0.67s.
+  - Focused approved-write/calendar/release-gate tests: 25 passed in 0.76s.
+  - Focused contacts plus command registry tests: 18 passed in 0.69s.
+  - Final focused contacts tests after exact-preview hardening: 13 passed in 0.64s.
+  - Full suite: 573 passed in 15.06s.
+  - Focused tracking/maturity/command docs validation: 19 passed in 0.18s.
+- Validation results:
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 170 commands, no problems.
+  - `git diff --check`: passed.
+  - Contact write direct-call scan found contact write handlers only in `agent/tools/personal/write_actions.py`; CLI execution goes through `execute_contact_action()` and ToolBroker.
+- Safety result:
+  - `contacts.update_selected` and `contacts.create` remain disabled by default.
+  - Contact writes remain CRITICAL per-action.
+  - Action Center remains the required review surface.
+  - Direct broker execution without Action Center verification is now denied even if a separate approval manager approves the capability.
+  - Mutated submitted args are rejected when they do not match the approved preview.
+  - No live external Contacts write provider was added.
+- Feature maturity:
+  - Contacts approved edits remains conservatively at `4 Tested`.
+  - Readiness score raised from 71 to 74 because direct broker bypass denial and approved-preview arg matching are now covered.
+  - Not marked live-validated because no live Contacts.app write provider was exercised.
+- Blockers:
+  - None for local tested v1 hardening.
+  - Native Contacts.app write provider and contact delete remain deferred and require a separate decision, implementation, and approval-gated live validation.
+- Next recommended task:
+  - `SESSION-LOGGING-REPLAY` remains the next prompt-queue item.
+  - Product-track alternative: `Privacy Center / data inventory v1`.
+
+## Latest Confirmed Run: 2026-05-23 08:16 PDT Privacy Center / Data Inventory v1
+
+- Prompt id: `PRIVACY-CENTER-V1`.
+- Next prompt id: `SESSION-LOGGING-REPLAY`.
+- Result:
+  - Privacy Center / Data Inventory v1 is complete for local tested v1.
+  - Added metadata-only privacy status/inventory/export, confirmed brokered memory deletion, audit summary, and permissions views.
+  - Personal connector data is not read; reports use connector/config/store metadata only.
+  - Exports are redacted by default and show memory/capture previews only.
+  - Real repo smoke checked `privacy status` and the unconfirmed `privacy delete-memory` denial path; confirmed deletion ran only in isolated tests.
+- Tests and validation:
+  - Full suite: 587 passed in 16.95s.
+  - Focused Privacy Center tests: 7 passed in 1.07s.
+  - Focused prompt/maturity/command docs validation: 19 passed in 0.19s.
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 176 commands, no problems.
+  - `git diff --check`: passed.
+- Blockers:
+  - None for local tested v1.
+  - Live/manual privacy export review remains future work; Backup / Restore / Migration v1 is now complete for local tested scope.
+- Next recommended task:
+  - Prompt queue: `SESSION-LOGGING-REPLAY`.
+  - Product-track alternative: `Backup / restore / migration v1`.
+
+## Latest Confirmed Run: 2026-05-23 08:23 PDT Local Startup Ergonomics
+
+- Prompt id: `LOCAL-STARTUP-ERGONOMICS`.
+- Next prompt id: `SESSION-LOGGING-REPLAY`.
+- Scope confirmed:
+  - Add a Python 3.11+ guard before importing agent modules.
+  - Add a local wrapper script so the user can run `./scripts/agent doctor` and normal chat commands without accidentally using Apple Python 3.9.
+  - Document `.venv`, LM Studio base URL/model setup, and `/v1/models` model-id discovery.
+- Non-goals confirmed:
+  - No ToolBroker, PolicyEngine, ApprovalManager, or AuditLogger behavior changes.
+  - No personal-data tools enabled.
+  - No connector, send/write, or memory behavior changes.
+- Files changed:
+  - `smart_agent.py`
+  - `scripts/agent`
+  - `tests/test_startup_ergonomics.py`
+  - `agent/ui/command_registry.py`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - Read startup/runtime, command registry, README, tracking, and test files with `sed` and `rg`.
+  - `chmod +x scripts/agent`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_startup_ergonomics.py -q`
+  - `./scripts/agent setup`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_startup_ergonomics.py tests/test_command_registry.py -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY smart_agent.py commands validate`
+  - `python3 smart_agent.py setup 2>&1 || true`
+  - `./scripts/agent doctor || true`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest -q`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; validate_capabilities_config(load_capabilities_config('config/capabilities.yaml')); print('capability manifest ok')"`
+  - `PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"; $PY -m pytest tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py tests/test_command_registry.py -q`
+  - `git diff --check`
+- Tests run:
+  - Startup ergonomics tests: 3 passed in 0.46s.
+  - Startup ergonomics plus command registry tests: 8 passed in 0.40s.
+  - Focused prompt/maturity/command docs validation: 19 passed in 0.19s.
+  - Full suite: 590 passed in 16.86s.
+- Validation results:
+  - Startup policy: ok.
+  - Capability manifest: ok.
+  - Command registry: ok, 177 commands, no problems.
+  - Apple Python 3.9 smoke printed the Python 3.11+ setup instructions instead of crashing.
+  - `./scripts/agent doctor` selected Python 3.12 and clearly reported missing `LMSTUDIO_MODEL`.
+  - `git diff --check`: passed.
+- Feature maturity:
+  - LM Studio no-tool chat readiness score raised from 82 to 84 for the tested Python version guard and local launcher.
+- Blockers:
+  - None for local startup ergonomics.
+  - Live no-tool chat still requires the user to start LM Studio and set `LMSTUDIO_MODEL`.
+- Next recommended task:
+  - Prompt queue: `SESSION-LOGGING-REPLAY`.
+  - Product-track alternative: `Backup / restore / migration v1`.
+
+## Run: 2026-05-23 Backup / Restore / Migration v1
+
+- Date/time: 2026-05-23 08:34 PDT.
+- Scope confirmed: Backup / Restore / Migration v1 only.
+- Non-goals confirmed: no personal connector reads, no secret export, no policy weakening, no ToolBroker/PolicyEngine/ApprovalManager/AuditLogger bypass, no background persistence, no send/write connector enablement.
+- Files changed:
+  - Runtime/tools: `agent/tools/backup/__init__.py`, `agent/tools/backup/backup_tools.py`, `agent/tools/registry.py`, `agent/core/tool_broker.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`.
+  - Tests: `tests/test_backup_restore.py`.
+  - Docs/tracking: `README.md`, `CHANGELOG.md`, `docs/backup_restore/BACKUP_RESTORE.md`, `docs/COMMAND_REGISTRY.md`, `docs/COMMAND_TEST_MATRIX.md`, `docs/FEATURE_REGISTRY.md`, `docs/FEATURE_MATURITY.md`, `docs/FEATURE_ROADMAP.md`, `docs/PROJECT_STATE.md`, `docs/PROMPT_LEDGER.md`, `docs/PROMPT_QUEUE.md`, `docs/PROMPT_AUDIT.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/COMPLETION_REPORT.md`.
+- Commands run:
+  - Read required governance docs and existing ToolBroker/policy/audit/CLI/registry patterns with `sed` and `rg`.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_backup_restore.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_policy.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 - <<'PY' ... validate_startup_policy() ... PY`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_backup_restore.py tests/test_policy.py tests/test_ux_packaging.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest -q`
+  - `git diff --check && git status --short`
+- Tests run:
+  - Focused backup tests: 8 passed.
+  - Focused policy tests: 17 passed.
+  - Focused backup/policy/packaging tests: 46 passed in 1.87s.
+  - Full suite: 598 passed in 17.30s.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok.
+  - Command registry validation: status ok, 182 commands, no problems.
+  - Diff whitespace check: passed.
+- Results:
+  - Added brokered backup tools: `backup.create`, `backup.list`, `backup.inspect`, `backup.verify`, `backup.export`, and `backup.restore`.
+  - Added CLI commands: `backup create`, `backup list`, `backup inspect <backup_id>`, `backup verify <backup_id>`, `backup export --redacted`, and `backup restore <backup_id>`.
+  - Backup archives are local redacted directories under `workspace/backups` by default or an explicit configured backup dir.
+  - Each archive includes `manifest.json`, per-file hashes, manifest integrity hash, excluded-secret records, and restore limitations.
+  - Config/docs/tracking/native-skill files are redacted and backed up; memory and Action Center stores are exported as redacted metadata when present; captures and audit metadata are optional.
+  - `.env` and key/certificate files are excluded; secret-like copied values are redacted.
+  - No calendar/contact/email/message/task/browser provider data is fetched during backup.
+  - `backup.restore` is HIGH risk, approval-required, denied safely in non-interactive mode, and blocks backed-up capability manifests that would weaken policy or enable personal connectors.
+- Blockers:
+  - No implementation blockers.
+  - Live restore should be tried only on a disposable project copy before raising maturity beyond Tested.
+- Next recommended action:
+  - Continue with `SESSION-LOGGING-REPLAY`, unless the user chooses the product-track alternative: Model-router benchmark and prompt quality evals.
+
+## Run: 2026-05-23 Model-Router Benchmark and Prompt Quality Evals
+
+- Date/time: 2026-05-23 08:46 PDT.
+- Prompt id: `MODEL-ROUTER-PROMPT-EVALS`.
+- Next prompt id: `SESSION-LOGGING-REPLAY`.
+- Scope confirmed:
+  - Add safe model/router/prompt-quality benchmark commands and fixture-backed evals.
+  - Measure route selected, tools attached, policy decision, and prompt guardrails.
+  - Keep live LM Studio answer-quality smoke opt-in.
+- Non-goals confirmed:
+  - No personal-data connector access.
+  - No email/text send.
+  - No calendar/contact writes.
+  - No automatic prompt or system-prompt rewrites.
+  - No ToolBroker, PolicyEngine, ApprovalManager, or AuditLogger bypass.
+- Files changed:
+  - Runtime/UI: `agent/ui/model_quality.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `agent/core/router.py`.
+  - Eval data/report: `eval_cases/model_router_prompt_quality.json`, `docs/PROMPT_QUALITY_REPORT.md`.
+  - Tests: `tests/test_model_quality_evals.py`.
+  - Docs/tracking: `README.md`, `CHANGELOG.md`, `docs/COMMAND_REGISTRY.md`, `docs/COMMAND_TEST_MATRIX.md`, `docs/FEATURE_REGISTRY.md`, `docs/FEATURE_MATURITY.md`, `docs/FEATURE_ROADMAP.md`, `docs/PROJECT_STATE.md`, `docs/PROMPT_LEDGER.md`, `docs/PROMPT_QUEUE.md`, `docs/PROMPT_AUDIT.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/TEST_PLAN.md`, `docs/RELEASE_CHECKLIST.md`, `docs/COMPLETION_REPORT.md`.
+- Commands added:
+  - `python smart_agent.py models list`
+  - `python smart_agent.py models benchmark --safe`
+  - `python smart_agent.py router eval`
+  - `python smart_agent.py prompts eval`
+  - `python smart_agent.py prompts report`
+- Commands run:
+  - Read required governance and tracking docs with `sed`.
+  - Inspected eval/router/CLI/command-registry code with `rg` and `sed`.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_model_quality_evals.py tests/test_router.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py models list`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py models benchmark --safe`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py router eval`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py prompts eval`
+  - Regenerated command docs via `write_command_docs('.')`.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_model_quality_evals.py tests/test_eval_harness.py tests/test_command_registry.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_feature_maturity_docs.py tests/test_model_quality_evals.py tests/test_command_registry.py -q`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest -q`
+  - Startup policy validation.
+  - Capability manifest validation.
+  - `python smart_agent.py commands validate`
+  - `git diff --check`
+- Tests run:
+  - Focused model/router tests: 28 passed in 0.33s.
+  - Focused model/eval/command tests: 26 passed in 1.22s.
+  - Focused maturity/model/command docs validation: 23 passed in 0.33s.
+  - Full suite: 607 passed in 18.68s.
+  - Model benchmark safe CLI: 14 passed, 1 live LM Studio skip by design.
+  - Router eval CLI: 7 passed.
+  - Prompt eval CLI: 2 passed.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok.
+  - Command registry validation: status ok, 187 commands, no problems.
+  - Diff whitespace check: passed.
+- Results:
+  - Added fixture-backed model/router/prompt-quality eval cases for normal no-tool chat, weather routing, web/current-info routing, URL/document routing, memory query routing, personal-data request routing, send/approval-gate behavior, prompt-injection handling, and answer-quality guardrails.
+  - Reports compare expected vs actual route, attached tools, and policy decisions.
+  - `models list` shows model config without sending prompts; live `/v1/models` lookup is optional.
+  - `models benchmark --safe` does not send prompts to LM Studio by default and skips the live no-tool answer-quality smoke unless `--live` is requested.
+  - Personal-data and send requests are measured as no-auto-execute routing/policy gate checks; no personal tools are called.
+- Feature maturity:
+  - Golden eval suite, model-router benchmark, and prompt quality scorecards remain conservatively at `4 Tested`.
+  - Readiness score raised from 78 to 82 because router/tool/policy comparisons, prompt guardrails, no-tool checks, and personal-data no-auto-execute regressions are now covered.
+- Blockers:
+  - None for local tested v1.
+  - Live LM Studio answer-quality baselines remain opt-in and require `LMSTUDIO_MODEL`.
+- Next recommended action:
+  - Continue with `SESSION-LOGGING-REPLAY`.
+## Run: 2026-05-23 10:13 PDT Live Session Logging and Replay
+
+- Scope confirmed: build a user-facing dogfooding session log and replay system, separate from the security AuditLogger.
+- Non-goals confirmed: no AuditLogger weakening/replacement, no secrets or raw personal-data logging by default, no personal-data tool enablement, no email/text sending, no ToolBroker bypass, no private macOS database access, and no environment-variable capture.
+- Implemented:
+  - Added `agent/session_logs/` with session/command models, JSON session store, command recorder, redaction helpers, replay formatter, and lightweight audit-id/tool-call detection.
+  - Added `python smart_agent.py session start/status/run/end/list/show/replay/export/last`.
+  - Added explicit `session run -- ...` capture for `smart_agent.py` commands; delegated commands retain their own ToolBroker, PolicyEngine, ApprovalManager, and AuditLogger behavior.
+  - Added redacted output files under `reports/sessions/<session_id>/outputs/` and gitignore protection for raw session reports.
+  - Added `docs/SESSION_LOGGING.md`.
+- Files changed for this task:
+  - `.gitignore`
+  - `agent/session_logs/__init__.py`
+  - `agent/session_logs/models.py`
+  - `agent/session_logs/recorder.py`
+  - `agent/session_logs/redaction.py`
+  - `agent/session_logs/replay.py`
+  - `agent/session_logs/reviewer.py`
+  - `agent/session_logs/store.py`
+  - `agent/ui/cli_commands.py`
+  - `agent/ui/command_registry.py`
+  - `tests/test_session_logs.py`
+  - `tests/test_prompt_tracking.py`
+  - `reports/sessions/.gitkeep`
+  - `README.md`
+  - `CHANGELOG.md`
+  - `docs/SESSION_LOGGING.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/COMPLETION_REPORT.md`
+- Commands run:
+  - `sed`/`rg` inspections of SDLC docs, CLI dispatch, command registry, project state, prompt tracking, and test patterns.
+  - `python - <<'PY' ... write_command_docs('.') ... PY`
+  - `pytest tests/test_session_logs.py tests/test_command_registry.py -q`
+  - `pytest tests/test_session_logs.py tests/test_command_registry.py tests/test_feature_maturity_docs.py tests/test_prompt_tracking.py -q`
+  - `python -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy('config/capabilities.yaml'); print('startup policy ok')"`
+  - `python -c "from agent.config.loader import load_capabilities_config; from agent.config.schema import validate_capabilities_config; config=load_capabilities_config('config/capabilities.yaml'); validate_capabilities_config(config); print(...)"`
+  - `python smart_agent.py commands validate`
+  - `pytest -q`
+  - `git diff --check`
+- Test results:
+  - Focused session logging and command registry tests: 15 passed in 0.48s.
+  - Focused session/docs/prompt/command validation: 29 passed in 0.55s.
+  - Full suite: 626 passed in 19.91s on the final run.
+  - Startup policy validation: startup policy ok.
+  - Capability manifest validation: capability manifest ok (77 capabilities).
+  - Command registry validation: 197 commands, no problems.
+  - Diff whitespace check: passed.
+- Safety notes:
+  - Session logs are not memory and are not security audit logs.
+  - Redaction covers common secret, email, phone, and command-line secret-argument patterns, but remains heuristic.
+  - `--unsafe-raw` exists only as an explicit debug escape hatch and should not be used for personal-data sessions.
+  - Raw session reports are ignored by git; committed examples must be sanitized fixtures.
+- Feature maturity changes:
+  - Added Live Session Logging and Replay at `4 Tested`.
+  - Did not mark live-validated because no extended manual dogfood session was run yet.
+- Blockers:
+  - None for local tested v1.
+  - Manual dogfood QA remains pending.
+- Prompt tracking:
+  - `SESSION-LOGGING-REPLAY` marked completed.
+  - Next prompt: `DOGFOOD-COMMAND-SUITES`.

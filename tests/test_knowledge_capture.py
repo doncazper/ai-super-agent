@@ -87,6 +87,19 @@ def test_capture_from_file_obeys_workspace_policy(tmp_path) -> None:
     assert [step["tool_name"] for step in report["steps"]] == ["filesystem.read", "filesystem.write"]
 
 
+def test_capture_from_file_can_be_explicitly_marked_trusted_user(tmp_path) -> None:
+    source = tmp_path / "workspace" / "source.txt"
+    source.parent.mkdir(parents=True)
+    source.write_text("User-authored workspace note.", encoding="utf-8")
+
+    report = capture_from_file(_broker(tmp_path), "workspace/source.txt", trusted_user=True)
+
+    assert report["status"] == "ok"
+    assert report["capture"]["source_type"] == "file"
+    assert report["capture"]["source_trust"] == "TRUSTED_USER"
+    assert [step["tool_name"] for step in report["steps"]] == ["filesystem.read", "filesystem.write"]
+
+
 def test_capture_from_file_blocks_unsafe_path(tmp_path) -> None:
     report = capture_from_file(_broker(tmp_path), "../outside.txt")
 
@@ -95,7 +108,7 @@ def test_capture_from_file_blocks_unsafe_path(tmp_path) -> None:
 
 
 def test_secret_capture_rejected_without_write(tmp_path) -> None:
-    report = capture_note(_broker(tmp_path), "api_key=sk-supersecretvalue123456")
+    report = capture_note(_broker(tmp_path), "api_key=not-a-real-secret-value")
 
     assert report["status"] == "error"
     assert "secret" in report["error"]
@@ -148,3 +161,15 @@ def test_capture_cli_note_command(tmp_path, capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     assert payload["capture"]["title"] == "CLI"
     assert payload["stored_in_memory"] is False
+
+
+def test_capture_cli_from_file_trusted_user_flag(tmp_path, capsys) -> None:
+    source = tmp_path / "workspace" / "cli_note.txt"
+    source.parent.mkdir(parents=True)
+    source.write_text("User-authored CLI note.", encoding="utf-8")
+
+    exit_code = _run_capture_command(["from-file", "workspace/cli_note.txt", "--trusted-user"], _broker(tmp_path))
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["capture"]["source_trust"] == "TRUSTED_USER"

@@ -34,7 +34,7 @@ M0-M11 are complete:
 - Workflow action reports show each step and result.
 - Approved write/send action tools are present but disabled by default.
 - Critical write/send actions require explicit per-action approval with preflight summaries.
-- Controlled self-improvement manager supports propose, branch-bound implement, run-tests, show-diff, and approval-gated commit.
+- Controlled self-improvement manager supports propose, branch-bound implement, run-tests, show-diff, commit-action checkpointing, and approval-gated commit.
 - Self-improvement blocks protected safety file edits and safety-weakening content.
 - Self-improvement backlog commands inspect approved project files through `ToolBroker` and propose read-only improvements without editing, granting, installing, or committing.
 - CLI inspection commands for tools, permissions, audit, memory, config, setup, and interactive entry.
@@ -134,20 +134,21 @@ python smart_agent.py browser clip-url "https://example.com" --to workspace
 python smart_agent.py browser selected-tab
 ```
 
-Browser v1 is URL-based only. `read-url` and `summarize-url` fetch explicit public URLs through `web.fetch_url`; `clip-url` fetches through `web.fetch_url` and writes through `filesystem.write` under `./workspace`. Fetched page content is `UNTRUSTED_WEB`, and saved clips are `UNTRUSTED_DOCUMENT`. The connector does not read browser history, cookies, sessions, passwords, forms, bookmarks, private browser databases, or password managers, and it does not submit forms or automate a browser. `selected-tab` is a clear stub until a safe selected-scope native integration is reviewed; see `docs/decisions/browser_selected_tab_clipping.md`.
+Browser v1 is URL-based only. The workflow capabilities are `browser.read_url`, `browser.summarize_url`, `browser.clip_url_to_workspace`, and the disabled `browser.selected_tab` stub. `read-url` and `summarize-url` fetch explicit public URLs through `web.fetch_url`; `clip-url` fetches through `web.fetch_url` and writes through `filesystem.write` under `./workspace`. Fetched page content is `UNTRUSTED_WEB`, and saved clips are `UNTRUSTED_DOCUMENT`. The connector does not read browser history, cookies, sessions, passwords, forms, bookmarks, private browser databases, or password managers, and it does not submit forms or automate a browser. `selected-tab` is a clear stub until a safe selected-scope native integration is reviewed; see `docs/decisions/browser_selected_tab_clipping.md`.
 
 Knowledge Capture:
 
 ```bash
 python smart_agent.py capture note "Project fact: the agent uses ToolBroker for tools."
 python smart_agent.py capture from-file workspace/research.txt
+python smart_agent.py capture from-file workspace/my-note.txt --trusted-user
 python smart_agent.py capture from-url "https://example.com"
 python smart_agent.py capture list
 python smart_agent.py capture summarize
 python smart_agent.py capture promote-to-memory <capture_id>
 ```
 
-Knowledge Capture v1 is a local workspace inbox, not Apple Notes. Captures are stored as JSON files under `./workspace/captures` through brokered `filesystem.write`, and source files are read through brokered `filesystem.read`. URL captures fetch explicit URLs through `web.fetch_url`; web content remains `UNTRUSTED_WEB`, and file captures are `UNTRUSTED_DOCUMENT` unless the user wrote the note directly. Secrets are rejected before capture storage. `promote-to-memory` reads the capture through `filesystem.read` and then calls `memory.store`, so Memory v2 policy decides whether the content may be stored; personal-looking content is blocked by default and no personal data is written to memory automatically.
+Knowledge Capture v1 is a local workspace inbox, not Apple Notes. Captures are stored as JSON files under `./workspace/captures` through brokered `filesystem.write`, and source files are read through brokered `filesystem.read`. URL captures fetch explicit URLs through `web.fetch_url`; web content remains `UNTRUSTED_WEB`, and file captures are `UNTRUSTED_DOCUMENT` by default. Use `--trusted-user` only for user-authored workspace files you intentionally want labeled `TRUSTED_USER`. Secrets are rejected before capture storage. `promote-to-memory` reads the capture through `filesystem.read` and then calls `memory.store`, so Memory v2 policy decides whether the content may be stored; personal-looking content is blocked by default and no personal data is written to memory automatically.
 
 Project file assistant:
 
@@ -173,12 +174,16 @@ python smart_agent.py improve backlog --dry-run --json
 python smart_agent.py improve implement <proposal_id>
 python smart_agent.py improve run-tests
 python smart_agent.py improve show-diff
+python smart_agent.py improve overnight-plan
+python smart_agent.py improve create-action-for-commit --message "Update docs"
 python smart_agent.py improve commit --from-action <action_id>
 ```
 
 The backlog/propose commands are read-only. They inspect an approved list of project docs, tests, capability config, self-improvement workflow files, and audit-log paths through brokered `filesystem.read` calls. Reads are audited, file contents are treated as `UNTRUSTED_DOCUMENT`, and dry-run mode evaluates the planned reads without reading file contents. Safety-weakening ideas such as disabling audit logs, relaxing ToolBroker/PolicyEngine checks, or enabling personal-data tools by default are reported as blocked suggestions.
 
-The implementation loop is branch-based and requires an approved proposal record in `data/self_improvement/approved_proposals.json`. `improve implement <proposal_id>` creates or switches to a `codex/` branch, writes only approved project/workspace files through brokered `filesystem.write`, runs brokered tests, shows brokered diff, and creates a pending Action Center commit item. It blocks protected safety files, policy weakening, audit disabling, package installs without a separate approval gate, persistence paths, personal-data access grants, and send/write side effects. `improve commit --from-action <action_id>` executes only an approved Action Center commit action through `ToolBroker`; no commit happens from implement alone.
+The implementation loop is branch-based and requires an approved proposal record in `data/self_improvement/approved_proposals.json`. `improve implement <proposal_id>` creates or switches to a `codex/` branch, writes only approved project/workspace files through brokered `filesystem.write`, runs brokered tests, shows brokered diff, and creates a pending Action Center commit item. `improve create-action-for-commit` is the manual checkpoint: it runs brokered tests, shows brokered diff, and queues a pending Action Center commit action without committing. It blocks protected safety files, policy weakening, audit disabling, package installs without a separate approval gate, persistence paths, personal-data access grants, and send/write side effects. `improve commit --from-action <action_id>` executes only an approved Action Center commit action through `ToolBroker`; no commit happens from implement or create-action-for-commit alone.
+
+Overnight self-improvement is planning-only unless explicitly approved. `improve overnight-plan` reads `docs/FEATURE_MATURITY.md`, `docs/PROJECT_STATE.md`, `docs/FEATURE_REGISTRY.md`, and `docs/FEATURE_ROADMAP.md` through `ToolBroker` and returns safe docs/tests/hardening candidates. It does not edit files, create a branch, schedule background work, run prompts, or commit. See `docs/SELF_IMPROVEMENT_OVERNIGHT_RUNBOOK.md` before any long unattended run.
 
 Prompt tracking:
 
@@ -232,18 +237,67 @@ python smart_agent.py commands qa-run Weather
 
 The durable command catalog lives in `docs/COMMAND_REGISTRY.md`; manual test coverage lives in `docs/COMMAND_TEST_MATRIX.md`; deprecated and blocked paths live in `docs/COMMAND_LEGACY.md`; and the manual QA process lives in `docs/COMMAND_QA_RUNBOOK.md`. Use `commands qa-plan` to find commands that need manual testing, and log command bugs by adding bug IDs to the test matrix before creating regression tests.
 
+Live session logging and replay:
+
+```bash
+python smart_agent.py session start --name "core-smoke"
+python smart_agent.py session run -- --no-tools "Explain RCS vs iMessage"
+python smart_agent.py session run -- weather current "Phoenix, AZ"
+python smart_agent.py session replay --last
+python smart_agent.py session review --last
+python smart_agent.py session review --last --create-bugs
+python smart_agent.py bugs list
+python smart_agent.py session end
+```
+
+Session logs are redacted dogfooding records under `reports/sessions/`; raw session outputs are ignored by git. They are not a replacement for the security audit log and they do not create a new tool execution path. Wrapped commands keep their existing ToolBroker, PolicyEngine, ApprovalManager, and AuditLogger behavior. See `docs/SESSION_LOGGING.md`.
+
+Session review and bug generation are local QA tools. Reviews read redacted session command previews and feedback, write reports under `reports/session_reviews/`, and can create redacted bug JSON under `bugs/`. They do not send data externally, access personal connectors, fix bugs automatically, or write memory. See `docs/BUG_TRIAGE.md`.
+
+Native skill vetting:
+
+```bash
+python smart_agent.py skills list
+python smart_agent.py skills show native_skill_vetter
+python smart_agent.py skills validate
+python smart_agent.py skills doctor
+python smart_agent.py skills find "I need to work with PDFs"
+python smart_agent.py skills find "Can you help with meeting follow-up?"
+python smart_agent.py skills vet ./workspace/skills/example/SKILL.md
+python smart_agent.py skills vet-folder ./workspace/skills/example
+python smart_agent.py skills score ./workspace/skills/example/SKILL.md
+```
+
+Native skill manifests are metadata-only workflow definitions under `native_skills/` or `docs/native_skills/manifests/`. The loader reads and validates manifest fields, required capabilities, risk/trust levels, memory behavior, audit requirements, personal-data defaults, and CRITICAL approval rules. It does not execute scripts, import external code, install marketplace skills, grant permissions, or let manifests bypass `ToolBroker`.
+
+`skills find` searches only local reviewed metadata: native skill manifests, the native candidate matrix, feature registry, and maturity tracker. It returns implemented matches, planned candidates, maturity/readiness, required approvals, and next work needed. It does not browse external marketplaces, install skills, execute external code, or write memory.
+
+Native skill vetting is static analysis only. It reads candidate skill files only from approved workspace paths, treats them as `UNTRUSTED_DOCUMENT`, parses `SKILL.md` frontmatter when present, and flags scripts, shell commands, package installs, network calls, secret references, filesystem escapes, personal-data access, browser cookie/session access, prompt-injection language, approval-bypass language, opaque binaries, and missing license information. The vetter never executes scripts, installs dependencies, grants permissions, or stores skill content in memory by default. All vetting commands execute through `ToolBroker`, `PolicyEngine`, and `AuditLogger`.
+
+PDF workspace native skill:
+
+```bash
+python smart_agent.py pdf info ./workspace/file.pdf
+python smart_agent.py pdf extract-text ./workspace/file.pdf
+python smart_agent.py pdf summarize ./workspace/file.pdf
+python smart_agent.py pdf extract-tables ./workspace/file.pdf
+```
+
+PDF operations are workspace-bounded, audited, and labeled `UNTRUSTED_DOCUMENT`. OCR, split/merge, generated PDF writes, and external binaries are not enabled in v1. The PDF skill uses embedded text extraction only and does not store document content in memory by default.
+
 Scheduler / Automation v1:
 
 ```bash
 python smart_agent.py schedule list
 python smart_agent.py schedule create --workflow connector_doctor --schedule daily@08:00 --name "Connector doctor"
 python smart_agent.py schedule create --workflow daily_briefing --arg sections=weather --arg weather_location="Phoenix, AZ"
+python smart_agent.py schedule create --workflow backup_create --arg backup_dir=workspace/backups
 python smart_agent.py schedule run <schedule_id>
 python smart_agent.py schedule pause <schedule_id>
 python smart_agent.py schedule delete <schedule_id>
 ```
 
-Scheduler v1 is manual-run only: it stores explicit local schedule records and never installs a LaunchAgent, cron job, daemon, login item, or hidden background runner. Scheduled workflows still use the existing safety path where tools are involved; personal-data sections require approval, and CRITICAL actions are never executed automatically. Details live in `docs/SCHEDULER.md`.
+Scheduler v1 is manual-run only: it stores explicit local schedule records and never installs a LaunchAgent, cron job, daemon, login item, or hidden background runner. Scheduled workflows still use the existing safety path where tools are involved; personal-data sections require approval, CRITICAL actions are never executed automatically, and scheduled backups are redacted-only brokered `backup.create` calls. Details live in `docs/SCHEDULER.md`.
 
 Weather-aware research:
 
@@ -363,7 +417,7 @@ python smart_agent.py calendar draft-delete <event_id>
 python smart_agent.py calendar delete --from-action <action_id>
 ```
 
-Calendar write capabilities remain disabled by default in `config/capabilities.yaml` and are CRITICAL per-action approval capabilities. Draft commands create Action Center records only; they do not create, update, delete, or invite anyone. `create/update/delete --from-action` requires an approved Action Center record and still executes through `ToolBroker`, `PolicyEngine`, `ApprovalManager`, and `AuditLogger`. Approved actions are consumed once. The current write connector is a no-external-change stub unless a future safe native write provider is explicitly configured and release-gated. Notes/body text is omitted from drafts unless `--allow-notes` is provided, recurring events are not supported in v1, and automatic invites are disabled.
+Calendar write capabilities remain disabled by default in `config/capabilities.yaml` and are CRITICAL per-action approval capabilities. Draft commands create Action Center records only; they do not create, update, delete, or invite anyone. `create/update/delete --from-action` requires an approved Action Center record and still executes through `ToolBroker`, `PolicyEngine`, `ApprovalManager`, and `AuditLogger`. The low-level write tools reject direct broker calls unless Action Center verifies the matching approved action id. Approved actions are consumed once. The current write connector is a no-external-change stub unless a future safe native write provider is explicitly configured and release-gated. Notes/body text is omitted from drafts unless `--allow-notes` is provided, recurring events are not supported in v1, and automatic invites are disabled.
 
 Reminders / Tasks connector:
 
@@ -377,7 +431,7 @@ python smart_agent.py tasks update <task_id> --title "Updated title"
 python smart_agent.py tasks delete <task_id>
 ```
 
-Tasks tools are personal-data tools and disabled by default. `tasks.list` is HIGH risk and approval-required. `tasks.create`, `tasks.update`, `tasks.complete`, and `tasks.delete` are CRITICAL per-action approval tools. `draft-create` creates an Action Center record only; `create --from-action` consumes one approved action and then calls `tasks.create` through `ToolBroker`. The current connector is adapter-first with a mock provider for tests; no native Reminders database scraping, no broad Full Disk Access, and no live macOS Reminders write path are enabled. Task contents are not stored in memory by default, notes are omitted unless explicitly allowed, and no full task export is performed.
+Tasks tools are personal-data tools and disabled by default when they access or mutate a task provider. `tasks.list` is HIGH risk and approval-required. `tasks.create`, `tasks.update`, `tasks.complete`, and `tasks.delete` are CRITICAL per-action approval tools. `draft-create` now routes through the brokered `tasks.draft_create` capability, creates an Action Center record only, and does not access a task provider or create a real reminder. `create --from-action` consumes one approved action and then calls `tasks.create` through `ToolBroker`. The current connector is adapter-first with a mock provider for tests; no native Reminders database scraping, no broad Full Disk Access, and no live macOS Reminders write path are enabled. Task contents are not stored in memory by default, notes are omitted unless explicitly allowed, and no full task export is performed.
 
 Personal task extraction:
 
@@ -439,7 +493,7 @@ python smart_agent.py contacts draft-create --display-name "Sam Example" --field
 python smart_agent.py contacts create --from-action <action_id>
 ```
 
-Contact write capabilities remain disabled by default and are CRITICAL per-action approval capabilities. Draft commands create Action Center records only; they do not edit or create Contacts.app records. `update/create --from-action` requires one approved Action Center record and still executes through `ToolBroker`, `PolicyEngine`, `ApprovalManager`, and `AuditLogger`. The current connector is a safe no-external-change stub until a native write provider is separately designed and release-gated. Updates require explicit field-level diffs, sensitive phone/email/address values are redacted in stored previews and audit logs, bulk edits are denied, contact deletion is deferred, and contact details are not written to memory by default.
+Contact write capabilities remain disabled by default and are CRITICAL per-action approval capabilities. Draft commands create Action Center records only; they do not edit or create Contacts.app records. `update/create --from-action` requires one approved Action Center record and still executes through `ToolBroker`, `PolicyEngine`, `ApprovalManager`, and `AuditLogger`; direct broker calls without the verified Action Center action id are denied. The submitted write arguments must match the approved preview. The current connector is a safe no-external-change stub until a native write provider is separately designed and release-gated. Updates require explicit field-level diffs, sensitive phone/email/address values are redacted in stored previews and audit logs, bulk edits are denied, contact deletion is deferred, and contact details are not written to memory by default.
 
 Email assistant metadata, selected-thread, and draft-only access:
 
@@ -473,7 +527,7 @@ python smart_agent.py actions approve <action_id>
 python smart_agent.py email send --from-action <action_id>
 ```
 
-`email.send_approved` is disabled by default and is CRITICAL per-action approval only. A send must originate from an Action Center item; direct approved tool calls without an action id are blocked. The preflight shows from account/provider, to, cc, bcc, subject, full body, attachments, thread/reply context, and rollback impossibility. Editing an action through `actions edit` invalidates prior approval. Bulk sends are denied, attachments are blocked in v1, no background sends are available, and email thread content remains `UNTRUSTED_EMAIL` data that cannot approve or instruct sending. The default send provider is not configured; tests may use the mock provider, and a real provider must be separately designed without hard-coded credentials or private Mail database scraping.
+`email.send_approved` is disabled by default and is CRITICAL per-action approval only. A send must originate from an Action Center item; direct broker calls without the verified Action Center action id are blocked, and submitted send arguments must match the approved reviewed draft. The preflight shows from account/provider, to, cc, bcc, subject, full body, attachments, thread/reply context, and rollback impossibility. Editing an action through `actions edit` invalidates prior approval. Bulk sends are denied, attachments are blocked in v1, no background sends are available, and email thread content remains `UNTRUSTED_EMAIL` data that cannot approve or instruct sending. The default send provider is not configured; tests may use the mock provider, and a real provider must be separately designed without hard-coded credentials or private Mail database scraping.
 
 Messages/text assistant selected-thread stubs and manual draft-only access:
 
@@ -491,7 +545,7 @@ Messages tools are disabled by default and approval-gated. There is intentionall
 
 Messages safe handoff:
 
-`messages draft-from-text` now queues reviewed Action Center handoff records for saving the draft to `./workspace` or copying it to the clipboard. `messages.save_draft` and `messages.copy_draft` are disabled by default, HIGH risk, approval-required, and never send a message. Saved drafts must remain inside approved workspace paths. Clipboard copy requires an approved Action Center item because clipboard contents may be personal data and can be read by other local apps. Automatic Messages/iMessage/SMS sending is deferred; see `docs/decisions/messages_send_path.md`.
+`messages draft-from-text` now queues reviewed Action Center handoff records for saving the draft to `./workspace` or copying it to the clipboard. `messages.save_draft` and `messages.copy_draft` are disabled by default, HIGH risk, approval-required, and never send a message. Low-level save/copy tool execution requires the verified Action Center action id, and submitted recipient/draft/path arguments must match the approved preview. Saved drafts must remain inside approved workspace paths. Clipboard copy requires an approved Action Center item because clipboard contents may be personal data and can be read by other local apps. Automatic Messages/iMessage/SMS sending is deferred; see `docs/decisions/messages_send_path.md`.
 
 Memory tools:
 
@@ -525,12 +579,40 @@ python smart_agent.py approvals approve <request_id>
 python smart_agent.py approvals deny <request_id>
 python smart_agent.py preflight "calendar.create_event"
 python smart_agent.py audit tail
+python smart_agent.py privacy status
+python smart_agent.py privacy inventory
+python smart_agent.py privacy export
+python smart_agent.py privacy delete-memory --confirm DELETE-MEMORY
+python smart_agent.py privacy audit-summary
+python smart_agent.py privacy permissions
+python smart_agent.py backup create
+python smart_agent.py backup list
+python smart_agent.py backup inspect <backup_id>
+python smart_agent.py backup verify <backup_id>
+python smart_agent.py backup export --redacted
+python smart_agent.py backup restore <backup_id>
 python smart_agent.py memory list
 python smart_agent.py config show
 python smart_agent.py setup
 ```
 
 `dashboard` and `status` are read-only CLI views. They do not send prompts to the model, attach tools, execute connector actions, read personal data, grant permissions, consume approvals, or start background work. The dashboard reports current model/config, LM Studio status from doctor checks, enabled tool metadata, connector metadata/status, permission grants, pending approvals, recent audit metadata, memory counts without memory content, risk-setting summaries, last recorded test result, and setup hints. Secrets are redacted, and personal connectors are shown from configuration/status metadata only.
+
+Privacy Center v1 gives a local data inventory without reading personal connectors. `privacy status` and `privacy inventory` report enabled/disabled connectors, personal-data capability metadata, memory category counts, capture counts, audit log path/size, weather/web cache metadata, pending personal-data actions, approval counts, permission grants, and deletion options. `privacy export` emits a redacted local report with memory/capture previews only; secrets are redacted by default. `privacy delete-memory` requires `--confirm DELETE-MEMORY` and clears memory through the brokered `memory.clear` path, so policy and audit still apply. Privacy reports explain that calendar/contact/email/message/task contents are not read from providers and external logs/backups are not rewritten by memory deletion.
+
+Backup / Restore:
+
+```bash
+python smart_agent.py backup create
+python smart_agent.py backup create --include-captures --include-audit-metadata
+python smart_agent.py backup list
+python smart_agent.py backup inspect <backup_id>
+python smart_agent.py backup verify <backup_id>
+python smart_agent.py backup export --redacted
+python smart_agent.py backup restore <backup_id>
+```
+
+Backups are local redacted archive directories under `workspace/backups` by default, or under `BACKUP_DIR` / `--backup-dir` when explicitly configured. Backup v1 includes config with secrets redacted, docs/tracking files, feature registry/maturity/roadmap, native skill manifests, redacted memory export metadata, redacted Action Center metadata, optional captures, and optional audit metadata. It never fetches personal connector data and does not store or export API keys, tokens, `.env`, private keys, raw mail/messages/calendar/contact data, or browser/session data. Each archive has `manifest.json` with content hashes and an integrity hash. `backup restore` is HIGH risk, approval-gated, verifies hashes first, creates pre-restore copies where possible, and rejects backed-up capability manifests that would weaken policy or enable personal connectors.
 
 The `doctor` command does not send prompts to the model, attach tools, access personal data, change config, or grant permissions. It checks Python, required imports, runtime config, `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL`, LM Studio reachability, `/v1/models`, selected model availability when confirmable, startup policy validation, normalized capability manifest validation, audit path writability, tool registry loading, `ToolBroker` initialization, connector registry loading, whether personal-data tools are disabled by default, and whether any CRITICAL actions are enabled by default.
 
@@ -548,7 +630,7 @@ python smart_agent.py actions clear-denied
 python smart_agent.py actions export
 ```
 
-Action Center is the review surface for future risky actions such as calendar writes, contact edits, email sends, message sends, personal memory writes, file deletes, git commits, and self-improvement commits. It stores exact redacted previews, rollback notes, approval state, source workflow, and audit references in `data/actions.json`. It does not execute actions directly. Approving an action marks it review-approved once; any real execution must still go through `ToolBroker`, `PolicyEngine`, the approval rules for that capability, and `AuditLogger`. CRITICAL actions remain per-action only, edits invalidate previous approvals, irreversible actions say rollback is unavailable, and non-interactive mode must not execute pending actions.
+Action Center is the review surface for future risky actions such as calendar writes, contact edits, email sends, message sends, personal memory writes, file deletes, git commits, and self-improvement commits. It stores exact secret-redacted previews, rollback notes, approval state, source workflow, and audit references in `data/actions.json` so the user can review exact action details locally before approval. `actions export` and lifecycle audit events use minimized/redacted views of sensitive action bodies and drafts. Action Center does not execute actions directly. Approving an action marks it review-approved once; any real execution must still go through `ToolBroker`, `PolicyEngine`, the approval rules for that capability, and `AuditLogger`. CRITICAL actions remain per-action only, edits invalidate previous approvals, irreversible actions say rollback is unavailable, and non-interactive mode must not execute pending actions.
 
 Interactive mode:
 
@@ -573,6 +655,49 @@ Inside interactive mode:
 ```
 
 Interactive commands such as `:doctor`, `:tools`, `:config`, and `:approvals` do not send prompts to the model. Normal chat turns still use the same orchestrator, router, `ToolBroker`, policy engine, approval manager, and audit logger as one-shot CLI requests. If a live interactive tool call requires approval, the CLI shows the approval preview and waits for `approve once`, `deny`, `abort`, or `show details`. Critical actions still allow only per-action approval.
+
+## Local Startup
+
+This project requires Python 3.11 or newer. macOS may run Apple Python 3.9 when you type `python3`; that version is not supported. `smart_agent.py` now checks the Python version before importing agent modules and prints setup commands instead of crashing.
+
+Recommended local setup:
+
+```bash
+cd "/Users/sambehdjou/Documents/AI Super Agent"
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+```
+
+If `python3.11` is not installed:
+
+```bash
+brew install python@3.11
+```
+
+Use the local launcher after setup:
+
+```bash
+./scripts/agent doctor
+./scripts/agent --no-tools "Explain RCS vs iMessage"
+```
+
+The launcher prefers `AI_AGENT_PYTHON`, then `./.venv/bin/python`, then the bundled Codex Python runtime if present, and only falls back to system `python3` when it is Python 3.11+.
+
+LM Studio setup:
+
+```bash
+export LMSTUDIO_BASE_URL="http://localhost:1234/v1"
+curl http://localhost:1234/v1/models
+export LMSTUDIO_MODEL="<model id from /v1/models>"
+./scripts/agent doctor
+```
+
+For Qwopus in the current local setup, the model id has been:
+
+```bash
+export LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m"
+```
 
 ## Runtime Config
 
@@ -640,27 +765,28 @@ IMAP_MAILBOX=INBOX
 Start LM Studio Developer Server at `http://localhost:1234/v1`, load Qwopus, then run:
 
 ```bash
+export LMSTUDIO_BASE_URL="http://localhost:1234/v1"
+curl http://localhost:1234/v1/models
 export LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m"
-PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
 
-$PY smart_agent.py --no-tools "Explain RCS vs iMessage"
-$PY smart_agent.py --debug "What time is it?"
+./scripts/agent --no-tools "Explain RCS vs iMessage"
+./scripts/agent --debug "What time is it?"
 ```
 
 Optional readiness check:
 
 ```bash
-$PY smart_agent.py doctor
+./scripts/agent doctor
 ```
 
 Controlled smoke harness:
 
 ```bash
-$PY smart_agent.py smoke --lmstudio
-$PY smart_agent.py smoke --web
-$PY smart_agent.py smoke --calendar --contacts
-$PY smart_agent.py smoke --all-safe
-$PY smart_agent.py smoke --all-safe --dry-run
+./scripts/agent smoke --lmstudio
+./scripts/agent smoke --web
+./scripts/agent smoke --calendar --contacts
+./scripts/agent smoke --all-safe
+./scripts/agent smoke --all-safe --dry-run
 ```
 
 Expected result:
@@ -678,7 +804,12 @@ The eval harness runs controlled validation checks for features that already exi
 ```bash
 python smart_agent.py eval list
 python smart_agent.py eval run --safe
-python smart_agent.py eval run --lmstudio
+python smart_agent.py eval run --routing
+python smart_agent.py eval run --policy
+python smart_agent.py eval run --tools
+python smart_agent.py eval run --workflows
+python smart_agent.py eval run --prompt-injection
+python smart_agent.py eval run --lmstudio-live
 python smart_agent.py eval run --web
 python smart_agent.py eval run --weather
 python smart_agent.py eval run --workspace
@@ -686,9 +817,23 @@ python smart_agent.py eval run --memory
 python smart_agent.py eval report
 ```
 
-`eval run --safe` covers no-tool LM Studio chat when `LMSTUDIO_MODEL` is configured, safe time-tool execution, weather current/forecast when a provider is configured, web search/fetch when configured, controlled workspace read/write under `./workspace/eval`, non-sensitive memory add/search/delete, dry-run/preflight, and connector doctor checks. Personal-data evals for calendar, contacts, email, and messages are skipped by default.
+`eval run --safe` now runs the Golden Eval Suite: data-file backed router checks, policy allow/ask/deny checks, ToolBroker denial/allow checks, prompt-injection wrapper checks, workflow dry-runs, no-tool LM Studio chat when `LMSTUDIO_MODEL` is configured, safe time-tool execution, weather current/forecast when a provider is configured, web search/fetch when configured, controlled workspace read/write under `./workspace/eval`, non-sensitive memory add/search/delete, dry-run/preflight, and connector doctor checks. Personal-data evals for calendar, contacts, email, and messages are skipped by default.
 
-Eval runs produce structured pass/fail/skipped results, write `logs/eval_results.json`, and update [docs/EVAL_REPORT.md](</Users/sambehdjou/Documents/AI Super Agent/docs/EVAL_REPORT.md>). Tool actions execute through `ToolBroker` and are audited. Evals do not send emails/texts, do not write calendar/contact data, do not infer location, and do not store personal data in memory.
+Golden cases live in `eval_cases/` so regression prompts, expected routes, and policy expectations can be reviewed as data. Eval runs produce structured pass/fail/skipped results, category scorecards, `logs/eval_results.json`, per-run JSON under `reports/evals/`, and [docs/EVAL_REPORT.md](</Users/sambehdjou/Documents/AI Super Agent/docs/EVAL_REPORT.md>). Tool actions execute through `ToolBroker` and are audited. Evals do not send emails/texts, do not write calendar/contact data, do not infer location, and do not store personal data in memory.
+
+### Model Router and Prompt Quality Evals
+
+These commands benchmark router choices, policy expectations, and system/untrusted-content prompt guardrails from reviewed fixture prompts. They do not send prompts to LM Studio by default and do not access personal data.
+
+```bash
+python smart_agent.py models list
+python smart_agent.py models benchmark --safe
+python smart_agent.py router eval
+python smart_agent.py prompts eval
+python smart_agent.py prompts report
+```
+
+`models benchmark --safe` covers normal no-tool chat routing, weather routing, web/current-info routing, URL/document routing, memory query routing, personal-data request routing, refusal/approval-gate behavior, prompt-injection handling, and answer-quality guardrails. The live answer-quality smoke case is skipped unless `--live` is passed and `LMSTUDIO_MODEL` is configured. Results are written to `logs/model_router_prompt_quality.json`, per-run JSON under `reports/evals/`, and [docs/PROMPT_QUALITY_REPORT.md](</Users/sambehdjou/Documents/AI Super Agent/docs/PROMPT_QUALITY_REPORT.md>).
 
 If LM Studio is not running, the CLI should say:
 
@@ -701,6 +846,23 @@ If the model variable is missing, the CLI should say:
 ```text
 LMSTUDIO_MODEL is not set. Export LMSTUDIO_MODEL='<model id>'.
 ```
+
+## Manual Dogfood Suites
+
+Dogfood suites are curated command lists for systematic manual QA. They run existing `smart_agent.py` commands and keep each command's normal ToolBroker, policy, approval, and audit behavior. They do not enable personal-data tools or run personal-data reads by default.
+
+```bash
+python smart_agent.py dogfood list
+python smart_agent.py dogfood show all_safe
+python smart_agent.py dogfood run all_safe --dry-run
+python smart_agent.py dogfood run all_safe
+python smart_agent.py session start --name dogfood-all-safe
+python smart_agent.py dogfood run all_safe --session
+python smart_agent.py session replay --last
+python smart_agent.py session end
+```
+
+Suites live in `dogfood_suites/` and are documented in [docs/dogfood/DOGFOOD_GUIDE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/DOGFOOD_GUIDE.md>) and [docs/dogfood/COMMAND_SUITES.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/COMMAND_SUITES.md>). Start with `all_safe`; use `personal_dry_run` only for preflight-only personal connector checks.
 
 ## Test Environments
 

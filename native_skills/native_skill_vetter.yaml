@@ -1,0 +1,41 @@
+skill_id: native_skill_vetter
+name: Native Skill Vetter
+description: Review candidate skill files and folders with static analysis before any native port or installation.
+category: security
+version: "1.0.0"
+status: available
+maturity_level: "4 Tested"
+risk_level: LOW
+trust_level: UNTRUSTED_DOCUMENT
+allowed_tools:
+  - native_skills.vet_skill_file
+  - native_skills.vet_skill_folder
+  - native_skills.score_candidate
+required_capabilities:
+  - native_skills.vet_skill_file
+  - native_skills.vet_skill_folder
+  - native_skills.score_candidate
+approval_required: false
+memory_behavior: no_store
+audit_required: true
+inputs_schema:
+  type: object
+  properties:
+    path:
+      type: string
+      description: Workspace path to a candidate SKILL.md or skill folder.
+  required:
+    - path
+outputs_schema:
+  type: object
+  properties:
+    risk_level:
+      type: string
+    safe_to_port:
+      type: string
+    findings:
+      type: array
+docs_path: docs/native_skills/SKILL_INTAKE_PROCESS.md
+tests_path: tests/test_native_skills.py
+owner: local-agent
+last_reviewed: "2026-05-23"

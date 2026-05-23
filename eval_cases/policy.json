@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "category": "policy",
+  "cases": [
+    {
+      "id": "policy.safe_time_allowed",
+      "title": "SAFE time tool is allowed.",
+      "risk_level": "SAFE",
+      "expect": {
+        "capability": "time.get_current_time",
+        "decision": "ALLOW",
+        "risk_level": "SAFE"
+      }
+    },
+    {
+      "id": "policy.unknown_denied",
+      "title": "Unknown capabilities are denied.",
+      "risk_level": "FORBIDDEN",
+      "expect": {
+        "capability": "unknown.missing_tool",
+        "decision": "DENY",
+        "risk_level": "FORBIDDEN"
+      }
+    },
+    {
+      "id": "policy.calendar_read_disabled_or_approval",
+      "title": "Calendar read is not silently allowed.",
+      "risk_level": "HIGH",
+      "expect": {
+        "capability": "calendar.read_date_range",
+        "decision": "DENY",
+        "risk_level": "HIGH"
+      }
+    },
+    {
+      "id": "policy.email_send_per_action",
+      "title": "Email send is CRITICAL with no approval reuse.",
+      "risk_level": "CRITICAL",
+      "expect": {
+        "capability": "email.send_approved",
+        "decision": "DENY",
+        "risk_level": "CRITICAL",
+        "approval_reuse_allowed": false
+      }
+    }
+  ]
+}
