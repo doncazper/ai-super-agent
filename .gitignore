@@ -2,9 +2,17 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 *.egg-info/
+.DS_Store
 .venv/
 venv/
 data/
 logs/
 .agent_backups/
 .env
+reports/sessions/*
+!reports/sessions/.gitkeep
+!reports/sessions/fixtures/
+reports/session_reviews/*
+!reports/session_reviews/.gitkeep
+bugs/*.json
+!bugs/.gitkeep
