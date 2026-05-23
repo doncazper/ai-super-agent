@@ -2,6 +2,30 @@
 
 These rules are permanent for this repository.
 
+- Every Codex run must read `docs/PROJECT_STATE.md` before making changes.
+- Before starting work, read `docs/PROMPT_QUEUE.md` and `docs/PROMPT_LEDGER.md`.
+- If importing a prompt pack, default to `import_only`.
+- Do not execute an entire prompt pack automatically.
+- Use `python smart_agent.py work import` for pasted mega prompts or raw single prompts.
+- Use `python smart_agent.py work autopilot` only for safe categories and stop at approval gates.
+- Every Codex run must update `docs/PROJECT_STATE.md` before finishing.
+- Every run must update `docs/COMPLETION_REPORT.md`.
+- If a prompt is being run, mark it active in prompt tracking.
+- Before finishing, mark the prompt completed, failed, blocked, skipped, or superseded.
+- Update `docs/PROMPT_AUDIT.md` after major prompt batches.
+- Do not run prompts out of order without updating `docs/PROMPT_QUEUE.md`.
+- If a prompt is superseded, mark it superseded and link the replacement.
+- Every Codex final report must include the `prompt_id` and `next_prompt_id`.
+- Every user-visible feature must update `CHANGELOG.md`.
+- Every feature, command, connector, workflow, or policy change must update `docs/FEATURE_REGISTRY.md`.
+- Every roadmap status change must update `docs/FEATURE_ROADMAP.md`.
+- When adding, renaming, deprecating, removing, or changing a CLI command, update `docs/COMMAND_REGISTRY.md`.
+- When command behavior changes, update `docs/COMMAND_TEST_MATRIX.md`.
+- Every command must have a status, risk level, approval requirement, description, and example.
+- A command is not user-ready unless it appears in `docs/COMMAND_REGISTRY.md` with docs, tests, and manual QA status.
+- Deprecated commands must include a replacement or reason.
+- Removed commands must remain listed with removal date and reason.
+- Final reports must mention command changes.
 - Build milestone by milestone.
 - Do not skip safety systems.
 - Do not bypass `ToolBroker`.
@@ -17,6 +41,9 @@ These rules are permanent for this repository.
 - Run tests after changes.
 - Update `docs/COMPLETION_REPORT.md` after each milestone attempt.
 - After changing any feature, command, connector, workflow, policy, approval, audit, or memory behavior, update `docs/FEATURE_MATURITY.md`.
+- A feature is not complete until tests, docs, feature registry, changelog, project state, and release gate are updated.
+- Do not mark a task complete if `docs/PROJECT_STATE.md` still says `in_progress`.
+- If interrupted, leave `docs/PROJECT_STATE.md` with the exact current state and next recommended action.
 - Do not mark a feature mature unless tests, docs, policy/audit behavior, and release gates justify it.
 - Prompt count is useful context but not proof of maturity.
 - A feature can be complete but still immature.

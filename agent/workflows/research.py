@@ -54,11 +54,14 @@ def source_grounded_research(
             "query": query,
             "error": search_content.get("error", "search failed"),
             "sources": [],
+            "fetch_failures": [],
+            "source_policy": "No citations are fabricated; summaries require returned search or fetch data.",
             "summary": "No source-grounded summary is available because search did not return sources.",
             "steps": steps,
         }
 
     sources: list[dict[str, Any]] = []
+    fetch_failures: list[dict[str, Any]] = []
     for index, item in enumerate(search_content.get("results", [])[:result_limit], start=1):
         source = {
             "index": index,
@@ -93,6 +96,13 @@ def source_grounded_research(
                 source["excerpt"] = safe_excerpt(str(fetch_content.get("content", "")))
             else:
                 source["fetch_error"] = str(fetch_content.get("error", "fetch failed"))
+                fetch_failures.append(
+                    {
+                        "index": index,
+                        "url": source["url"],
+                        "error": source["fetch_error"],
+                    }
+                )
         if not source["excerpt"]:
             source["excerpt"] = safe_excerpt(source["snippet"])
         sources.append(source)
@@ -101,8 +111,10 @@ def source_grounded_research(
         "status": "ok",
         "query": query,
         "summary_language": summary_language or "en",
+        "source_policy": "No citations are fabricated; summaries use only returned search results and fetched page text.",
         "summary": build_source_summary(sources, summary_language=summary_language or "en"),
         "sources": sources,
+        "fetch_failures": fetch_failures,
         "steps": steps,
     }
 
@@ -226,8 +238,6 @@ def safe_excerpt(text: str, *, max_chars: int = 700) -> str:
     sentences = re.split(r"(?<=[.!?])\s+", re.sub(r"\s+", " ", text).strip())
     safe_sentences = [sentence for sentence in sentences if sentence and not _looks_like_instruction_injection(sentence)]
     excerpt = " ".join(safe_sentences) if safe_sentences else ""
-    if not excerpt:
-        excerpt = re.sub(r"\s+", " ", text).strip()
     return excerpt[:max_chars].strip()
 
 

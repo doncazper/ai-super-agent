@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+from difflib import unified_diff
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ DENIED_HOME_PATHS = (
 )
 
 DENIED_FILENAMES = {".env"}
+DOCUMENT_TRUST_LEVEL = "UNTRUSTED_DOCUMENT"
 
 
 @dataclass(frozen=True)
@@ -119,6 +121,7 @@ def make_filesystem_tools(project_root: str | Path) -> dict[str, Any]:
         return {
             "path": str(target),
             "content": data.decode("utf-8"),
+            "trust_level": DOCUMENT_TRUST_LEVEL,
             **_audit(files_read=[str(target)]),
         }
 
@@ -146,11 +149,21 @@ def make_filesystem_tools(project_root: str | Path) -> dict[str, Any]:
         if replacements != expected_replacements:
             raise ToolError("patch did not match expected replacement count")
         backup_path = _backup_file(target, guard.project_root)
-        _atomic_write(target, original.replace(old_text, new_text, expected_replacements))
+        updated = original.replace(old_text, new_text, expected_replacements)
+        diff = "".join(
+            unified_diff(
+                original.splitlines(keepends=True),
+                updated.splitlines(keepends=True),
+                fromfile=str(target),
+                tofile=str(target),
+            )
+        )
+        _atomic_write(target, updated)
         return {
             "path": str(target),
             "replacements": replacements,
             "backup_path": str(backup_path),
+            "diff": diff,
             **_audit(files_read=[str(target)], files_written=[str(target), str(backup_path)]),
         }
 

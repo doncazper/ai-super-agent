@@ -12,6 +12,11 @@ import httpx
 
 from agent.config.loader import load_capabilities_config
 from agent.config.runtime import RuntimeConfig, RuntimeConfigError
+from agent.config.schema import validate_capabilities_config
+from agent.connectors.registry import default_connector_registry
+from agent.core.tool_broker import ToolBroker
+from agent.safety.audit import AuditLogger
+from agent.safety.policy import PolicyEngine
 from agent.safety.validation import validate_startup_policy
 from agent.tools.registry import default_registry
 
@@ -103,20 +108,51 @@ def run_doctor(
     except Exception as exc:
         checks.append(DoctorCheck("startup_policy", "fail", str(exc)))
 
+    config_data: dict[str, Any] | None = None
+    try:
+        config_data = load_capabilities_config(runtime.capabilities_path)
+        validate_capabilities_config(config_data)
+        checks.append(DoctorCheck("capability_manifest", "ok", "normalized capability manifest valid"))
+    except Exception as exc:
+        checks.append(DoctorCheck("capability_manifest", "fail", str(exc)))
+
     checks.append(_check_audit_path(runtime.audit_log_path))
 
+    tool_registry = None
     try:
-        registry = default_registry()
-        checks.append(DoctorCheck("tools_registry", "ok", f"{len(registry.schemas())} tools registered"))
+        tool_registry = default_registry()
+        checks.append(DoctorCheck("tools_registry", "ok", f"{len(tool_registry.schemas())} tools registered"))
     except Exception as exc:
         checks.append(DoctorCheck("tools_registry", "fail", str(exc)))
 
     try:
-        config_data = load_capabilities_config(runtime.capabilities_path)
+        connector_registry = default_connector_registry()
+        checks.append(
+            DoctorCheck("connector_registry", "ok", ", ".join(connector_registry.names()))
+        )
+    except Exception as exc:
+        checks.append(DoctorCheck("connector_registry", "fail", str(exc)))
+
+    if tool_registry is not None and config_data is not None:
+        try:
+            ToolBroker(
+                tool_registry,
+                PolicyEngine.from_config(config_data),
+                AuditLogger(Path(runtime.audit_log_path).parent / ".doctor-broker-audit.jsonl"),
+                session_id="doctor",
+                model=runtime.lmstudio_model,
+                route="doctor",
+            )
+            checks.append(DoctorCheck("toolbroker_loads", "ok", "ToolBroker initialized without executing tools"))
+        except Exception as exc:
+            checks.append(DoctorCheck("toolbroker_loads", "fail", str(exc)))
+
+    try:
+        config_data = config_data or load_capabilities_config(runtime.capabilities_path)
         enabled_personal = [
             name
             for name, entry in config_data.get("tools", {}).items()
-            if name.startswith(("email.", "messages.", "contacts.", "calendar.", "browser."))
+            if entry.get("connector_name") in {"email", "messages", "contacts", "calendar", "browser"}
             and bool(entry.get("default_enabled"))
         ]
         if enabled_personal:
@@ -131,6 +167,26 @@ def run_doctor(
             checks.append(DoctorCheck("personal_tools_disabled", "ok", "all personal tools disabled by default"))
     except Exception as exc:
         checks.append(DoctorCheck("personal_tools_disabled", "fail", str(exc)))
+
+    try:
+        config_data = config_data or load_capabilities_config(runtime.capabilities_path)
+        enabled_critical = [
+            name
+            for name, entry in config_data.get("tools", {}).items()
+            if entry.get("risk_level") == "CRITICAL" and bool(entry.get("default_enabled"))
+        ]
+        if enabled_critical:
+            checks.append(
+                DoctorCheck(
+                    "critical_actions_disabled",
+                    "fail",
+                    "enabled CRITICAL actions: " + ", ".join(enabled_critical),
+                )
+            )
+        else:
+            checks.append(DoctorCheck("critical_actions_disabled", "ok", "no CRITICAL actions enabled by default"))
+    except Exception as exc:
+        checks.append(DoctorCheck("critical_actions_disabled", "fail", str(exc)))
 
     return checks
 

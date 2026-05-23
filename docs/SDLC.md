@@ -13,6 +13,28 @@ The project follows a safety-first lifecycle.
 9. Documentation: update milestone docs and completion report.
 10. Monitoring and iteration: inspect audit output, failures, and user feedback.
 
+## Release Gate Addendum
+
+Every release gate must run startup capability validation against `config/capabilities.yaml`.
+
+The capability manifest must use the normalized schema for every capability:
+
+- `capability_name`
+- `tool_name`
+- `connector_name`
+- `risk_level`
+- `trust_level`
+- `default_enabled`
+- `approval_required`
+- `approval_reuse_allowed`
+- `rate_limit`
+- `memory_behavior`
+- `audit_fields`
+- `setup_hint`
+- `docs_reference`
+
+The gate must fail if a capability is missing required fields, contains bypass flags, enables personal-data capabilities by default, or defines a CRITICAL capability without per-action approval and no approval reuse.
+
 ## Mini-SDLC for Every Milestone
 
 1. Confirm scope.

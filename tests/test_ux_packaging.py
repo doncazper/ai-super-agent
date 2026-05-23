@@ -11,7 +11,9 @@ from agent.safety.policy import RiskLevel
 from agent.ui.approvals_ui import ConsoleApprovalPrompt, format_approval_preview
 from agent.ui.audit_viewer import tail_audit
 from agent.ui.cli_commands import dispatch_cli
+from agent.ui.dashboard import build_dashboard, format_dashboard
 from agent.ui.doctor import doctor_exit_code, run_doctor
+from agent.ui.doctor import DoctorCheck
 from agent.ui.permissions_dashboard import PermissionStore
 
 
@@ -136,8 +138,12 @@ def test_doctor_with_mocked_lmstudio_reachable(tmp_path) -> None:
     assert by_name["lmstudio_server"].status == "ok"
     assert by_name["selected_model_available"].status == "ok"
     assert by_name["startup_policy"].status == "ok"
+    assert by_name["capability_manifest"].status == "ok"
     assert by_name["audit_log_path_writable"].status == "ok"
+    assert by_name["toolbroker_loads"].status == "ok"
+    assert by_name["connector_registry"].status == "ok"
     assert by_name["personal_tools_disabled"].status == "ok"
+    assert by_name["critical_actions_disabled"].status == "ok"
     assert doctor_exit_code(checks) == 0
 
 
@@ -171,6 +177,42 @@ def test_doctor_reports_missing_model(tmp_path) -> None:
     assert by_name["lmstudio_model"].status == "fail"
 
 
+def test_doctor_reports_invalid_config(tmp_path) -> None:
+    capabilities_path = tmp_path / "bad-capabilities.yaml"
+    capabilities_path.write_text(
+        """
+tools:
+  web.search:
+    capability_name: web.search
+    tool_name: web.search
+    connector_name: web
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields: [tool_name, policy_decision]
+    setup_hint: bad test config
+    docs_reference: README.md
+""",
+        encoding="utf-8",
+    )
+    config = RuntimeConfig(
+        lmstudio_base_url="http://localhost:1234/v1",
+        lmstudio_model="qwopus",
+        audit_log_path=str(tmp_path / "audit.jsonl"),
+        capabilities_path=str(capabilities_path),
+    )
+
+    checks = run_doctor(config=config, get_json=lambda url: {"data": [{"id": "qwopus"}]})
+    by_name = {check.name: check for check in checks}
+
+    assert by_name["startup_policy"].status == "fail"
+    assert by_name["capability_manifest"].status == "fail"
+    assert doctor_exit_code(checks) == 1
+
+
 def test_doctor_command_can_be_dispatched(monkeypatch, capsys) -> None:
     from agent.ui import cli_commands
     from agent.ui.doctor import DoctorCheck
@@ -194,9 +236,23 @@ def test_cli_audit_tail_command_works(tmp_path, monkeypatch, capsys) -> None:
 
 
 def test_cli_memory_list_command_works(tmp_path, monkeypatch, capsys) -> None:
-    monkeypatch.chdir(tmp_path)
+    from agent.core.tool_broker import ToolBroker
+    from agent.safety.audit import AuditLogger
+    from agent.safety.policy import Capability, PolicyEngine, RiskLevel
+    from agent.tools.registry import default_registry
+    from smart_agent import _run_memory_command
 
-    assert dispatch_cli(["memory", "list"]) == 0
+    monkeypatch.chdir(tmp_path)
+    broker = ToolBroker(
+        default_registry(project_root=tmp_path, memory_path=tmp_path / "memory.sqlite3"),
+        PolicyEngine({"memory.export": Capability("memory.export", RiskLevel.LOW)}),
+        AuditLogger(tmp_path / "audit.jsonl"),
+        session_id="test-session",
+        model="test-model",
+        route="test",
+    )
+
+    assert _run_memory_command(["list"], broker) == 0
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["records"] == []
@@ -223,3 +279,143 @@ def test_cli_approvals_list_show_approve_deny(tmp_path, monkeypatch, capsys) -> 
 
     output = capsys.readouterr().out
     assert request.request_id in output
+
+
+def test_dashboard_loads_with_metadata_only(tmp_path) -> None:
+    report = build_dashboard(
+        project_root=tmp_path,
+        doctor_checks=[
+            DoctorCheck("lmstudio_server", "warn", "not checked in test"),
+            DoctorCheck("lmstudio_model", "ok", "qwopus"),
+        ],
+        connectors=[
+            {
+                "name": "weather",
+                "configured": True,
+                "enabled": True,
+                "default_provider": "open_meteo",
+                "risk_level": "LOW",
+                "approval_required": False,
+                "setup_hint": "ready",
+                "capabilities": [],
+            }
+        ],
+        approvals=[],
+        permissions=[],
+        audit_events=[],
+        memory_path=tmp_path / "memory.sqlite3",
+    )
+
+    assert report["read_only"] is True
+    assert report["accesses_personal_data"] is False
+    assert report["tools"]["registered_count"] > 0
+    assert "time.get_current_time" in report["tools"]["registered_tools"]
+    assert "Runtime" in format_dashboard(report)
+
+
+def test_dashboard_redacts_secrets(tmp_path) -> None:
+    report = build_dashboard(
+        project_root=tmp_path,
+        doctor_checks=[
+            DoctorCheck("lmstudio_server", "ok", "server reachable"),
+            DoctorCheck("lmstudio_model", "ok", "qwopus"),
+        ],
+        connectors=[
+            {
+                "name": "web",
+                "configured": True,
+                "enabled": True,
+                "default_provider": "brave",
+                "risk_level": "LOW",
+                "approval_required": False,
+                "setup_hint": "api_key=supersecretvalue",
+                "capabilities": [],
+            }
+        ],
+        approvals=[],
+        permissions=["web.fetch_url"],
+        audit_events=[{"tool_name": "web.search", "sanitized_args": {"api_key": "supersecretvalue"}}],
+        memory_path=tmp_path / "memory.sqlite3",
+    )
+
+    rendered = json.dumps(report)
+    assert "supersecretvalue" not in rendered
+    assert "[REDACTED]" in rendered
+
+
+def test_dashboard_personal_connectors_show_disabled_by_default() -> None:
+    report = build_dashboard(
+        doctor_checks=[
+            DoctorCheck("lmstudio_server", "warn", "not checked in test"),
+            DoctorCheck("lmstudio_model", "ok", "qwopus"),
+        ],
+        audit_events=[],
+    )
+
+    personal = {
+        connector["name"]: connector
+        for connector in report["connectors"]
+        if connector["name"] in {"calendar", "contacts", "email", "messages"}
+    }
+    assert personal
+    assert all(connector["enabled"] is False for connector in personal.values())
+    assert all(connector["approval_required"] in {True, "per_action"} for connector in personal.values())
+
+
+def test_dashboard_pending_approvals_shown(tmp_path) -> None:
+    request = ApprovalRequest(
+        capability="git.commit",
+        tool_name="git.commit",
+        risk_level=RiskLevel.HIGH,
+        summary="Commit changes",
+    )
+
+    report = build_dashboard(
+        project_root=tmp_path,
+        doctor_checks=[
+            DoctorCheck("lmstudio_server", "ok", "server reachable"),
+            DoctorCheck("lmstudio_model", "ok", "qwopus"),
+        ],
+        connectors=[],
+        approvals=[request],
+        permissions=[],
+        audit_events=[],
+        memory_path=tmp_path / "memory.sqlite3",
+    )
+
+    assert report["approvals"]["pending_count"] == 1
+    assert report["approvals"]["pending"][0]["request_id"] == request.request_id
+
+
+def test_status_command_does_not_access_personal_data(monkeypatch, capsys) -> None:
+    from agent.ui import cli_commands
+
+    called = {}
+
+    def fake_dashboard(*, project_root=".", audit_limit=10):
+        called["project_root"] = project_root
+        called["audit_limit"] = audit_limit
+        return {
+            "status": "ok",
+            "read_only": True,
+            "accesses_personal_data": False,
+            "runtime": {"model": "qwopus", "base_url": "http://localhost:1234/v1", "tool_mode": "auto", "audit_log_path": "logs/audit.jsonl"},
+            "lmstudio": {"server_status": "ok", "server_detail": "mock", "model_status": "ok"},
+            "tools": {"registered_count": 1, "enabled_count": 1, "enabled_tools": ["time.get_current_time"]},
+            "connectors": [{"name": "calendar", "configured": False, "enabled": False, "default_provider": "disabled", "risk_level": "HIGH", "approval_required": True}],
+            "permissions": {"grants": []},
+            "approvals": {"pending": []},
+            "audit": {"recent_events": []},
+            "memory": {"total_records": 0, "by_category": {}},
+            "risk_settings": {"by_risk": {"SAFE": 1}, "personal_defaults_disabled": True, "critical_defaults_disabled": True},
+            "last_test_run": {"summary": "mock"},
+            "setup_hints": [],
+        }
+
+    monkeypatch.setattr(cli_commands, "build_dashboard", fake_dashboard)
+
+    assert dispatch_cli(["status"]) == 0
+    output = capsys.readouterr().out
+    assert "Agent Dashboard v1" in output
+    assert "calendar: configured=False enabled=False" in output
+    assert called["audit_limit"] == 10

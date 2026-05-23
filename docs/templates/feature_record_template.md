@@ -1,0 +1,22 @@
+# Feature Record Template
+
+- Feature ID:
+- Name:
+- Description:
+- Category:
+- Status: planned | in_progress | complete | blocked | deferred
+- Risk level:
+- Trust level:
+- Capabilities:
+- Commands:
+- Dependencies:
+- ToolBroker path:
+- Policy behavior:
+- Approval behavior:
+- Audit behavior:
+- Memory behavior:
+- Tests:
+- Docs:
+- Release gate:
+- Known limitations:
+- Last updated:

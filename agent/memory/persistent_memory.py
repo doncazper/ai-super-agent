@@ -66,18 +66,32 @@ class PersistentMemoryStore:
             )
         return record
 
-    def search(self, query: str, *, scope: str = "default", limit: int = 10) -> list[MemoryRecord]:
+    def search(
+        self,
+        query: str,
+        *,
+        scope: str = "default",
+        limit: int = 10,
+        categories: list[str] | None = None,
+    ) -> list[MemoryRecord]:
         like = f"%{query}%"
+        category_filter = ""
+        params: list[Any] = [scope, like]
+        if categories:
+            placeholders = ", ".join("?" for _ in categories)
+            category_filter = f" AND category IN ({placeholders})"
+            params.extend(categories)
+        params.append(limit)
         with self._connect() as conn:
             rows = conn.execute(
-                """
+                f"""
                 SELECT id, category, scope, content, source_trust, metadata_json, created_at
                 FROM memories
-                WHERE scope = ? AND content LIKE ?
+                WHERE scope = ? AND content LIKE ?{category_filter}
                 ORDER BY created_at DESC
                 LIMIT ?
                 """,
-                (scope, like, limit),
+                tuple(params),
             ).fetchall()
         return [self._row_to_record(row) for row in rows]
 
@@ -98,6 +112,11 @@ class PersistentMemoryStore:
         with self._connect() as conn:
             cursor = conn.execute("DELETE FROM memories WHERE id = ?", (record_id,))
         return cursor.rowcount > 0
+
+    def clear(self, *, scope: str = "default") -> int:
+        with self._connect() as conn:
+            cursor = conn.execute("DELETE FROM memories WHERE scope = ?", (scope,))
+        return int(cursor.rowcount)
 
     def vacuum(self) -> None:
         with self._connect() as conn:

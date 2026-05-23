@@ -257,13 +257,14 @@ class OpenMeteoProvider:
         return self._geocode(location, locale)
 
     def _geocode(self, location: str, locale: str | None) -> dict[str, Any]:
-        params: dict[str, Any] = {"name": location, "count": 5, "format": "json"}
-        language = _language_from_locale(locale)
-        if language:
-            params["language"] = language
-        payload = self._get_json(self.geocoding_endpoint, params=params)
-        results = payload.get("results") if isinstance(payload, dict) else None
-        if not isinstance(results, list) or not results:
+        hint = _city_region_hint(location)
+        payload = self._geocode_payload(location, locale)
+        results = _geocoding_results(payload)
+        results = _prefer_admin1_results(results, hint)
+        if not results and hint is not None:
+            payload = self._geocode_payload(hint["query"], locale)
+            results = _prefer_admin1_results(_geocoding_results(payload), hint)
+        if not results:
             raise WeatherProviderError("location not found")
         selected = results[0]
         if not isinstance(selected, dict):
@@ -281,6 +282,13 @@ class OpenMeteoProvider:
                 "alternatives": alternatives,
             }
         return selected
+
+    def _geocode_payload(self, location: str, locale: str | None) -> dict[str, Any]:
+        params: dict[str, Any] = {"name": location, "count": 5, "format": "json"}
+        language = _language_from_locale(locale)
+        if language:
+            params["language"] = language
+        return self._get_json(self.geocoding_endpoint, params=params)
 
     def _forecast(self, selected_location: dict[str, Any], params: dict[str, Any]) -> dict[str, Any]:
         forecast_params = {
@@ -419,13 +427,11 @@ class NWSProvider:
         direct = _parse_direct_coordinates(location)
         if direct is not None:
             return direct
-        params: dict[str, Any] = {"name": location, "count": 5, "format": "json"}
-        language = _language_from_locale(locale)
-        if language:
-            params["language"] = language
-        payload = self._get_json(self.geocoding_endpoint, params=params)
-        results = payload.get("results") if isinstance(payload, dict) else None
-        if not isinstance(results, list) or not results:
+        hint = _city_region_hint(location)
+        results = _prefer_admin1_results(_geocoding_results(self._geocode_payload(location, locale)), hint)
+        if not results and hint is not None:
+            results = _prefer_admin1_results(_geocoding_results(self._geocode_payload(hint["query"], locale)), hint)
+        if not results:
             raise WeatherProviderError("location not found")
         selected = results[0]
         if not isinstance(selected, dict):
@@ -435,6 +441,13 @@ class NWSProvider:
         if not isinstance(selected.get("latitude"), (int, float)) or not isinstance(selected.get("longitude"), (int, float)):
             raise WeatherProviderError("weather geocoding provider returned malformed coordinates")
         return selected
+
+    def _geocode_payload(self, location: str, locale: str | None) -> dict[str, Any]:
+        params: dict[str, Any] = {"name": location, "count": 5, "format": "json"}
+        language = _language_from_locale(locale)
+        if language:
+            params["language"] = language
+        return self._get_json(self.geocoding_endpoint, params=params)
 
     def _points(self, selected_location: dict[str, Any]) -> dict[str, Any]:
         url = self.points_endpoint_template.format(
@@ -985,6 +998,88 @@ def _language_from_locale(locale: str | None) -> str | None:
         return None
     language = locale.replace("_", "-").split("-", 1)[0].strip().lower()
     return language or None
+
+
+_US_STATE_NAMES = {
+    "al": "Alabama",
+    "ak": "Alaska",
+    "az": "Arizona",
+    "ar": "Arkansas",
+    "ca": "California",
+    "co": "Colorado",
+    "ct": "Connecticut",
+    "de": "Delaware",
+    "fl": "Florida",
+    "ga": "Georgia",
+    "hi": "Hawaii",
+    "id": "Idaho",
+    "il": "Illinois",
+    "in": "Indiana",
+    "ia": "Iowa",
+    "ks": "Kansas",
+    "ky": "Kentucky",
+    "la": "Louisiana",
+    "me": "Maine",
+    "md": "Maryland",
+    "ma": "Massachusetts",
+    "mi": "Michigan",
+    "mn": "Minnesota",
+    "ms": "Mississippi",
+    "mo": "Missouri",
+    "mt": "Montana",
+    "ne": "Nebraska",
+    "nv": "Nevada",
+    "nh": "New Hampshire",
+    "nj": "New Jersey",
+    "nm": "New Mexico",
+    "ny": "New York",
+    "nc": "North Carolina",
+    "nd": "North Dakota",
+    "oh": "Ohio",
+    "ok": "Oklahoma",
+    "or": "Oregon",
+    "pa": "Pennsylvania",
+    "ri": "Rhode Island",
+    "sc": "South Carolina",
+    "sd": "South Dakota",
+    "tn": "Tennessee",
+    "tx": "Texas",
+    "ut": "Utah",
+    "vt": "Vermont",
+    "va": "Virginia",
+    "wa": "Washington",
+    "wv": "West Virginia",
+    "wi": "Wisconsin",
+    "wy": "Wyoming",
+    "dc": "District of Columbia",
+}
+
+
+def _city_region_hint(location: str) -> dict[str, str] | None:
+    parts = [part.strip() for part in location.split(",")]
+    if len(parts) < 2 or not parts[0] or not parts[1]:
+        return None
+    region = re.sub(r"[^A-Za-z ]", "", parts[1]).strip()
+    if not region:
+        return None
+    return {"query": parts[0], "admin1": _US_STATE_NAMES.get(region.casefold(), region)}
+
+
+def _geocoding_results(payload: dict[str, Any]) -> list[Any]:
+    results = payload.get("results") if isinstance(payload, dict) else None
+    return results if isinstance(results, list) else []
+
+
+def _prefer_admin1_results(results: list[Any], hint: dict[str, str] | None) -> list[Any]:
+    if hint is None:
+        return results
+    expected = hint["admin1"].casefold()
+    matches = [
+        result
+        for result in results
+        if isinstance(result, dict) and str(result.get("admin1") or "").casefold() == expected
+    ]
+    return matches or results
 
 
 def _unit_params(units: str) -> dict[str, str]:

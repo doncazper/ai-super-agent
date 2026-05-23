@@ -8,6 +8,7 @@ from agent.config.runtime import env_bool
 from agent.safety.action_preview import ActionPreviewError, ActionPreviewFormatter
 from agent.safety.audit import AuditEvent, AuditLogger, new_request_id
 from agent.safety.approvals import ApprovalManager, ApprovalRequest, ApprovalResult
+from agent.safety.contact_redaction import redact_contact_args
 from agent.safety.policy import PolicyDecision, PolicyEngine, RiskLevel
 from agent.safety.rate_limits import RateLimiter
 from agent.safety.trust import TrustLevel
@@ -439,6 +440,16 @@ class ToolBroker:
             sanitized["query"] = "[WEB_SEARCH_QUERY_REDACTED]"
         if tool_name.startswith("weather.") and "location" in sanitized:
             sanitized["location"] = "[WEATHER_LOCATION_REDACTED]"
+        if tool_name.startswith("calendar."):
+            for key in ("event_id", "title"):
+                if key in sanitized:
+                    sanitized[key] = "[CALENDAR_EVENT_REDACTED]"
+        if tool_name.startswith("tasks."):
+            for key in ("task_id", "title", "notes"):
+                if key in sanitized:
+                    sanitized[key] = "[TASK_REDACTED]"
+        if tool_name.startswith("contacts."):
+            sanitized = redact_contact_args(sanitized)
         if tool_name.startswith("memory.") and "content" in sanitized:
             sanitized["content"] = "[MEMORY_CONTENT_REDACTED]"
         if tool_name.startswith(("email.", "messages.")):
@@ -456,7 +467,11 @@ class ToolBroker:
             return TrustLevel.UNTRUSTED_MESSAGE
         if tool_name.startswith(("web.", "weather.")):
             return TrustLevel.UNTRUSTED_WEB
-        if tool_name.startswith(("contacts.", "browser.")):
+        if tool_name == "filesystem.read":
+            return TrustLevel.UNTRUSTED_DOCUMENT
+        if tool_name.startswith("filesystem."):
+            return TrustLevel.LOCAL_PRIVATE_DATA
+        if tool_name.startswith(("contacts.", "browser.", "tasks.")):
             return TrustLevel.LOCAL_PRIVATE_DATA
         return TrustLevel.MODEL_OUTPUT
 

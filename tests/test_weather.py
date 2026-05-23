@@ -845,6 +845,35 @@ def test_open_meteo_ambiguous_geocode_returns_disambiguation(tmp_path) -> None:
     assert len(payload["disambiguation"]["alternatives"]) == 2
 
 
+def test_open_meteo_city_state_abbreviation_falls_back_to_city_search(tmp_path) -> None:
+    geocode_queries: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "geocoding-api.open-meteo.com":
+            query = str(request.url.params["name"])
+            geocode_queries.append(query)
+            if query == "Phoenix, AZ":
+                return httpx.Response(200, json={"results": []})
+            return httpx.Response(200, json=ambiguous_geocoding_payload())
+        return httpx.Response(
+            200,
+            json={
+                "timezone": "America/Phoenix",
+                "current_units": {"temperature_2m": "C"},
+                "current": {"time": "2026-05-22T12:00", "temperature_2m": 40.0, "weather_code": 0},
+            },
+        )
+
+    broker = make_broker(tmp_path, weather_provider=open_meteo_provider(handler))
+
+    result = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    payload = json.loads(result.content)
+    assert payload["status"] == "ok"
+    assert payload["location"] == "Phoenix, Arizona, United States"
+    assert geocode_queries == ["Phoenix, AZ", "Phoenix"]
+
+
 def test_open_meteo_direct_lat_lon_bypasses_geocoding(tmp_path) -> None:
     hosts: list[str] = []
 

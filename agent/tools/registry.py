@@ -13,6 +13,7 @@ from agent.tools.personal.calendar import CalendarConnector
 from agent.tools.personal.contacts import ContactsConnector
 from agent.tools.personal.email import EmailConnector
 from agent.tools.personal.messages import MessagesConnector
+from agent.tools.personal.tasks import TasksConnector
 from agent.tools.personal.read_only import PERSONAL_SCHEMAS, make_personal_tools
 from agent.tools.personal.write_actions import WRITE_ACTION_SCHEMAS, make_write_action_tools
 from agent.tools.web.fetch import WEB_FETCH_SCHEMA, DomainRules, WebResponse, make_fetch_tool
@@ -38,6 +39,9 @@ class ToolRegistry:
     def get(self, name: str) -> ToolSpec | None:
         return self._tools.get(name)
 
+    def specs(self) -> list[ToolSpec]:
+        return list(self._tools.values())
+
     def schemas(self, names: set[str] | None = None) -> list[dict[str, Any]]:
         if names is None:
             return [tool.schema for tool in self._tools.values()]
@@ -56,6 +60,7 @@ def default_registry(
     contacts_connector: ContactsConnector | None = None,
     email_connector: EmailConnector | None = None,
     messages_connector: MessagesConnector | None = None,
+    tasks_connector: TasksConnector | None = None,
 ) -> ToolRegistry:
     registry = ToolRegistry()
     registry.register(
@@ -99,6 +104,7 @@ def default_registry(
         contacts_connector=contacts_connector,
         email_connector=email_connector,
         messages_connector=messages_connector,
+        tasks_connector=tasks_connector,
     ).items():
         registry.register(ToolSpec(name=name, capability=name, schema=PERSONAL_SCHEMAS[name], handler=handler))
     for name, handler in make_write_action_tools().items():

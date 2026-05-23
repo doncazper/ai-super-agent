@@ -18,6 +18,13 @@ def test_weather_configured_status(monkeypatch) -> None:
     assert status["enabled"] is True
     assert status["default_provider"] == "open_meteo"
     assert status["risk_level"] == "LOW"
+    assert status["setup_hint"] == status["docs_setup_hint"]
+    assert {item["name"] for item in status["capabilities"]} >= {
+        "weather.status",
+        "weather.current",
+        "weather.forecast",
+        "weather.alerts",
+    }
     assert status["provider_status"]["requires_api_key"] is False
     assert status["provider_status"]["api_key_configured"] is False
 
@@ -31,7 +38,20 @@ def test_web_missing_provider_status(monkeypatch) -> None:
     assert status["name"] == "web"
     assert status["configured"] is False
     assert status["default_provider"] == "disabled"
+    assert "capabilities" in status
+    assert status["rate_limit_state"]["configured"] is True
     assert "BRAVE_SEARCH_API_KEY" in status["docs_setup_hint"]
+
+
+def test_browser_url_workflow_status_does_not_require_profile_access() -> None:
+    status = connector_status("browser")
+
+    assert status["name"] == "browser"
+    assert status["configured"] is True
+    assert status["default_provider"] == "url_workflow"
+    assert any(item["name"] == "browser.read_selected_tab" for item in status["capabilities"])
+    assert "history" in status["docs_setup_hint"]
+    assert "cookies" in status["docs_setup_hint"]
 
 
 def test_personal_connectors_disabled_by_default() -> None:
@@ -74,6 +94,9 @@ def test_connectors_doctor_does_not_access_personal_data(tmp_path, monkeypatch) 
     text = json.dumps(report)
     assert "~/Library/Messages" not in text
     assert "~/Library/Mail" not in text
+    for connector in report["connectors"]:
+        assert "capabilities" in connector
+        assert "setup_hint" in connector
 
 
 def test_connector_status_ignores_successful_dry_run_as_error(tmp_path) -> None:
@@ -115,8 +138,10 @@ def test_connectors_cli_list(capsys) -> None:
     assert [item["name"] for item in payload["connectors"]] == [
         "weather",
         "web",
+        "browser",
         "calendar",
         "contacts",
         "email",
         "messages",
+        "tasks",
     ]

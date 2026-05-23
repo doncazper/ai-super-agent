@@ -13,6 +13,7 @@
 - No-tool chat sends no tools.
 - Tool-call loop appends matching tool results.
 - CLI modes construct expected orchestration options.
+- Prompt tracking CLI lists, advances, shows, adds, marks, audits, and reports missing prompt records without executing agent tools.
 - Smoke harness tests use mocks for LM Studio, web search/fetch, and personal connector policy checks.
 - Pytest markers identify `unit`, `integration`, `live_lmstudio`, `live_web`, `live_calendar`, `live_contacts`, `requires_approval`, and `personal_data`.
 - Tests marked `personal_data` are skipped by default and must be explicitly selected.
@@ -24,7 +25,11 @@
 - HIGH actions ask approval.
 - CRITICAL actions require per-action approval.
 - FORBIDDEN actions denied.
-- Capability manifest validation requires default state, approval requirement, storage flag, trust level, audit fields, and network rate limits where applicable.
+- Capability manifest validation requires normalized capability name, tool name, connector name, risk level, trust level, default state, approval requirement, approval reuse flag, storage flag, rate limit field, memory behavior, audit fields, setup hint, and docs reference.
+- Startup validation rejects missing risk levels, missing trust levels, missing approval rules, missing audit rules, invalid memory behavior, and manifest bypass flags.
+- Personal-data capabilities must be disabled by default.
+- CRITICAL capabilities must require per-action approval and disallow approval reuse.
+- Every registered tool must have a matching manifest capability.
 
 ## Approval Tests
 
@@ -61,6 +66,17 @@
 - Foreign-language titles/snippets/excerpts pass through without cloud translation.
 - Audit logs include search and fetch actions.
 
+## Memory Tests
+
+- Preference, project fact, and workflow lesson memories can be stored through `ToolBroker`.
+- Secrets are rejected and redacted from audit logs.
+- Email/message/contact/calendar content is not stored by default.
+- Personal-data memory requires approval.
+- Search respects scope and category filters.
+- Export/delete/clear lifecycle operations are audited and document best-effort deletion limits.
+- Context injection obeys record and character limits, excludes personal memory by default, and audits injected memory IDs.
+- Knowledge Capture tests cover workspace-only note captures, URL captures through `web.fetch_url`, file captures through `filesystem.read`, secret rejection before capture writes, prompt-injection filtering, personal-data default memory-promotion blocks, and `promote-to-memory` routing through `memory.store`.
+
 ## Weather Tests
 
 - Weather provider missing returns a structured error.
@@ -83,9 +99,12 @@
 
 - Weather configured status reports provider and enabled state without network calls.
 - Web missing-provider status reports setup hints without hallucinating configuration.
+- Browser status reports explicit URL workflow setup and does not require browser profile access.
 - Personal connectors remain disabled by default.
 - Connector status output does not reveal API keys, passwords, or tokens.
 - Connector doctor does not access personal data or audit noisy personal checks.
+- Connector status includes normalized capability summaries, risk, approval, rate-limit, cache, last-success/error, and setup-hint fields.
+- Runtime doctor checks normalized manifest validation, ToolBroker initialization, connector registry loading, personal connector defaults, and CRITICAL action defaults without sending prompts or attaching tools.
 
 ## Live Smoke Tests
 
@@ -104,6 +123,7 @@
 - Contacts search/read require approval, keep tools disabled by default, return compact search candidates, require a selected-scope token and explicit requested fields for selected reads, omit notes, redact email/phone/address values by default, deny bulk export attempts, and audit accesses as `LOCAL_PRIVATE_DATA`.
 - Email metadata/read/summarize/draft require approval when enabled, keep tools disabled by default, return no body in metadata, wrap selected thread bodies as `UNTRUSTED_EMAIL`, ignore prompt injection, never send drafts, refuse bulk thread ids, avoid long-term body storage, and audit access.
 - Messages read/summarize/draft require approval when enabled, keep tools disabled by default, do not implement sends or bulk history reads, refuse bulk thread ids, return clear setup errors for unsafe/unconfigured adapters, restrict manual draft context files to `./workspace`, wrap content as `UNTRUSTED_MESSAGE`, ignore prompt injection, avoid long-term body storage, and audit access.
+- Browser selected URL and clipping tests cover explicit URL fetch through `web.fetch_url`, blocked-domain denial, prompt-injection filtering, workspace-only clipping through `filesystem.write`, `UNTRUSTED_WEB`/`UNTRUSTED_DOCUMENT` labeling, selected-tab stub setup notes, no browser history/cookie/session/password/profile access, and audit logs for fetch/write/stub paths.
 
 ## Self-Improvement Tests
 
@@ -117,3 +137,33 @@
 - All selected milestone tests pass or failures are documented.
 - Forbidden capabilities are absent.
 - Audit and policy checks pass.
+
+## Prompt Tracking Tests
+
+- `docs/PROMPT_LEDGER.md`, `docs/PROMPT_QUEUE.md`, `docs/PROMPT_AUDIT.md`, and `docs/templates/prompt_record_template.md` exist.
+- `docs/PROMPT_PACK_FORMAT.md` and `docs/templates/prompt_pack_template.md` exist.
+- Every queued prompt has a `prompt_id`.
+- At most one prompt is active at a time.
+- `docs/PROJECT_STATE.md` references `active_prompt_id`, `next_prompt_id`, `prompt_queue_status`, and `last_prompt_audit_result`.
+- `AGENTS.md` requires prompt ledger/queue updates.
+- `prompts mark-complete` requires test/docs status fields or `--unknown`.
+- Prompt pack parser tests cover valid packs, duplicate ids, duplicate order, missing end markers, missing metadata, invalid risk levels, missing dependencies, circular dependencies, execute-all rejection, validate-without-write behavior, import file writes, queue updates, dependency-aware next prompt selection, approval-gate blocking, body preservation, and missing completion evidence.
+- PromptOps Workbench tests cover import from stdin/file/clipboard, raw single prompt import, invalid metadata/risk rejection, dependency-aware next prompt selection, copy-next clipboard behavior, disabled-by-default run-next, safe-only autopilot rejection of HIGH/approval-gated prompts, secret redaction in reports, and mark-complete evidence requirements.
+
+## Command Registry Tests
+
+- `docs/COMMAND_REGISTRY.md`, `docs/COMMAND_TEST_MATRIX.md`, `docs/COMMAND_LEGACY.md`, `docs/COMMAND_QA_RUNBOOK.md`, and command templates exist.
+- Every registered command has an id, command string, group, status, maturity level, risk level, approval requirement, description, example, docs link, and test/manual QA status.
+- Command registry validation catches missing docs, missing matrix rows, invalid status values, invalid risk values, missing examples, and missing AGENTS/README references.
+- CLI tests cover `commands list`, `commands show`, `commands search`, `commands legacy`, `commands deprecated`, `commands validate`, `commands qa-plan`, and `commands qa-run`.
+- `commands qa-run` does not execute command examples in v1 and only prints SAFE/LOW active command examples for the requested group.
+
+## Scheduler Tests
+
+- Schedule create/list writes and reads explicit local schedule records.
+- Manual `schedule run` executes a safe supported workflow and audits run start/finish.
+- Personal scheduled Daily Briefing sections require normal approval and do not read personal data when approval is unavailable.
+- Unsupported or CRITICAL workflows are rejected and not executed.
+- Pause prevents runs and delete removes the local schedule record.
+- Scheduler v1 creates no LaunchAgent, cron, daemon, login item, or hidden persistence.
+- CLI tests cover schedule create/list with a test-local `SCHEDULE_PATH`.

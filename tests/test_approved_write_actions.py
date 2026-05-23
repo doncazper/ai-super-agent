@@ -96,14 +96,14 @@ def test_contact_edit_requires_approval(tmp_path) -> None:
 
 
 def test_no_approval_reuse_for_critical_actions(tmp_path) -> None:
-    approvals = ApprovalManager(auto_approve={"email.send_approved"})
+    approvals = ApprovalManager(auto_approve={"messages.send_approved"})
     broker = make_broker(tmp_path, approvals)
 
     first = broker.execute(
-        call("email.send_approved", {"to": "a@example.com", "subject": "One", "body": "Body one"})
+        call("messages.send_approved", {"to": "+15555550100", "body": "Body one"})
     )
     second = broker.execute(
-        call("email.send_approved", {"to": "b@example.com", "subject": "Two", "body": "Body two"})
+        call("messages.send_approved", {"to": "+15555550101", "body": "Body two"})
     )
 
     assert first.allowed is True

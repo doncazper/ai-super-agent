@@ -23,6 +23,8 @@ def memory_capabilities() -> dict[str, Capability]:
         "memory.search": Capability("memory.search", RiskLevel.LOW),
         "memory.export": Capability("memory.export", RiskLevel.LOW),
         "memory.delete": Capability("memory.delete", RiskLevel.LOW),
+        "memory.clear": Capability("memory.clear", RiskLevel.LOW),
+        "memory.context": Capability("memory.context", RiskLevel.LOW),
     }
 
 
@@ -59,6 +61,28 @@ def test_preference_memory_stored(tmp_path) -> None:
     payload = json.loads(result.content)
     assert payload["stored"] is True
     assert payload["record"]["category"] == "user_preference"
+
+
+def test_project_fact_and_workflow_lesson_stored(tmp_path) -> None:
+    broker = make_broker(tmp_path)
+
+    fact = broker.execute(
+        call(
+            "memory.store",
+            {"content": "Project uses ToolBroker for tools.", "category": "project_fact"},
+        )
+    )
+    lesson = broker.execute(
+        call(
+            "memory.store",
+            {"content": "Run tests after safety changes.", "category": "workflow_lesson"},
+        )
+    )
+
+    assert fact.allowed is True
+    assert lesson.allowed is True
+    assert json.loads(fact.content)["record"]["category"] == "project_fact"
+    assert json.loads(lesson.content)["record"]["category"] == "workflow_lesson"
 
 
 def test_secret_memory_rejected_and_audit_redacts_content(tmp_path) -> None:
@@ -138,6 +162,33 @@ def test_memory_search_respects_scope(tmp_path) -> None:
     assert payload["results"][0]["scope"] == "agent"
 
 
+def test_memory_search_respects_categories(tmp_path) -> None:
+    broker = make_broker(tmp_path)
+    broker.execute(
+        call(
+            "memory.store",
+            {"content": "Prefer concise answers.", "category": "user_preference", "scope": "agent"},
+        )
+    )
+    broker.execute(
+        call(
+            "memory.store",
+            {"content": "Concise test lesson.", "category": "workflow_lesson", "scope": "agent"},
+        )
+    )
+
+    result = broker.execute(
+        call(
+            "memory.search",
+            {"query": "Concise", "scope": "agent", "categories": ["workflow_lesson"]},
+        )
+    )
+
+    payload = json.loads(result.content)
+    assert len(payload["results"]) == 1
+    assert payload["results"][0]["category"] == "workflow_lesson"
+
+
 def test_memory_delete_removes_record(tmp_path) -> None:
     broker = make_broker(tmp_path)
     stored = broker.execute(
@@ -153,6 +204,87 @@ def test_memory_delete_removes_record(tmp_path) -> None:
 
     assert json.loads(delete_result.content)["deleted"] is True
     assert json.loads(search_result.content)["results"] == []
+
+
+def test_memory_context_injection_obeys_limits_and_audits_ids(tmp_path) -> None:
+    broker = make_broker(tmp_path)
+    broker.execute(
+        call(
+            "memory.store",
+            {"content": "Project fact two is intentionally longer than the context budget.", "category": "project_fact", "scope": "agent"},
+        )
+    )
+    first = broker.execute(
+        call(
+            "memory.store",
+            {"content": "Project fact one is short.", "category": "project_fact", "scope": "agent"},
+        )
+    )
+    first_id = json.loads(first.content)["record"]["id"]
+
+    result = broker.execute(
+        call(
+            "memory.context",
+            {"query": "Project fact", "scope": "agent", "max_records": 5, "max_chars": 60},
+        )
+    )
+
+    payload = json.loads(result.content)
+    assert payload["character_budget"] == 60
+    assert payload["injected_memory_ids"] == [first_id]
+    assert payload["truncated"] is True
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert events[-1]["tool_name"] == "memory.context"
+    assert first_id in events[-1]["result_summary"]
+
+
+def test_memory_context_does_not_inject_personal_by_default(tmp_path) -> None:
+    from agent.safety.approvals import ApprovalManager
+
+    approvals = ApprovalManager(auto_approve={"memory.store_personal"})
+    broker = ToolBroker(
+        default_registry(project_root=tmp_path, memory_path=tmp_path / "memory.sqlite3"),
+        PolicyEngine(memory_capabilities()),
+        AuditLogger(tmp_path / "audit.jsonl"),
+        session_id="test-session",
+        model="test-model",
+        route="test",
+        approval_manager=approvals,
+    )
+    broker.execute(
+        call(
+            "memory.store_personal",
+            {
+                "content": "Personal appointment detail",
+                "category": "personal_data_reference",
+                "source_trust": "LOCAL_PRIVATE_DATA",
+            },
+        )
+    )
+
+    result = broker.execute(call("memory.context", {"query": "Personal", "max_chars": 200}))
+
+    payload = json.loads(result.content)
+    assert payload["injected_memory_ids"] == []
+    assert payload["context"] == ""
+
+
+def test_memory_export_and_clear(tmp_path) -> None:
+    broker = make_broker(tmp_path)
+    broker.execute(
+        call(
+            "memory.store",
+            {"content": "Clear this fact.", "category": "project_fact"},
+        )
+    )
+
+    exported = broker.execute(call("memory.export", {"scope": "default"}))
+    cleared = broker.execute(call("memory.clear", {"scope": "default"}))
+    after = broker.execute(call("memory.export", {"scope": "default"}))
+
+    assert len(json.loads(exported.content)["records"]) == 1
+    assert json.loads(cleared.content)["deleted_count"] == 1
+    assert json.loads(after.content)["records"] == []
 
 
 def test_audit_logs_memory_operations(tmp_path) -> None:

@@ -1,10 +1,16 @@
 tools:
   time.get_current_time:
+    capability_name: time.get_current_time
+    tool_name: time.get_current_time
+    connector_name: null
     risk_level: SAFE
+    trust_level: MODEL_OUTPUT
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: MODEL_OUTPUT
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -17,15 +23,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Safe local time tool.
+    docs_reference: README.md#usage
   web.search:
+    capability_name: web.search
+    tool_name: web.search
+    connector_name: web
     risk_level: LOW
+    trust_level: UNTRUSTED_WEB
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    requires_web_access: true
     rate_limit:
       requests_per_minute: 10
-    trust_level: UNTRUSTED_WEB
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -39,37 +51,55 @@ tools:
     - sanitized_args
     - result_summary
     - network_domains
+    setup_hint: Configure web provider if needed; Brave requires WEB_SEARCH_PROVIDER=brave
+      and BRAVE_SEARCH_API_KEY.
+    docs_reference: README.md#web-search-and-research
+    requires_web_access: true
   web.fetch_url:
+    capability_name: web.fetch_url
+    tool_name: web.fetch_url
+    connector_name: web
     risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Configure web provider if needed; Brave requires WEB_SEARCH_PROVIDER=brave
+      and BRAVE_SEARCH_API_KEY.
+    docs_reference: README.md#web-search-and-research
     requires_web_access: true
     timeout_seconds: 10
     blocked_domains: []
     allowed_domains: []
-    trust_level: UNTRUSTED_WEB
-    audit_fields:
-    - timestamp
-    - session_id
-    - request_id
-    - tool_name
-    - capability
-    - risk_level
-    - trust_level
-    - policy_decision
-    - approval_result
-    - sanitized_args
-    - result_summary
-    - network_domains
-    rate_limit:
-      requests_per_minute: 30
   weather.status:
+    capability_name: weather.status
+    tool_name: weather.status
+    connector_name: weather
     risk_level: LOW
+    trust_level: UNTRUSTED_WEB
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: UNTRUSTED_WEB
+    rate_limit: null
+    memory_behavior: cache_only
     audit_fields:
     - timestamp
     - session_id
@@ -83,15 +113,22 @@ tools:
     - sanitized_args
     - result_summary
     - network_domains
+    setup_hint: Open-Meteo is default; set WEATHER_PROVIDER or WEATHER_DEFAULT_LOCATION
+      explicitly if desired.
+    docs_reference: README.md#weather
   weather.current:
+    capability_name: weather.current
+    tool_name: weather.current
+    connector_name: weather
     risk_level: LOW
+    trust_level: UNTRUSTED_WEB
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    requires_web_access: true
     rate_limit:
       requests_per_minute: 20
-    trust_level: UNTRUSTED_WEB
+    memory_behavior: cache_only
     audit_fields:
     - timestamp
     - session_id
@@ -105,15 +142,23 @@ tools:
     - sanitized_args
     - result_summary
     - network_domains
+    setup_hint: Open-Meteo is default; set WEATHER_PROVIDER or WEATHER_DEFAULT_LOCATION
+      explicitly if desired.
+    docs_reference: README.md#weather
+    requires_web_access: true
   weather.forecast:
+    capability_name: weather.forecast
+    tool_name: weather.forecast
+    connector_name: weather
     risk_level: LOW
+    trust_level: UNTRUSTED_WEB
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    requires_web_access: true
     rate_limit:
       requests_per_minute: 10
-    trust_level: UNTRUSTED_WEB
+    memory_behavior: cache_only
     audit_fields:
     - timestamp
     - session_id
@@ -127,15 +172,23 @@ tools:
     - sanitized_args
     - result_summary
     - network_domains
+    setup_hint: Open-Meteo is default; set WEATHER_PROVIDER or WEATHER_DEFAULT_LOCATION
+      explicitly if desired.
+    docs_reference: README.md#weather
+    requires_web_access: true
   weather.alerts:
+    capability_name: weather.alerts
+    tool_name: weather.alerts
+    connector_name: weather
     risk_level: LOW
+    trust_level: UNTRUSTED_WEB
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    requires_web_access: true
     rate_limit:
       requests_per_minute: 10
-    trust_level: UNTRUSTED_WEB
+    memory_behavior: cache_only
     audit_fields:
     - timestamp
     - session_id
@@ -149,12 +202,22 @@ tools:
     - sanitized_args
     - result_summary
     - network_domains
+    setup_hint: Open-Meteo is default; set WEATHER_PROVIDER or WEATHER_DEFAULT_LOCATION
+      explicitly if desired.
+    docs_reference: README.md#weather
+    requires_web_access: true
   weather.cache_clear:
+    capability_name: weather.cache_clear
+    tool_name: weather.cache_clear
+    connector_name: weather
     risk_level: LOW
+    trust_level: UNTRUSTED_WEB
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: UNTRUSTED_WEB
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -168,17 +231,21 @@ tools:
     - sanitized_args
     - result_summary
     - network_domains
+    setup_hint: Open-Meteo is default; set WEATHER_PROVIDER or WEATHER_DEFAULT_LOCATION
+      explicitly if desired.
+    docs_reference: README.md#weather
   filesystem.list:
+    capability_name: filesystem.list
+    tool_name: filesystem.list
+    connector_name: workspace
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    allowed_roots:
-    - .
-    - ./workspace
-    - ./agent
-    - ./tests
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -193,17 +260,26 @@ tools:
     - result_summary
     - files_read
     - files_written
+    setup_hint: Workspace/project-file tools are bounded to approved roots and denied
+      private paths.
+    docs_reference: README.md#project-tools
+    allowed_roots:
+    - .
+    - ./workspace
+    - ./agent
+    - ./tests
   filesystem.read:
+    capability_name: filesystem.read
+    tool_name: filesystem.read
+    connector_name: workspace
     risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    allowed_roots:
-    - .
-    - ./workspace
-    - ./agent
-    - ./tests
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -218,17 +294,26 @@ tools:
     - result_summary
     - files_read
     - files_written
+    setup_hint: Workspace/project-file tools are bounded to approved roots and denied
+      private paths.
+    docs_reference: README.md#project-tools
+    allowed_roots:
+    - .
+    - ./workspace
+    - ./agent
+    - ./tests
   filesystem.write:
+    capability_name: filesystem.write
+    tool_name: filesystem.write
+    connector_name: workspace
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    allowed_roots:
-    - .
-    - ./workspace
-    - ./agent
-    - ./tests
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: workspace_write
     audit_fields:
     - timestamp
     - session_id
@@ -243,17 +328,26 @@ tools:
     - result_summary
     - files_read
     - files_written
+    setup_hint: Workspace/project-file tools are bounded to approved roots and denied
+      private paths.
+    docs_reference: README.md#project-tools
+    allowed_roots:
+    - .
+    - ./workspace
+    - ./agent
+    - ./tests
   filesystem.patch:
+    capability_name: filesystem.patch
+    tool_name: filesystem.patch
+    connector_name: workspace
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    allowed_roots:
-    - .
-    - ./workspace
-    - ./agent
-    - ./tests
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: workspace_write
     audit_fields:
     - timestamp
     - session_id
@@ -268,17 +362,26 @@ tools:
     - result_summary
     - files_read
     - files_written
+    setup_hint: Workspace/project-file tools are bounded to approved roots and denied
+      private paths.
+    docs_reference: README.md#project-tools
+    allowed_roots:
+    - .
+    - ./workspace
+    - ./agent
+    - ./tests
   filesystem.delete:
+    capability_name: filesystem.delete
+    tool_name: filesystem.delete
+    connector_name: workspace
     risk_level: HIGH
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: true
+    approval_reuse_allowed: true
     stores_data: false
-    allowed_roots:
-    - .
-    - ./workspace
-    - ./agent
-    - ./tests
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: workspace_write
     audit_fields:
     - timestamp
     - session_id
@@ -293,12 +396,26 @@ tools:
     - result_summary
     - files_read
     - files_written
+    setup_hint: Workspace/project-file tools are bounded to approved roots and denied
+      private paths.
+    docs_reference: README.md#project-tools
+    allowed_roots:
+    - .
+    - ./workspace
+    - ./agent
+    - ./tests
   git.status:
+    capability_name: git.status
+    tool_name: git.status
+    connector_name: git
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -312,12 +429,20 @@ tools:
     - sanitized_args
     - result_summary
     - commands_run
+    setup_hint: Git tools operate inside the project repository; commits require approval.
+    docs_reference: README.md#project-tools
   git.diff:
+    capability_name: git.diff
+    tool_name: git.diff
+    connector_name: git
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -331,12 +456,20 @@ tools:
     - sanitized_args
     - result_summary
     - commands_run
+    setup_hint: Git tools operate inside the project repository; commits require approval.
+    docs_reference: README.md#project-tools
   git.branch:
+    capability_name: git.branch
+    tool_name: git.branch
+    connector_name: git
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -350,12 +483,20 @@ tools:
     - sanitized_args
     - result_summary
     - commands_run
+    setup_hint: Git tools operate inside the project repository; commits require approval.
+    docs_reference: README.md#project-tools
   git.commit:
+    capability_name: git.commit
+    tool_name: git.commit
+    connector_name: git
     risk_level: HIGH
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: true
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -369,12 +510,20 @@ tools:
     - sanitized_args
     - result_summary
     - commands_run
+    setup_hint: Git tools operate inside the project repository; commits require approval.
+    docs_reference: README.md#project-tools
   code.run_tests:
+    capability_name: code.run_tests
+    tool_name: code.run_tests
+    connector_name: test_runner
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -388,12 +537,21 @@ tools:
     - sanitized_args
     - result_summary
     - commands_run
+    setup_hint: Test runner executes configured project tests with timeout through
+      ToolBroker.
+    docs_reference: README.md#project-tools
   memory.store:
+    capability_name: memory.store
+    tool_name: memory.store
+    connector_name: memory
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: true
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: stores_project_data
     audit_fields:
     - timestamp
     - session_id
@@ -406,12 +564,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Memory tools use local storage; personal data and secrets require
+      policy checks or are rejected.
+    docs_reference: README.md#memory
   memory.store_personal:
+    capability_name: memory.store_personal
+    tool_name: memory.store_personal
+    connector_name: memory
     risk_level: HIGH
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: true
+    approval_reuse_allowed: true
     stores_data: true
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: stores_personal_with_approval
     audit_fields:
     - timestamp
     - session_id
@@ -424,12 +591,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Memory tools use local storage; personal data and secrets require
+      policy checks or are rejected.
+    docs_reference: README.md#memory
   memory.search:
+    capability_name: memory.search
+    tool_name: memory.search
+    connector_name: memory
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -442,12 +618,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Memory tools use local storage; personal data and secrets require
+      policy checks or are rejected.
+    docs_reference: README.md#memory
   memory.export:
+    capability_name: memory.export
+    tool_name: memory.export
+    connector_name: memory
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -460,12 +645,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Memory tools use local storage; personal data and secrets require
+      policy checks or are rejected.
+    docs_reference: README.md#memory
   memory.delete:
+    capability_name: memory.delete
+    tool_name: memory.delete
+    connector_name: memory
     risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: true
     approval_required: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -478,15 +672,105 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Memory tools use local storage; personal data and secrets require
+      policy checks or are rejected.
+    docs_reference: README.md#memory
+  memory.clear:
+    capability_name: memory.clear
+    tool_name: memory.clear
+    connector_name: memory
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Memory tools use local storage; personal data and secrets require
+      policy checks or are rejected.
+    docs_reference: README.md#memory
+  memory.context:
+    capability_name: memory.context
+    tool_name: memory.context
+    connector_name: memory
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Memory context injection is bounded, non-personal by default, and
+      audited with injected memory ids.
+    docs_reference: README.md#memory
   email.read_selected_thread:
+    capability_name: email.read_selected_thread
+    tool_name: email.read_selected_thread
+    connector_name: email
     risk_level: HIGH
+    trust_level: UNTRUSTED_EMAIL
     default_enabled: false
     approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Email send is disabled by default; send only from an approved
+      Action Center draft with an explicitly configured provider.
+    docs_reference: README.md#email-approved-send
     selected_scope_only: true
     bulk_read_allowed: false
-    trust_level: UNTRUSTED_EMAIL
     stores_body: false
+  contacts.search:
+    capability_name: contacts.search
+    tool_name: contacts.search
+    connector_name: contacts
+    risk_level: HIGH
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
     stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -499,15 +783,24 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
-  contacts.search:
-    risk_level: HIGH
-    default_enabled: false
-    approval_required: true
+    setup_hint: Contacts tools are disabled by default; enable only selected-scope
+      read-only connector after approval.
+    docs_reference: README.md#contacts-read-only-selected-scope-access
     selected_scope_only: true
     compact_results_only: true
     max_results: 5
-    stores_data: false
+  contacts.read_selected:
+    capability_name: contacts.read_selected
+    tool_name: contacts.read_selected
+    connector_name: contacts
+    risk_level: HIGH
     trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -520,18 +813,27 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
-  contacts.read_selected:
-    risk_level: HIGH
-    default_enabled: false
-    approval_required: true
+    setup_hint: Contacts tools are disabled by default; enable only selected-scope
+      read-only connector after approval.
+    docs_reference: README.md#contacts-read-only-selected-scope-access
     selected_scope_only: true
     requested_fields_only: true
     emails_included_by_default: false
     phones_included_by_default: false
     notes_included: false
     addresses_included: false
-    stores_data: false
+  calendar.read_date_range:
+    capability_name: calendar.read_date_range
+    tool_name: calendar.read_date_range
+    connector_name: calendar
+    risk_level: HIGH
     trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -544,15 +846,24 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
-  calendar.read_date_range:
-    risk_level: HIGH
-    default_enabled: false
-    approval_required: true
+    setup_hint: Calendar tools are disabled by default; enable only selected-range
+      read-only connector after approval.
+    docs_reference: README.md#calendar-read-only-selected-range-access
     selected_scope_only: true
     selected_date_range_only: true
     max_range_days: 31
-    stores_data: false
+  calendar.read_selected_event:
+    capability_name: calendar.read_selected_event
+    tool_name: calendar.read_selected_event
+    connector_name: calendar
+    risk_level: HIGH
     trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -565,16 +876,56 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Calendar event reads are disabled by default; enable only selected-event
+      read-only access after approval.
+    docs_reference: README.md#meeting-prep-workflow
+    selected_scope_only: true
+    selected_event_only: true
+    notes_included: false
+    attendee_details_included: false
   calendar.find_availability:
+    capability_name: calendar.find_availability
+    tool_name: calendar.find_availability
+    connector_name: calendar
     risk_level: HIGH
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: false
     approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Calendar tools are disabled by default; enable only selected-range
+      read-only connector after approval.
+    docs_reference: README.md#calendar-read-only-selected-range-access
     selected_scope_only: true
     selected_date_range_only: true
     max_range_days: 31
     returns_event_details: false
+  email.list_metadata:
+    capability_name: email.list_metadata
+    tool_name: email.list_metadata
+    connector_name: email
+    risk_level: HIGH
+    trust_level: UNTRUSTED_EMAIL
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -587,35 +938,24 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
-  email.list_metadata:
-    risk_level: HIGH
-    default_enabled: false
-    approval_required: true
+    setup_hint: Email tools are disabled by default; configure only metadata/read/draft
+      workflows, never sending.
+    docs_reference: README.md#email-metadata-selected-thread-and-draft-only
     selected_scope_only: true
     body_included: false
     max_results: 10
-    stores_data: false
-    trust_level: UNTRUSTED_EMAIL
-    audit_fields:
-    - timestamp
-    - session_id
-    - request_id
-    - tool_name
-    - capability
-    - risk_level
-    - trust_level
-    - policy_decision
-    - approval_result
-    - sanitized_args
-    - result_summary
   email.summarize_thread:
+    capability_name: email.summarize_thread
+    tool_name: email.summarize_thread
+    connector_name: email
     risk_level: HIGH
+    trust_level: UNTRUSTED_EMAIL
     default_enabled: false
     approval_required: true
-    selected_scope_only: true
-    stores_body: false
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: UNTRUSTED_EMAIL
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -628,36 +968,23 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Email tools are disabled by default; configure only metadata/read/draft
+      workflows, never sending.
+    docs_reference: README.md#email-metadata-selected-thread-and-draft-only
+    selected_scope_only: true
+    stores_body: false
   email.draft_reply:
+    capability_name: email.draft_reply
+    tool_name: email.draft_reply
+    connector_name: email
     risk_level: HIGH
-    default_enabled: false
-    approval_required: true
-    selected_scope_only: true
-    draft_only: true
-    sending_implemented: false
-    stores_data: false
     trust_level: UNTRUSTED_EMAIL
-    audit_fields:
-    - timestamp
-    - session_id
-    - request_id
-    - tool_name
-    - capability
-    - risk_level
-    - trust_level
-    - policy_decision
-    - approval_result
-    - sanitized_args
-    - result_summary
-  messages.read_selected_thread:
-    risk_level: HIGH
     default_enabled: false
     approval_required: true
-    selected_scope_only: true
-    bulk_read_allowed: false
-    trust_level: UNTRUSTED_MESSAGE
-    stores_body: false
+    approval_reuse_allowed: true
     stores_data: false
+    rate_limit: null
+    memory_behavior: draft_only_no_send
     audit_fields:
     - timestamp
     - session_id
@@ -670,56 +997,54 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
-  messages.summarize_thread:
-    risk_level: HIGH
-    default_enabled: false
-    approval_required: true
+    setup_hint: Email tools are disabled by default; configure only metadata/read/draft
+      workflows, never sending.
+    docs_reference: README.md#email-metadata-selected-thread-and-draft-only
     selected_scope_only: true
-    bulk_read_allowed: false
-    trust_level: UNTRUSTED_MESSAGE
-    stores_body: false
-    stores_data: false
-    audit_fields:
-    - timestamp
-    - session_id
-    - request_id
-    - tool_name
-    - capability
-    - risk_level
-    - trust_level
-    - policy_decision
-    - approval_result
-    - sanitized_args
-    - result_summary
-  messages.draft_reply:
-    risk_level: HIGH
-    default_enabled: false
-    approval_required: true
-    selected_scope_only: true
-    bulk_read_allowed: false
-    trust_level: UNTRUSTED_MESSAGE
     draft_only: true
     sending_implemented: false
-    stores_data: false
-    audit_fields:
-    - timestamp
-    - session_id
-    - request_id
-    - tool_name
-    - capability
-    - risk_level
-    - trust_level
-    - policy_decision
-    - approval_result
-    - sanitized_args
-    - result_summary
-  browser.read_selected_tab:
+  messages.read_selected_thread:
+    capability_name: messages.read_selected_thread
+    tool_name: messages.read_selected_thread
+    connector_name: messages
     risk_level: HIGH
+    trust_level: UNTRUSTED_MESSAGE
     default_enabled: false
     approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Messages tools are disabled by default; no live Messages database
+      connector is enabled.
+    docs_reference: README.md#messages-draft-only
     selected_scope_only: true
+    bulk_read_allowed: false
+    stores_body: false
+  messages.summarize_thread:
+    capability_name: messages.summarize_thread
+    tool_name: messages.summarize_thread
+    connector_name: messages
+    risk_level: HIGH
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -732,12 +1057,266 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Messages tools are disabled by default; no live Messages database
+      connector is enabled.
+    docs_reference: README.md#messages-draft-only
+    selected_scope_only: true
+    bulk_read_allowed: false
+    stores_body: false
+  messages.draft_reply:
+    capability_name: messages.draft_reply
+    tool_name: messages.draft_reply
+    connector_name: messages
+    risk_level: HIGH
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: draft_only_no_send
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Messages tools are disabled by default; no live Messages database
+      connector is enabled.
+    docs_reference: README.md#messages-draft-only
+    selected_scope_only: true
+    bulk_read_allowed: false
+    draft_only: true
+    sending_implemented: false
+  messages.draft_from_text:
+    capability_name: messages.draft_from_text
+    tool_name: messages.draft_from_text
+    connector_name: messages
+    risk_level: HIGH
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: draft_only_no_send
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Messages draft-from-text is disabled by default; provide a selected
+      workspace text file only after approval.
+    docs_reference: README.md#messages-draft-only
+    selected_scope_only: true
+    workspace_file_only: true
+    bulk_read_allowed: false
+    draft_only: true
+    sending_implemented: false
+  messages.save_draft:
+    capability_name: messages.save_draft
+    tool_name: messages.save_draft
+    connector_name: messages
+    risk_level: HIGH
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Message draft save is disabled by default; review and approve an
+      Action Center draft before saving inside ./workspace.
+    docs_reference: README.md#messages-safe-handoff
+    workspace_only: true
+    sends_message: false
+  messages.copy_draft:
+    capability_name: messages.copy_draft
+    tool_name: messages.copy_draft
+    connector_name: messages
+    risk_level: HIGH
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Message clipboard handoff is disabled by default; review and approve
+      an Action Center draft before copying.
+    docs_reference: README.md#messages-safe-handoff
+    clipboard_only: true
+    sends_message: false
+  browser.read_selected_tab:
+    capability_name: browser.read_selected_tab
+    tool_name: browser.read_selected_tab
+    connector_name: browser
+    risk_level: HIGH
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Browser selected-tab reading is disabled by default and requires selected-scope
+      approval.
+    docs_reference: README.md#personal-data-tools
+    selected_scope_only: true
+  browser.read_selected_url:
+    capability_name: browser.read_selected_url
+    tool_name: browser.read_selected_url
+    connector_name: web
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Use an explicit URL; this workflow fetches through web.fetch_url and
+      never reads browser history, cookies, sessions, passwords, or private browser
+      databases.
+    docs_reference: README.md#browser-selected-url-and-clipping
+    requires_web_access: true
+  browser.summarize_selected_url:
+    capability_name: browser.summarize_selected_url
+    tool_name: browser.summarize_selected_url
+    connector_name: web
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Summarize only explicitly supplied URLs; webpage content is untrusted
+      data and no browser profile data is accessed.
+    docs_reference: README.md#browser-selected-url-and-clipping
+    requires_web_access: true
+  browser.clip_url_to_workspace:
+    capability_name: browser.clip_url_to_workspace
+    tool_name: browser.clip_url_to_workspace
+    connector_name: web
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: workspace_write
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    - network_domains
+    setup_hint: Clips are saved only under ./workspace through filesystem.write after
+      fetching the explicit URL through web.fetch_url.
+    docs_reference: README.md#browser-selected-url-and-clipping
+    requires_web_access: true
   email.send:
+    capability_name: email.send
+    tool_name: email.send
+    connector_name: email
     risk_level: CRITICAL
+    trust_level: MODEL_OUTPUT
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
-    trust_level: MODEL_OUTPUT
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -750,13 +1329,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
-    stores_data: false
+    setup_hint: Email tools are disabled by default; configure only metadata/read/draft
+      workflows, never sending.
+    docs_reference: README.md#email-metadata-selected-thread-and-draft-only
   messages.send:
+    capability_name: messages.send
+    tool_name: messages.send
+    connector_name: messages
     risk_level: CRITICAL
+    trust_level: MODEL_OUTPUT
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
-    trust_level: MODEL_OUTPUT
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -769,14 +1356,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
-    stores_data: false
+    setup_hint: Messages tools are disabled by default; no live Messages database
+      connector is enabled.
+    docs_reference: README.md#messages-draft-only
   calendar.create_event:
+    capability_name: calendar.create_event
+    tool_name: calendar.create_event
+    connector_name: calendar
     risk_level: CRITICAL
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -789,13 +1383,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Calendar tools are disabled by default; enable only selected-range
+      read-only connector after approval.
+    docs_reference: README.md#calendar-read-only-selected-range-access
   calendar.update_event:
+    capability_name: calendar.update_event
+    tool_name: calendar.update_event
+    connector_name: calendar
     risk_level: CRITICAL
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -808,13 +1410,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Calendar tools are disabled by default; enable only selected-range
+      read-only connector after approval.
+    docs_reference: README.md#calendar-read-only-selected-range-access
   calendar.delete_event:
+    capability_name: calendar.delete_event
+    tool_name: calendar.delete_event
+    connector_name: calendar
     risk_level: CRITICAL
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-    trust_level: LOCAL_PRIVATE_DATA
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -827,13 +1437,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Calendar tools are disabled by default; enable only selected-range
+      read-only connector after approval.
+    docs_reference: README.md#calendar-read-only-selected-range-access
   contacts.update_selected:
+    capability_name: contacts.update_selected
+    tool_name: contacts.update_selected
+    connector_name: contacts
     risk_level: CRITICAL
-    default_enabled: false
-    approval_required: per_action
-    approval_reuse_allowed: false
-    stores_data: false
     trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -846,13 +1464,48 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Contacts tools are disabled by default; enable only selected-scope
+      write connector after approval.
+    docs_reference: README.md#contacts-approved-edits
+  contacts.create:
+    capability_name: contacts.create
+    tool_name: contacts.create
+    connector_name: contacts
+    risk_level: CRITICAL
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Contacts create is disabled by default and currently uses a safe
+      approved-action stub until a native connector is configured.
+    docs_reference: README.md#contacts-approved-edits
   email.send_approved:
+    capability_name: email.send_approved
+    tool_name: email.send_approved
+    connector_name: email
     risk_level: CRITICAL
+    trust_level: MODEL_OUTPUT
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-    trust_level: MODEL_OUTPUT
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -865,13 +1518,21 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Email tools are disabled by default; configure only metadata/read/draft
+      workflows, never sending.
+    docs_reference: README.md#email-metadata-selected-thread-and-draft-only
   messages.send_approved:
+    capability_name: messages.send_approved
+    tool_name: messages.send_approved
+    connector_name: messages
     risk_level: CRITICAL
+    trust_level: MODEL_OUTPUT
     default_enabled: false
     approval_required: per_action
     approval_reuse_allowed: false
     stores_data: false
-    trust_level: MODEL_OUTPUT
+    rate_limit: null
+    memory_behavior: no_store
     audit_fields:
     - timestamp
     - session_id
@@ -884,11 +1545,156 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
+    setup_hint: Messages tools are disabled by default; no live Messages database
+      connector is enabled.
+    docs_reference: README.md#messages-draft-only
+  tasks.list:
+    capability_name: tasks.list
+    tool_name: tasks.list
+    connector_name: tasks
+    risk_level: HIGH
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Tasks tools are disabled by default; use selected-scope access and
+      Action Center for writes.
+    docs_reference: README.md#reminders-tasks-connector
+  tasks.create:
+    capability_name: tasks.create
+    tool_name: tasks.create
+    connector_name: tasks
+    risk_level: CRITICAL
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Tasks tools are disabled by default; use selected-scope access and
+      Action Center for writes.
+    docs_reference: README.md#reminders-tasks-connector
+  tasks.update:
+    capability_name: tasks.update
+    tool_name: tasks.update
+    connector_name: tasks
+    risk_level: CRITICAL
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Tasks tools are disabled by default; use selected-scope access and
+      Action Center for writes.
+    docs_reference: README.md#reminders-tasks-connector
+  tasks.complete:
+    capability_name: tasks.complete
+    tool_name: tasks.complete
+    connector_name: tasks
+    risk_level: CRITICAL
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Tasks tools are disabled by default; use selected-scope access and
+      Action Center for writes.
+    docs_reference: README.md#reminders-tasks-connector
+  tasks.delete:
+    capability_name: tasks.delete
+    tool_name: tasks.delete
+    connector_name: tasks
+    risk_level: CRITICAL
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Tasks tools are disabled by default; use selected-scope access and
+      Action Center for writes.
+    docs_reference: README.md#reminders-tasks-connector
   secrets.read:
+    capability_name: secrets.read
+    tool_name: secrets.read
+    connector_name: secrets
     risk_level: FORBIDDEN
+    trust_level: LOCAL_PRIVATE_DATA
     default_enabled: false
     approval_required: false
-    trust_level: LOCAL_PRIVATE_DATA
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: forbidden
     audit_fields:
     - timestamp
     - session_id
@@ -901,4 +1707,5 @@ tools:
     - approval_result
     - sanitized_args
     - result_summary
-    stores_data: false
+    setup_hint: Secret-reading capabilities are forbidden.
+    docs_reference: docs/THREAT_MODEL.md#threats-and-mitigations

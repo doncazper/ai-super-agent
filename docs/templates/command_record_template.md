@@ -1,0 +1,27 @@
+# Command Record Template
+
+- Command ID:
+- Command:
+- Group:
+- Description:
+- Example:
+- Status:
+- Maturity level:
+- Risk level:
+- Trust level:
+- Requires approval:
+- Requires connector:
+- Requires provider:
+- Side effects:
+- ToolBroker path:
+- Audit behavior:
+- Memory behavior:
+- Test coverage:
+- Manual QA status:
+- Docs link:
+- Introduced date/commit:
+- Deprecated date/commit:
+- Replacement command:
+- Last verified:
+- Known bugs:
+- Notes:
