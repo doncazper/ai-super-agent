@@ -5,6 +5,11 @@ category: documents
 version: "1.0.0"
 status: available
 maturity_level: "4 Tested"
+root_id: project_skills
+source: project
+provenance:
+  source_type: native
+  review_status: reviewed_local
 risk_level: MEDIUM
 trust_level: UNTRUSTED_DOCUMENT
 allowed_tools:
@@ -17,9 +22,21 @@ required_capabilities:
   - documents.pdf.extract_text
   - documents.pdf.extract_tables
   - documents.pdf.summarize
+required_connectors: []
+required_env: []
+required_config: []
+required_binaries: []
+required_files: []
+required_platforms:
+  - any
+required_python: ">=3.11"
+required_model_features: []
 approval_required: "none for read-only v1; OCR, split/merge, and generated output writes are deferred for separate approval design"
+approval_reuse_allowed: true
 memory_behavior: no_store
 audit_required: true
+network_behavior: none
+filesystem_behavior: workspace_read
 inputs_schema:
   type: object
   properties:
@@ -41,5 +58,10 @@ outputs_schema:
       type: array
 docs_path: docs/native_skills/pdf.md
 tests_path: tests/test_pdf_documents.py
+dogfood_suite: ""
 owner: local-agent
+license: project-internal
 last_reviewed: "2026-05-23"
+setup_hint: Requires PDF files to be inside approved workspace roots; OCR and write actions are deferred.
+known_limitations:
+  - Embedded text only; OCR and PDF writes are disabled.

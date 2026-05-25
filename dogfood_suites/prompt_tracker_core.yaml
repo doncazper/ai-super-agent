@@ -1,0 +1,33 @@
+suite_id: prompt_tracker_core
+name: Prompt Tracker Core Smoke
+description: Exercises prompt queue/status/evidence commands without executing queued prompts.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: pt_core_list
+    description: List prompt records.
+    command: python smart_agent.py prompts list
+    expected_behavior: Prompt records print as JSON without executing prompt bodies.
+    failure_signals: Crash, missing PTM prompts, or unredacted private data.
+    tags: [prompt_tracking, safe]
+  - id: pt_core_next
+    description: Show next prompt.
+    command: python smart_agent.py prompts next
+    expected_behavior: Next prompt is reported from the queue with dependencies respected.
+    failure_signals: High-risk prompt auto-run, missing next prompt, or dependency bypass.
+    tags: [prompt_tracking, queue]
+  - id: pt_core_audit
+    description: Audit prompt evidence.
+    command: python smart_agent.py prompts audit
+    expected_behavior: Audit reports active count, queued count, and completion evidence.
+    failure_signals: More than one active prompt or no evidence status.
+    tags: [prompt_tracking, evidence]
+  - id: pt_core_missing
+    description: Report missing prompt evidence.
+    command: python smart_agent.py prompts missing
+    expected_behavior: Missing evidence is reported without changing queue state.
+    failure_signals: Prompt status changes or auto-execution.
+    tags: [prompt_tracking, evidence]

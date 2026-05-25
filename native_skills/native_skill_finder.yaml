@@ -5,15 +5,34 @@ category: productivity
 version: "1.0.0"
 status: available
 maturity_level: "4 Tested"
+root_id: project_skills
+source: project
+provenance:
+  source_type: native
+  review_status: reviewed_local
 risk_level: LOW
 trust_level: UNTRUSTED_DOCUMENT
 allowed_tools:
   - native_skills.find_skill
 required_capabilities:
   - native_skills.find_skill
+required_connectors: []
+required_env: []
+required_config: []
+required_binaries: []
+required_files:
+  - docs/FEATURE_REGISTRY.md
+  - docs/FEATURE_MATURITY.md
+required_platforms:
+  - any
+required_python: ">=3.11"
+required_model_features: []
 approval_required: false
+approval_reuse_allowed: true
 memory_behavior: no_store
 audit_required: true
+network_behavior: none
+filesystem_behavior: metadata_only
 inputs_schema:
   type: object
   properties:
@@ -33,5 +52,10 @@ outputs_schema:
       type: object
 docs_path: docs/native_skills/NATIVE_SKILLS_PROGRAM.md
 tests_path: tests/test_native_skill_finder.py
+dogfood_suite: ""
 owner: local-agent
+license: project-internal
 last_reviewed: "2026-05-23"
+setup_hint: Uses local project metadata only; no external marketplace search or install.
+known_limitations:
+  - Matching is lightweight keyword/synonym scoring.

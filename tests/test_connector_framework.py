@@ -65,7 +65,25 @@ def weather_capabilities() -> dict[str, Capability]:
 def test_connector_registry_loads() -> None:
     registry = default_connector_registry()
 
-    assert registry.names() == ["weather", "web", "browser", "calendar", "contacts", "email", "messages", "tasks"]
+    assert registry.names() == [
+        "weather",
+        "web",
+        "browser",
+        "calendar",
+        "contacts",
+        "email",
+        "messages",
+        "tasks",
+        "searxng",
+        "brave",
+        "serpapi",
+        "weatherapi",
+        "gmail",
+        "telegram",
+        "reddit",
+        "v2ex",
+        "apple_business",
+    ]
     assert registry.get("weather") is not None
 
 

@@ -16,11 +16,12 @@ def test_python_version_guard_message_includes_setup_commands() -> None:
 
     assert "requires Python 3.11 or newer" in message
     assert "Detected Python: 3.9.6" in message
-    assert "python3.11 -m venv .venv" in message
+    assert "python3.12 -m venv .venv" in message
     assert "python -m pip install -e '.[dev]'" in message
     assert "LMSTUDIO_BASE_URL" in message
     assert "LMSTUDIO_MODEL" in message
     assert "curl http://localhost:1234/v1/models" in message
+    assert "./scripts/agent doctor" in message
 
 
 def test_local_agent_wrapper_exists_and_is_executable() -> None:
@@ -30,7 +31,8 @@ def test_local_agent_wrapper_exists_and_is_executable() -> None:
     assert wrapper.stat().st_mode & stat.S_IXUSR
     text = wrapper.read_text(encoding="utf-8")
     assert ".venv/bin/python" in text
-    assert "codex-primary-runtime" in text
+    assert "python3.12" in text
+    assert "No supported interpreter was found." in text
     assert "LMSTUDIO_MODEL" in text
 
 

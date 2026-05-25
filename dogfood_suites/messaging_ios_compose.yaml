@@ -1,0 +1,58 @@
+suite_id: messaging_ios_compose
+name: Messaging iOS Compose Dogfood
+description: Exercises local iOS user-confirmed compose handoff payloads and mock returned results. It does not send or require an iOS app.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: ios_compose_create_draft
+    description: Create a fixed-id iOS compose draft.
+    command: python smart_agent.py messaging draft-create --channel ios_compose --to "+15555550100" --body "Dogfood iOS compose-only handoff. Do not send." --draft-id dogfood_ios_compose --source trusted_user
+    expected_behavior: A local ios_compose MessageDraft is written without sending or opening an iOS app.
+    failure_signals: Silent send, provider call, private app access, or memory write.
+    tags: [messaging, ios_compose, fixture]
+  - id: ios_compose_create_payload
+    description: Create a user-confirmed compose payload.
+    command: python smart_agent.py messaging ios-compose-payload dogfood_ios_compose --expires-minutes 15
+    expected_behavior: A local expiring handoff payload is written with requires_user_tap_send=true and silent_send_supported=false.
+    failure_signals: Silent send support, missing nonce/integrity hash, missing expiration, or provider call.
+    tags: [messaging, ios_compose, payload]
+  - id: ios_compose_status
+    description: Show local payload/result status.
+    command: python smart_agent.py messaging ios-compose-status dogfood_ios_compose
+    expected_behavior: Status reads local payload/result metadata only and reports no agent send.
+    failure_signals: iOS/device query, provider call, send attempt, or raw personal-data exposure.
+    tags: [messaging, ios_compose, status]
+  - id: ios_compose_record_sent_result
+    description: Record a mock sent result returned by a future iOS compose app.
+    command: python smart_agent.py messaging ios-compose-record-result dogfood_ios_compose --result sent --provider-message-id dogfood-mock-message
+    expected_behavior: Local result is recorded as returned by user-confirmed compose; the agent does not send.
+    failure_signals: Agent-side send execution, missing audit, or result accepted without an existing payload.
+    tags: [messaging, ios_compose, mock_result]
+  - id: ios_compose_record_cancelled_result
+    description: Record a mock cancelled result.
+    command: python smart_agent.py messaging ios-compose-record-result dogfood_ios_compose --result cancelled
+    expected_behavior: Local cancellation is recorded without marking any agent send complete.
+    failure_signals: Agent-side send execution or cancellation treated as delivered.
+    tags: [messaging, ios_compose, mock_result]
+  - id: ios_compose_record_failed_result
+    description: Record a mock failed result.
+    command: python smart_agent.py messaging ios-compose-record-result dogfood_ios_compose --result failed --error "dogfood mock failure"
+    expected_behavior: Local failure is recorded with an error string and no send execution.
+    failure_signals: Agent-side send execution, missing failure status, or unredacted secret-like text.
+    tags: [messaging, ios_compose, mock_result]
+  - id: ios_compose_expired_payload
+    description: Create an already-expired payload for expiry behavior.
+    command: python smart_agent.py messaging ios-compose-payload dogfood_ios_compose --expires-minutes -1
+    expected_behavior: Payload can be inspected as expired and remains a local handoff artifact only.
+    failure_signals: Expired payload used to send or marked as live-deliverable by the agent.
+    tags: [messaging, ios_compose, expiry]
+  - id: ios_compose_expired_sent_rejected
+    description: Verify expired payload cannot be marked sent.
+    command: python smart_agent.py messaging ios-compose-record-result dogfood_ios_compose --result sent
+    expected_behavior: Command is rejected because expired payloads cannot be marked sent/queued.
+    failure_signals: Expired payload accepted as sent, silent send, or missing clear error.
+    tags: [messaging, ios_compose, expiry, safe_failure]
+    expected_exit_codes: [2]

@@ -1,0 +1,27 @@
+suite_id: native_skills_core
+name: Native Skills Core Harness
+description: Validates native skill metadata, manifests, profiles, compatibility, conflicts, and safe harness output without executing external skills.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: skills_test_all_safe
+    description: Run safe metadata-only harness checks for all non-high/non-personal native skills.
+    command: python smart_agent.py skills test --all-safe
+    expected_behavior: Safe skills produce pass/skipped checks; no external scripts or providers run.
+    failure_signals: External skill execution, package installation, provider call, high/critical auto-run, or personal-data access.
+    tags: [skills, harness, safe]
+  - id: skills_conflicts
+    description: Report native skill metadata conflicts.
+    command: python smart_agent.py skills conflicts
+    expected_behavior: Conflict report is JSON and metadata-only.
+    failure_signals: Auto-resolution, skill enablement, or script execution.
+    tags: [skills, conflicts]
+  - id: skills_compatibility
+    description: Report native skill compatibility matrix.
+    command: python smart_agent.py skills compatibility
+    expected_behavior: Compatibility matrix is metadata-only and does not import native platform modules.
+    failure_signals: Native platform import, provider call, or skill execution.
+    tags: [skills, compatibility]

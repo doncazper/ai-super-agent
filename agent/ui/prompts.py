@@ -9,7 +9,17 @@ from pathlib import Path
 from typing import Any
 
 
-PROMPT_STATUSES = {"queued", "active", "completed", "skipped", "failed", "superseded", "blocked"}
+PROMPT_STATUSES = {
+    "queued",
+    "active",
+    "completed",
+    "skipped",
+    "failed",
+    "superseded",
+    "blocked",
+    "approval_required",
+    "needs_review",
+}
 PROMPT_DIRS = {
     "queued": "prompts/queued",
     "active": "prompts/active",
@@ -17,6 +27,9 @@ PROMPT_DIRS = {
     "skipped": "prompts/skipped",
     "failed": "prompts/failed",
     "superseded": "prompts/superseded",
+    "blocked": "prompts/blocked",
+    "approval_required": "prompts/approval_required",
+    "needs_review": "prompts/needs_review",
 }
 LEDGER_PATH = Path("docs/PROMPT_LEDGER.md")
 QUEUE_PATH = Path("docs/PROMPT_QUEUE.md")
@@ -41,6 +54,8 @@ class PromptRecord:
     notes: str = ""
     dependencies: str = ""
     approval_gate: str = ""
+    risk_level: str = ""
+    pack_id: str = ""
 
     def to_dict(self) -> dict[str, str]:
         return {
@@ -53,6 +68,8 @@ class PromptRecord:
             "notes": self.notes,
             "dependencies": self.dependencies,
             "approval_gate": self.approval_gate,
+            "risk_level": self.risk_level,
+            "pack_id": self.pack_id,
         }
 
 
@@ -134,6 +151,12 @@ def mark_prompt(
         raise ValueError(f"invalid prompt status: {status}")
     if status == "completed" and not unknown and (not test_result or not docs_updated):
         raise ValueError("mark-complete requires --test-result and --docs-updated, or --unknown")
+    if status == "failed" and not notes:
+        raise ValueError("mark-failed requires --notes with a failure reason")
+    if status == "active":
+        active = [record.prompt_id for record in list_prompt_records(project_root) if record.status == "active" and record.prompt_id != prompt_id]
+        if active:
+            raise ValueError(f"cannot mark {prompt_id} active while another prompt is active: {', '.join(active)}")
     root = Path(project_root)
     _ensure_dirs(root)
     source = _find_record_file(prompt_id, root)
@@ -158,6 +181,20 @@ def mark_prompt(
         _rewrite_field(target, "notes", notes)
     if superseded_by is not None:
         _rewrite_field(target, "superseded_by", superseded_by)
+    _update_tracking_tables(
+        root,
+        prompt_id,
+        {
+            "status": status,
+            "started_at": now if status == "active" else None,
+            "completed_at": now if status in {"completed", "skipped", "failed", "superseded", "blocked", "needs_review"} else None,
+            "test_result": test_result or ("unknown" if unknown and status == "completed" else None),
+            "docs_updated": docs_updated or ("unknown" if unknown and status == "completed" else None),
+            "notes": notes,
+            "blockers": notes if status in {"failed", "blocked", "needs_review"} else None,
+            "superseded_by": superseded_by,
+        },
+    )
     return {"prompt_id": prompt_id, "status": status, "path": str(target.relative_to(root))}
 
 
@@ -200,6 +237,29 @@ def missing_prompts(project_root: str | Path = ".") -> list[PromptRecord]:
     root = Path(project_root)
     evidence_text = _evidence_text(root)
     return [record for record in list_prompt_records(root) if record.status == "queued" and not _has_evidence(record, evidence_text)]
+
+
+def search_prompt_records(query: str, project_root: str | Path = ".") -> list[PromptRecord]:
+    terms = [term.lower() for term in query.split() if term.strip()]
+    if not terms:
+        return []
+    matches: list[PromptRecord] = []
+    for record in list_prompt_records(project_root):
+        haystack = " ".join(
+            [
+                record.prompt_id,
+                record.title,
+                record.category,
+                record.status,
+                record.notes,
+                record.path,
+                record.risk_level,
+                record.pack_id,
+            ]
+        ).lower()
+        if all(term in haystack for term in terms):
+            matches.append(record)
+    return matches
 
 
 def format_prompt_records(records: list[PromptRecord]) -> str:
@@ -248,6 +308,8 @@ def _records_from_markdown_table(path: Path, source_path: str) -> list[PromptRec
                         notes=payload.get("notes", ""),
                         dependencies=payload.get("prerequisite_prompt_ids", "") or payload.get("depends_on", ""),
                         approval_gate=payload.get("approval_gate", ""),
+                        risk_level=payload.get("risk_level", ""),
+                        pack_id=payload.get("pack_id", ""),
                     )
                 )
         break
@@ -275,6 +337,8 @@ def _records_from_prompt_dirs(root: Path) -> list[PromptRecord]:
                     notes=_field_from_content(content, "notes") or "",
                     dependencies=_field_from_content(content, "depends_on") or "",
                     approval_gate=_field_from_content(content, "approval_gate") or "",
+                    risk_level=_field_from_content(content, "risk_level") or "",
+                    pack_id=_field_from_content(content, "pack_id") or "",
                 )
             )
     return records
@@ -299,6 +363,10 @@ def _new_record_content(*, prompt_id: str, title: str, status: str) -> str:
 prompt_id: {prompt_id}
 title: {title}
 category: uncategorized
+pack_id:
+risk_level: LOW
+approval_gate: false
+depends_on: []
 status: {status}
 source: user
 created_at: {now}
@@ -309,6 +377,8 @@ branch:
 commit_hash:
 related_feature_ids:
 related_files:
+files_expected:
+files_changed:
 expected_outputs:
 commands_expected:
 commands_run:
@@ -319,7 +389,9 @@ docs_updated:
 changelog_updated:
 feature_registry_updated:
 feature_maturity_updated:
+command_registry_updated:
 completion_report_updated:
+evidence_links:
 blockers:
 next_prompt_id:
 supersedes:
@@ -338,6 +410,45 @@ def _rewrite_field(path: Path, field: str, value: str) -> None:
             return
     lines.append(f"{prefix} {value}")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _update_tracking_tables(root: Path, prompt_id: str, updates: dict[str, str | None]) -> None:
+    for path in (root / LEDGER_PATH, root / QUEUE_PATH):
+        if path.exists():
+            _update_markdown_table_row(path, prompt_id, updates)
+
+
+def _update_markdown_table_row(path: Path, prompt_id: str, updates: dict[str, str | None]) -> None:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    in_table = False
+    headers: list[str] = []
+    changed = False
+    for index, line in enumerate(lines):
+        if not line.startswith("|"):
+            if in_table:
+                break
+            continue
+        cells = [_clean_cell(cell) for cell in line.strip("|").split("|")]
+        if "prompt_id" in cells:
+            headers = cells
+            in_table = True
+            continue
+        if not in_table or "---" in line:
+            continue
+        row = [_clean_cell(cell) for cell in line.strip("|").split("|")]
+        if len(row) != len(headers):
+            continue
+        payload = dict(zip(headers, row))
+        if payload.get("prompt_id") != prompt_id:
+            continue
+        for field, value in updates.items():
+            if value is not None and field in payload:
+                payload[field] = str(value)
+        lines[index] = "| " + " | ".join(payload.get(header, "") for header in headers) + " |"
+        changed = True
+        break
+    if changed:
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _prompt_id_from_content(content: str) -> str | None:

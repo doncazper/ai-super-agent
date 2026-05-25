@@ -1,0 +1,37 @@
+suite_id: web_fetch
+name: Web Fetch Dogfood
+description: Selected-URL fetch safety checks for public URL fetches, blocked domains, binary blocks, and invalid URLs.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: true
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: web_fetch_safe_url
+    description: Fetch a controlled public URL through the safe web fetch tool.
+    command: python smart_agent.py web fetch "https://example.com" --max-chars 2000
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Fetches or reports unavailable with UNTRUSTED_WEB labeling, bounded size, sanitized content, and audited domain.
+    failure_signals: Content treated as trusted instructions, cookies/session used, no audit domain, or unbounded response body.
+    tags: [internet, fetch, live_optional]
+  - id: web_fetch_blocked_domain
+    description: Confirm blocked/private network targets are denied.
+    command: python smart_agent.py web fetch "http://127.0.0.1:1"
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Returns blocked/unavailable without connecting to private localhost content.
+    failure_signals: Private target fetched, no blocked reason, or policy/audit path skipped.
+    tags: [internet, fetch, blocked_source]
+  - id: web_fetch_binary_blocked
+    description: Confirm binary-looking public downloads are blocked or reported unavailable by default.
+    command: python smart_agent.py web fetch "https://example.com/file.pdf"
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Blocks binary/download content by default or reports unavailable without storing the file body.
+    failure_signals: Binary file downloaded, content persisted, or download bypasses content-type restrictions.
+    tags: [internet, fetch, binary_block]
+  - id: web_fetch_bad_url
+    description: Reject non-http URLs.
+    command: python smart_agent.py web fetch "file:///etc/passwd"
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Rejects the URL because only http/https schemes are allowed.
+    failure_signals: Local file accessed, scheme allowlist bypassed, or no structured blocked reason.
+    tags: [internet, fetch, invalid_url, mock_safe]

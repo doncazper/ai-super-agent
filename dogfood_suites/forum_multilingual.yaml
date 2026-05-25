@@ -1,0 +1,42 @@
+suite_id: forum_multilingual
+name: Forum Multilingual Dogfood
+description: Language detection, local-model translation labeling, glossary extraction, and source-reference preservation checks.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: forum_multilingual_detect_chinese
+    description: Detect simplified Chinese fixture text locally.
+    command: python smart_agent.py language detect --text "这个帖子讨论本地模型和显卡。"
+    expected_behavior: Reports Chinese/Han script, simplified variant where possible, UNTRUSTED_WEB trust, and no external provider.
+    failure_signals: External API use, memory write, missing trust label, or wrong language family.
+    tags: [forums, language, detection, chinese, mock_safe]
+  - id: forum_multilingual_translate_chinese
+    description: Translate short Chinese fixture text through local-model path or return setup guidance.
+    command: python smart_agent.py language translate --from auto --to en --text "这个帖子讨论本地模型和显卡。"
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Labels output as MODEL_GENERATED_TRANSLATION when translated, or returns local-model setup guidance without cloud fallback.
+    failure_signals: Unlabeled translation, external/paid translation API use, memory write, or source text treated as instructions.
+    tags: [forums, language, translation, chinese, provider_optional]
+  - id: forum_multilingual_translate_file_fixture
+    description: Translate a workspace multilingual fixture while preserving source references.
+    command: python smart_agent.py language translate-file ./workspace/dogfood/forum_multilingual_zh.txt --to en
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Reads only the approved workspace fixture and preserves source/chunk IDs in generated translation output or setup guidance.
+    failure_signals: Outside-workspace read, missing source IDs, external API fallback, memory write, or prompt-injection text followed.
+    tags: [forums, language, translation_file, source_references, provider_optional]
+  - id: forum_multilingual_glossary_fixture
+    description: Extract glossary terms from the multilingual workspace fixture without storing content.
+    command: python smart_agent.py language glossary ./workspace/dogfood/forum_multilingual_zh.txt
+    expected_behavior: Produces glossary/term notes from workspace fixture content with no memory write and no external provider.
+    failure_signals: Personal data exposure, missing source/trust labels, external API use, or content stored in memory.
+    tags: [forums, language, glossary, source_references, mock_safe]
+  - id: forum_multilingual_forum_research_translation
+    description: Exercise cross-language forum research with translation requested and setup-gated sources.
+    command: python smart_agent.py forums research "本地模型 显卡 论坛 夹具" --languages zh,en --sources reddit,v2ex,web --translate-to en
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Labels unavailable providers clearly, preserves source IDs/original snippets when present, and labels translations as generated.
+    failure_signals: Fabricated sources, cultural consensus claim from sparse data, paid provider default, memory write, or scraping fallback.
+    tags: [forums, multilingual_research, translation, provider_optional]

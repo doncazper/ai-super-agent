@@ -1,0 +1,24 @@
+{
+  "category": "prompt_tracker",
+  "cases": [
+    {
+      "id": "prompt_tracker_docs_exist",
+      "title": "Prompt tracker docs and queue files exist",
+      "input": "Check prompt tracker docs.",
+      "expect": {
+        "docs": [
+          "docs/PROMPT_LEDGER.md",
+          "docs/PROMPT_QUEUE.md",
+          "docs/PROMPT_AUDIT.md"
+        ]
+      },
+      "risk_level": "SAFE",
+      "personal_data": false,
+      "live": false,
+      "tags": [
+        "prompt_tracking",
+        "docs"
+      ]
+    }
+  ]
+}

@@ -8,15 +8,15 @@ Build a local Mac AI agent with safety-first governance, ToolBroker-only tool ex
 
 ## Current Overall Phase
 
-Dogfood and QA tooling after the controlled actions, product quality, native skills, and safe self-improvement planning batch.
+Release Hardening Loop v2 completed locally with YELLOW release readiness. News Intelligence is now specified as a docs-first track with source policy, provider strategy, freshness controls, source grounding, retention policy, architecture decision, planned command tracking, disabled/planned capability manifest entries, safe config defaults, provider-policy selection logic, and conservative risk/threat notes; no runtime news command, provider call, article fetch, paid provider default, search-history storage, or full article-body persistence exists yet. Cross-Platform Core + Platform Bridge architecture is specified, Platform Capability Registry v1 exists as portable static metadata, platform bridge base interfaces exist, platform-aware config/paths/detection scaffolding exists with safe disabled/lazy defaults, read-only platform doctor/capability commands exist through brokered SAFE metadata tools, lazy macOS/iOS companion/Windows/web bridge stubs now exist as fail-closed implementation seams, the App Bridge API contract exists as disabled-by-default schema/docs scaffolding for future native/local frontends, and the current cross-platform release gate/future build guides are complete for the current groundwork. Runtime platform behavior remains future work. The repo has green local tests and validation, release audit/blocker/plan docs, tracker navigation docs, and generated artifact hygiene, but it still needs a human-reviewed clean release candidate boundary plus broader live/manual validation before broad feature expansion. Current tracker summaries are indexed from `docs/TRACKER_DASHBOARD.md` and `docs/TRACKER_INDEX.md`.
 
 ## Current Batch
 
-Dogfood QA tooling through Session Review and Bug Generator is complete; regression test generation from reviewed bugs is next.
+Native Skill System Hardening pack `native-skill-system-hardening-v1` is imported, split into `SKILL-01` through `SKILL-10`, and complete through the local metadata-only release gate. The batch preserved the stop conditions: no approval gate was crossed, no package installation occurred, no arbitrary external skill/script execution occurred, no plugin runtime executed, no personal-data skill was enabled, and no safety-control bypass was added.
 
 ## Current Task
 
-Session Review and Bug Generator completed.
+SKILL-10 complete: Native Skill System Hardening release gate passed locally for metadata-only native skill controls. Added release-gate and maturity-review docs, validated roots/precedence, manifest schema, dependency gating, provenance/trust, lockfile verification status, inspection/vetting, profile allowlists, compatibility matrix, conflict detector, test/dogfood harness, docs generator/catalog, command registry, native skill evals, and safe dogfood suites. Non-goals held: no external skill installation, no external skill enablement, no external skill/script execution, no dependency installation, no provider/connector calls for skill metadata checks, no plugin runtime execution, no personal-data skill enablement, no memory write, no permission grant, and no ToolBroker/Policy/Permission/Approval/Audit bypass.
 
 ## Current Status
 
@@ -24,15 +24,15 @@ complete
 
 ## Current Branch
 
-`agent/overnight-2026-05-23`
+`checkpoint/large-working-tree-20260523`
 
 ## Last Known Good Commit
 
-`1c465df Complete controlled actions and workflow release gate`
+`e1dfdbf Add command registry and documentation tracking`
 
 ## Last Test Result
 
-Focused session review tests: 21 passed in 1.19s. Focused session/command registry tests: 26 passed in 1.14s. Focused session/command/prompt/maturity validation: 40 passed in 1.20s after docs updates. Full suite: 645 passed in 20.13s. Startup policy ok. Capability manifest ok. Command registry ok with 215 commands. `git diff --check` passed.
+Native Skill System Hardening `SKILL-10` release gate on 2026-05-25 with `./.venv/bin/python`: full suite passed with 1205 passed and 1 skipped; startup policy and capability manifest validation passed via `make policy-check`; docs/prompt/release artifact tests passed with 11 passed; command registry validation passed with 428 commands; native skill manifest validation passed with 3 valid manifests; `skills lock verify` returned expected `requires_setup` for missing reviewed real lockfile records without writing; `skills conflicts` passed with 0 conflicts; `skills docs-check` passed with current catalog and 0 missing docs; `dogfood run native_skills_core --session` passed 3/3; `dogfood run native_skill_vetting --session` passed 3/3 in redacted session `sess_20260525T110516Z_c5539999`; `eval run --native-skills --json` passed 3 native-skill checks and skipped 5 personal-data checks by default.
 
 ## Startup Policy Status
 
@@ -41,10 +41,28 @@ startup policy ok.
 ## Prompt Tracking
 
 - active_prompt_id: none
-- next_prompt_id: REGRESSION-TEST-GENERATOR
-- active_prompt_pack: none
-- prompt_queue_status: `SESSION-REVIEW-BUG-GENERATOR` completed; queued dogfood follow-up points to `REGRESSION-TEST-GENERATOR`.
-- last_prompt_audit_result: Session review and bug generator recorded as completed; next prompt `REGRESSION-TEST-GENERATOR`.
+- next_prompt_id: news-provider-registry-status-commands
+- active_prompt_pack: native-skill-system-hardening-v1
+- prompt_queue_status: Imported `native-skill-system-hardening-v1` and queued `SKILL-01` through `SKILL-10`; running sequentially by explicit user request until blocked.
+- last_prompt_audit_result: prompt audit passed after Native Skill System Hardening release gate with active_count 0, completed_count 181, queued_count 3, total 185, next_prompt_id `news-provider-registry-status-commands`, and no completed prompts missing evidence.
+- current_prompt_batch: Native Skill System Hardening controlled batch; `SKILL-01` through `SKILL-10` complete after local metadata-only release gate.
+- prompt_blockers: no P0/P1; P2 clean source/diff release-boundary, live/manual validation, and direct network/subprocess static-guard blockers remain documented in `docs/release/RELEASE_BLOCKERS.md`.
+- prompt_resume_instructions: Native Skill System Hardening pack is complete. Queue next is `news-provider-registry-status-commands`; native-skill-specific recommended follow-up is a reviewed lockfile/pinning workflow or clean release-candidate boundary prompt selected by the user.
+
+## Cross-Platform Core + Platform Bridge Track
+
+This track is underway after the docs-only architecture milestone and metadata-only capability registry. It must keep the Python core platform-neutral, CLI-only mode functional, platform bridges optional/lazy/disabled by default, platform-specific imports out of core startup, and all future actions routed through ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, and AuditLogger.
+
+1. Cross-platform architecture and roadmap. Complete as docs-only work.
+2. Platform capability registry. Complete as metadata-only registry with 27 static planned/stubbed records.
+3. Platform bridge base interfaces. Complete as interface-only work with NullPlatformBridge and lazy registry.
+4. Platform-aware config, paths, and detection. Complete as config/path/detection scaffolding with safe defaults and tests.
+5. Platform doctor and capability commands. Complete as brokered read-only metadata CLI commands.
+6. macOS/iOS/Windows/web bridge stubs. Complete as lazy fail-closed stubs with no native imports, personal-data reads, side effects, or platform actions.
+7. App Bridge API contract. Complete as disabled-by-default contract/schema/docs scaffolding with no server, frontend, remote access, personal-data access, or approval bypass.
+8. Platform capability manifest and ToolBroker mapping.
+9. Startup overhead and lazy-load guardrails.
+10. Cross-platform release gate and future build guide. Complete for current groundwork by explicit user request; manifest mapping and dedicated startup guardrails still remain required before real platform behavior.
 
 ## Next Feature Set: Controlled Actions and Product Quality
 
@@ -67,6 +85,60 @@ This is the next product-feature track to keep visible before starting implement
 15. Overnight self-improvement runbook and one approved bounded safe-mode run. Complete for planning-only runbook, `improve overnight-plan`, and the 2026-05-23 docs/tests/tracking run; future overnight runs require separate explicit approval.
 16. Full release gate + maturity review. Complete locally; live validation remains opt-in where noted.
 
+## Internet Access Graduation Track
+
+This is the next active web/research hardening track. It is docs/tracking first and must remain free-first, cache-first, ToolBroker-only, and no-bypass by default.
+
+1. Cost-aware provider policy. Complete and hardened with brokered `web providers`, `web provider-policy`, and `web provider-decision` inspection commands.
+2. Web Acquisition Layer core. Complete for local v1 via `FREE-FIRST-WEB-ACQUISITION` plus central `agent.web_acquisition` models/router and brokered `web source-status` inspection.
+3. Robots/sitemap/feed support. Complete for local v1, including core parser modules, alias capabilities, 500 sitemap URL / 50 feed item defaults, and focused safety tests.
+4. Search provider registry. Complete for local v1 as `WEB-SEARCH-PROVIDER-REGISTRY`; metadata-only registry and brokered inspection command added.
+5. SearXNG provider. Complete for local v1 as `SEARXNG-PROVIDER`; configured self-hosted base URL only, disabled by default, no public instance fallback, mocked provider tests pass, and live instance validation remains opt-in.
+6. Brave provider hardening. Complete for local v1 as `BRAVE-PROVIDER`; disabled by default, requires API key plus paid/quota policy opt-in, mocked provider tests pass, and live key validation remains opt-in.
+7. SerpAPI optional fallback. Complete for explicit paid-policy-gated fallback and reverified/hardened with `SERPAPI_ENABLED=true` plus daily-cap gates and config-only doctor.
+8. Safe fetch/extraction hardening. Complete for local v1.
+9. Source-grounded research workflow hardening. Complete for local v1.
+10. Router internet-only-when-needed behavior. Complete for local v1.
+11. Citation/source attribution. Complete for local v1.
+12. Cache/dedupe/local lightweight index. Complete for local v1.
+13. Official API connector framework. Complete for local framework/stub v1.
+14. Web dogfood/eval suite. Complete for local/mock-first v1; live web/provider checks opt-in.
+15. Internet Access final release gate. Complete for local v1; live provider validation remains opt-in and environment-gated.
+
+## News Intelligence Track
+
+This future track graduates generic web/research current-events work into dedicated news commands and provider policy. It must remain source-grounded, freshness-aware, free-first, cache-first, no-history-by-default, no-full-article-body-by-default, no-paid-provider-by-default, and no-bypass by default.
+
+1. News Intelligence roadmap and source policy. Complete as docs/tracking only.
+2. News capability manifest entries and provider policy. Complete as disabled/planned manifest entries, safe config defaults, provider-policy helpers, and tests only.
+3. News provider registry and status commands. Recommended next.
+4. News cache and retention scaffolding.
+5. RSS/Atom and news sitemap headline acquisition.
+6. GDELT provider.
+7. Optional Media Cloud and NewsAPI providers.
+8. News top/search/topic/source commands.
+9. News brief/timeline/compare commands.
+10. Multilingual news summaries.
+11. News dogfood/eval suite and release gate.
+
+## Reddit + Multilingual Forum Intelligence Track
+
+1. Reddit/forum architecture, policy, and roadmap. Complete.
+2. Reddit provider policy and compliance scaffolding. Complete.
+3. Reddit OAuth/config doctor. Complete for local diagnostics.
+4. Reddit official read-only connector. Complete for local mocked v1.
+5. Reddit search workflows. Complete for local mocked v1.
+6. Reddit thread fetch and conversation normalization. Complete for local mocked v1.
+7. Reddit source-grounded summaries. Complete for local mocked v1.
+8. Reddit retention/cache compliance. Complete for local mocked v1.
+9. Language detection + translation. Complete for local tested v1.
+10. Cross-language research workflow. Complete for local mocked v1.
+11. Global forum provider registry. Complete for local tested v1.
+12. V2EX connector. Complete for local mocked v1.
+13. Chinese forum discovery/search/fetch. Complete for local mocked v1.
+14. Forum dogfood/eval suite. Complete for local/mock-first v1; live provider checks remain opt-in.
+15. Forum Intelligence release gate. Complete locally; live Reddit, V2EX, Chinese forum discovery, and translation quality validation remain opt-in/config-gated.
+
 ## Overnight Self-Improvement Track
 
 - `OVERNIGHT-RUNBOOK` is complete and planning-only.
@@ -75,9 +147,382 @@ This is the next product-feature track to keep visible before starting implement
 
 ## Last Updated Timestamp
 
-2026-05-23 11:35 PDT
+2026-05-25 11:05 UTC / 2026-05-25 04:05 PDT
 
 ## Last Completed Work
+
+- Native Skill System Hardening `SKILL-10` release gate completed on `checkpoint/large-working-tree-20260523`.
+- Added native skill system release-gate and maturity-review docs, completed the metadata-only hardening batch through `SKILL-10`, and recorded the safe reliance boundary: metadata review/vetting/docs/evidence are safe; external skill installation/execution remains not approved.
+- Validation passed with `./.venv/bin/python`: full suite 1205 passed, 1 skipped; startup policy and capability manifest validation passed; command registry ok with 428 commands; native skill manifests 3 valid; conflict detection 0 conflicts; docs-check current with 0 missing docs; native skill evals 3 pass and 5 personal-data skips; native skill dogfood suites 6/6 passed in a redacted session.
+- Remaining blocker: reviewed real `native_skills.lock` and lockfile write/pinning workflow are deferred; manual external-skill intake/live QA remains required before any external skill user-ready claim.
+
+- Native Skill System Hardening `SKILL-09` docs generator completed on `checkpoint/large-working-tree-20260523`.
+- Added metadata-only docs generator, dry-run default docs generation, explicit `--write` catalog update, generated catalog, docs-check, docs-generation guide/template, command registry rows, and tests.
+- Validation passed with `./.venv/bin/python`: focused docs generator tests 8 passed; broader docs-generator/harness/command tests 23 passed; docs/prompt/release artifact tests 11 passed; startup policy and capability manifest validation passed; command registry ok with 428 commands; native skill manifests 3 valid; full suite 1205 passed, 1 skipped.
+
+- News capability manifest entries and provider policy completed on `checkpoint/large-working-tree-20260523`.
+- Added 18 disabled/planned `news.*` capability manifest entries covering provider status, search/top/feed/sitemap/GDELT/optional paid provider placeholders, article fetch/extract placeholders, brief/timeline/compare/multilingual/cache/dogfood placeholders, all with risk/trust/default/approval/provider/rate-limit/memory/audit/docs/status metadata.
+- Added safe `NEWS_*` config defaults and `agent.news` provider-policy helpers that select or skip candidates only; no provider network calls, article fetch/extract runtime, paid API default, search-history storage, full article-body persistence, or command execution path was added.
+- Validation passed: News capability/provider-policy tests 10 passed; focused News/docs/maturity tests 28 passed; startup policy ok; capability manifest ok; command registry ok with 398 commands; full suite 1119 passed, 1 skipped.
+
+- News Intelligence roadmap and source policy completed on `checkpoint/large-working-tree-20260523`.
+- Created `docs/news/NEWS_INTELLIGENCE_TRACK.md`, `NEWS_SOURCE_POLICY.md`, `NEWS_PROVIDER_STRATEGY.md`, `NEWS_FRESHNESS_POLICY.md`, `NEWS_SOURCE_GROUNDING.md`, `NEWS_RETENTION_POLICY.md`, and `docs/decisions/news_intelligence_architecture.md`.
+- Added planned/stubbed command registry entries for `news providers`, `news top`, `news search`, `news topic`, `news source`, `news brief`, `news timeline`, `news compare`, `news multilingual`, `news cache status`, and `news dogfood`.
+- No runtime news commands, provider API calls, paid API defaults, article fetching, browser automation, search/news history storage, full article-body storage, fabricated source/citation path, or paywall/login/CAPTCHA/anti-bot bypass was added.
+- Validation passed: News docs tests 5 passed; feature-registry regression plus News docs tests 6 passed; startup policy ok; capability manifest ok; command registry ok with 398 commands; full suite 1109 passed, 1 skipped.
+
+- Chinese forum discovery/search layer completed on `checkpoint/large-working-tree-20260523`.
+- Added `agent.forums.chinese_discovery`, brokered `cn_forums.providers`, `cn_forums.search`, `cn_forums.fetch`, and `cn_forums.research` tools, CLI commands, capability manifest entries, docs, command registry/test matrix updates, and tests.
+- Discovery uses approved search-provider site filters for Zhihu, Baidu Tieba, Douban Groups, Xiaohongshu, Weibo, V2EX, and NGA; selected public URL fetches go through safe fetch policy only; blocked/login/CAPTCHA pages return unavailable; fetched content is `UNTRUSTED_WEB`; language detection and optional local-model translation are integrated.
+- No platform-specific scraping, private/logged-in reads, cookies, browser sessions, CAPTCHA/anti-bot bypass, paid provider default, readable search-history persistence, long-term forum-content storage, forum-content training, or memory write was added.
+- Validation passed: Chinese forum discovery tests 9 passed; docs/command/maturity/prompt tests 23 passed; startup policy ok; capability manifest ok with 185 capabilities; command registry ok with 377 commands; `cn-forums providers` CLI smoke passed without network calls; full suite 1027 passed, 2 skipped.
+
+- V2EX read-only connector completed on `checkpoint/large-working-tree-20260523`.
+- Added documented API-only V2EX client/provider/cache/normalizer modules, brokered `v2ex.status`, `v2ex.nodes.get`, `v2ex.node_topics`, `v2ex.topic.get`, `v2ex.topic_replies`, `v2ex.latest`, and `v2ex.hot` tools, CLI commands, connector status metadata, capability manifest entries, docs, and tests.
+- V2EX remains disabled by default with optional redacted token config, no write/member/profile/notification endpoints, no scraping fallback, no logged-in/private reads, no CAPTCHA/anti-bot bypass, `UNTRUSTED_WEB` labels, TTL cache only, author metadata redacted by default, and no memory write.
+- Validation passed: focused V2EX connector tests 9 passed; connector/forum/command/maturity/prompt tests 52 passed; connector regression tests 28 passed; startup policy ok; capability manifest ok; command registry ok with 373 commands; full suite 1018 passed, 2 skipped.
+
+- Multilingual detection and translation layer completed on `checkpoint/large-working-tree-20260523`.
+- Added `agent.language` detection, normalization, romanization, translation, and term extraction modules plus brokered `language.detect`, `language.translate_text`, `language.summarize_multilingual`, and `language.extract_terms` tools.
+- Added CLI commands `language detect`, `language translate`, `language translate-file`, and `language glossary`; file commands read workspace files through brokered `filesystem.read`; translations are labeled `MODEL_GENERATED_TRANSLATION`; source IDs/chunks are preserved; source text remains `UNTRUSTED_WEB` or `UNTRUSTED_DOCUMENT`; no translations/source text are written to memory.
+- No external/paid translation API, forum scraping, personal-data default enablement, content training, permanent forum/source storage, send/write action, or live provider call by default was added.
+- Focused validation passed: `tests/test_language_layer.py` 9 passed with `./.venv/bin/python` 3.12.13. Final broader validations are recorded in the completion report for this run.
+
+- Reddit retention/cache compliance completed on `checkpoint/large-working-tree-20260523`.
+- Added `reddit.cache_status`, `reddit.retention_status`, and `reddit.privacy_report` brokered tools plus `reddit cache status`, `reddit retention status`, and `reddit privacy-report` CLI commands.
+- Cache entries remain TTL-bounded and now report source/content-hash metadata; cache writes are disabled when TTL policy cannot be guaranteed; author metadata is stripped by default; deleted/removed payloads are not cached; query-like fields are redacted before cache write; privacy reports return counts and policy flags only.
+- No Reddit API fetch expansion, web scraping fallback, unauthenticated traffic, posting/commenting/voting/DM/moderation action, CAPTCHA/login/anti-bot bypass, paid provider default, content training, search-history persistence, permanent storage, or live Reddit call by default was added.
+- Validation passed: focused Reddit retention/read-only/provider policy tests 30 passed; focused Reddit workflow retention/search/thread/summarization tests 33 passed; docs/tracking/command tests 28 passed; full suite 984 passed, 2 skipped; startup policy ok; capability manifest ok; command registry ok with 356 commands.
+
+- Reddit source-grounded summarization completed on `checkpoint/large-working-tree-20260523`.
+- Added `reddit.summarize_thread`, `reddit.summarize_search`, `reddit.consensus`, `reddit.pros_cons`, `reddit.complaints`, and `reddit.buying_advice` brokered tools plus `reddit summarize-thread`, `reddit summarize-search`, `reddit consensus`, `reddit pros-cons`, `reddit complaints`, and `reddit buying-advice` CLI commands.
+- Summaries preserve Reddit source IDs/permalinks, label fetched-thread versus snippet-only evidence, include required consensus/disagreement/complaint/praise/caveat/source/fetch-limitation sections, exclude deleted/removed and prompt-injection-like comments from evidence, and do not write summaries to memory.
+- No Reddit web scraping fallback, unauthenticated traffic, posting/commenting/voting/DM/moderation action, CAPTCHA/login/anti-bot bypass, paid provider default, content training, search-history persistence, permanent summary memory storage, or live Reddit call by default was added.
+- Validation passed: focused Reddit summarization/provider policy tests 15 passed; focused Reddit workflow suite 55 passed; docs/tracking/command tests 28 passed; full suite 974 passed, 2 skipped; startup policy ok; capability manifest ok; command registry ok with 353 commands; prompt audit ok with zero active prompts and 149 completed prompts.
+
+- Reddit thread fetch and conversation normalization completed on `checkpoint/large-working-tree-20260523`.
+- Added `reddit.fetch_thread` and `reddit.thread_export` brokered tools, `reddit thread` / `reddit thread-export` CLI commands, thread comment-tree plus flattened-comment normalization, source references/permalinks, max-comment truncation, collapse-depth metadata, removed-comment handling, workspace-only exports labeled `UNTRUSTED_DOCUMENT`, command registry entries, docs, and regression tests.
+- No Reddit web scraping fallback, unauthenticated traffic, posting/commenting/voting/DM/moderation action, CAPTCHA/login/anti-bot bypass, paid provider default, content training, permanent memory storage, or live Reddit call by default was added.
+- Validation passed: focused Reddit thread/read-only/provider policy tests 26 passed; docs/prompt/command/thread tests 29 passed; full suite 967 passed, 2 skipped; startup policy ok; capability manifest ok; command registry ok with 347 commands; prompt audit ok with zero active prompts and 148 completed prompts.
+
+- Reddit search workflows completed on `checkpoint/large-working-tree-20260523`.
+- Added polished `reddit search` options for subreddit, sort, time, limit, and advisory language; added snippet-only evidence labels, stable source IDs/permalinks, query-hashed cache keys, local `reddit explain-result <source_id>` metadata lookup, setup-required disabled/OAuth-missing behavior, and rate-limit error handling.
+- No Reddit web scraping fallback, unauthenticated traffic, posting/commenting/voting/DM/moderation action, CAPTCHA/login/anti-bot bypass, paid provider default, content training, permanent user-content storage, search-history persistence, or live Reddit call by default was added.
+- Validation passed: focused Reddit search/read-only/provider tests, command/manifest/policy validations, CLI smokes, prompt audit, and full suite 961 passed, 2 skipped.
+
+- Reddit read-only connector v1 completed on `checkpoint/large-working-tree-20260523`.
+- Added `agent/forums/reddit/client.py`, `models.py`, `provider.py`, `normalizer.py`, `errors.py`, `retention.py`, brokered Reddit read-only tools, CLI commands for search/subreddit/post/comments/cache/retention, capability manifest entries, command registry/test matrix updates, docs, and tests.
+- No Reddit web scraping fallback, unauthenticated traffic, posting/commenting/voting/DM/moderation action, CAPTCHA/login/anti-bot bypass, content training, permanent user-content storage, author metadata storage by default, or search-history persistence was added. Live Reddit API validation remains opt-in and credential/config dependent.
+- Validation passed: focused Reddit connector tests, command/manifest/policy validations, prompt audit, and full suite 951 passed, 2 skipped.
+
+- Reddit + Multilingual Forum Intelligence Track planning completed on `checkpoint/large-working-tree-20260523`.
+- Created `docs/decisions/reddit_forum_intelligence_track.md`, forum access/Reddit/multilingual/Chinese/source-grounding/retention policy docs, and prompt completion evidence for `REDDIT-FORUM-INTELLIGENCE-TRACK`.
+- Updated feature roadmap, registry, maturity, risk register, threat model, test plan, release checklist, prompt ledger/queue/audit, changelog, completion report, and project state.
+- No runtime Reddit API calls, Chinese forum scraping, CAPTCHA/login/robots/anti-bot bypass, forum-content training, permanent forum storage by default, personal-data default enablement, paid API default, or CLI command changes were added.
+- Validation passed in this run: focused docs/prompt validation 18 passed; startup policy ok; capability manifest ok with 143 capabilities; command registry ok with 334 commands; full suite 919 passed, 2 skipped; prompt audit ok with `REDDIT-PROVIDER-POLICY-COMPLIANCE` next.
+
+- Internet Access dogfood/eval suite and release gate completed on `checkpoint/large-working-tree-20260523`.
+- Added `internet_core`, `web_providers`, `web_fetch`, `web_research`, and `web_blocked_sources` dogfood suites; added recursive `eval_cases/internet/source_grounding.json`; added fixture-backed `eval run --internet` and `eval report --internet`; added `docs/web/INTERNET_DOGFOOD_RUNBOOK.md`; updated command registry/test matrix, README, dogfood docs, feature/risk/threat/test/release tracking, prompt tracking, changelog, and completion report.
+- No live provider call, paid API default, browser automation, CAPTCHA/login/paywall/anti-bot bypass, personal-data tool enablement, search/web-content memory storage, or ToolBroker/PolicyEngine/AuditLogger bypass was added.
+- Validation passed in this run: focused internet dogfood/eval tests 19 passed; targeted internet/command registry tests 10 passed; docs/prompt tracking/command docs tests 22 passed; full suite 918 passed, 2 skipped; `eval run --internet` passed 5 and skipped 5 personal-data evals; all five new dogfood suites dry-run ok; startup policy ok; capability manifest ok with 143 capabilities; command registry ok with 334 commands; prompt audit ok with `REDDIT-FORUM-INTELLIGENCE-TRACK` next.
+
+- Official API Connector Framework v1 completed on `checkpoint/large-working-tree-20260523`.
+- Added `agent.web_acquisition.official_apis` interfaces, models, registry/domain matching, GitHub/Wikipedia/arXiv/Reddit provider stubs, brokered `web official-apis`, `web api-status <provider>`, and `web api-search <provider> "<query>"` commands, capability manifest entries, docs, tests, and command registry updates.
+- No live API calls by default, no credentials committed, no high-risk personal connector implementation, no write operations, no Reddit web scraping fallback, no search-history/web-content memory storage, no paid API default, no CAPTCHA/login/paywall/anti-bot bypass, and no ToolBroker/PolicyEngine/AuditLogger bypass were added.
+- Validation passed in this run: focused official API tests 9 passed; targeted official API/command tests 14 passed; targeted web/search/cache/official API tests 74 passed; feature/prompt docs tests 17 passed; full suite 913 passed, 2 skipped; startup policy ok; capability manifest ok with 143 capabilities; command registry ok with 332 commands; prompt audit ok with `INTERNET-DOGFOOD-EVAL-SUITE` next.
+
+- Internet routing policy completed on `checkpoint/large-working-tree-20260523`.
+- Added deterministic internet routing metadata in `agent.core.router`, read-only `router explain`, richer `preflight` route output, current/live/source-required/citation/URL routing, stable/local/no-tools clean routing, and prompt-injection-like routing suppression.
+- Updated docs at `docs/web/INTERNET_ROUTING_POLICY.md`, README, command registry/test matrix, eval cases, feature registry, maturity tracker, roadmap, risk register, threat model, test plan, release checklist, prompt tracking, changelog, and completion report.
+- No provider call during routing, LLM router default, user-message rewrite, query-history persistence, web-content memory storage, paid API default, CAPTCHA/login/paywall/anti-bot bypass, browser automation, personal-data tool enablement, or ToolBroker/PolicyEngine/AuditLogger bypass was added.
+- Validation passed in this run: focused router/preflight tests 34 passed; targeted router/preflight/model-quality/command-registry tests 48 passed; final full suite 889 passed, 2 skipped; startup policy ok; capability manifest validation ok with 134 capabilities; command registry validation ok with 321 commands; prompt audit ok with `CITATION-SOURCE-ATTRIBUTION` next.
+
+- Source-grounded research workflow v1 completed on `checkpoint/large-working-tree-20260523`.
+- Hardened `research` to search through provider policy, optionally fetch selected sources, summarize only returned data, include real source URLs with retrieved timestamps and provider metadata, report snippet-only/fetched-page evidence, coverage limitations, and blocked/unavailable fetch failures, and keep `memory_written=false` / `query_history_persisted=false`.
+- Added `--max-sources`, `--freshness`, broader explicit provider handling, `--no-fetch` behavior coverage, docs at `docs/web/SOURCE_GROUNDED_RESEARCH.md`, README research examples, command registry/test matrix updates, feature maturity/roadmap/risk/threat/test/release tracking, prompt completion evidence, and completion report updates.
+- No new provider API implementation, live provider call, paid API default, fabricated citation path, web/search memory persistence, CAPTCHA/login/paywall/anti-bot bypass, browser automation, personal-data tool enablement, or ToolBroker/PolicyEngine/AuditLogger bypass was added.
+- Validation passed in this run: focused source-grounded workflow tests 14 passed; targeted workflow/web/command tests 128 passed; feature/prompt docs tests 17 passed after updating the next-prompt allowlist; full suite 879 passed, 2 skipped; startup policy ok; capability manifest validation ok with 134 capabilities; command registry validation ok with 320 commands; prompt audit ok with `INTERNET-ROUTING-POLICY` next.
+
+- SerpAPI fallback provider hardening completed on `checkpoint/large-working-tree-20260523`.
+- Added disabled-by-default `SERPAPI_ENABLED=false`, `SERPAPI_TIMEOUT_SECONDS`, `SERPAPI_MAX_RESULTS`, stricter paid/quota gating requiring `ALLOW_PAID_APIS=true` and `MAX_PAID_API_CALLS_PER_DAY>0`, config-only `web serpapi doctor`, connector status metadata, setup/error normalization, SerpAPI provider-selection docs, and mocked tests.
+- Updated `.env.example`, README provider setup, `docs/web/providers/serpapi.md`, `docs/web/PROVIDER_SELECTION.md`, search-provider docs, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, test plan, release checklist, prompt tracking, changelog, and completion report.
+- No paid API default, live provider call in validation, query-history persistence, web-content memory storage, CAPTCHA/login/paywall/anti-bot bypass, browser automation, personal-data tool enablement, or ToolBroker/AuditLogger bypass was added.
+- Validation passed in this run: focused SerpAPI/provider/search/connector/workflow tests 94 passed; focused docs/prompt/command/provider tests 116 passed; full suite 869 passed, 2 skipped; startup policy ok; capability manifest validation ok with 132 capabilities; command registry validation ok with 317 commands; prompt audit ok with `WEB-FETCH-EXTRACTION-HARDENING` next; config-only SerpAPI doctor/status and setup-required explicit search smokes passed without provider calls.
+
+- Brave provider v1 completed on `checkpoint/large-working-tree-20260523`.
+- Added disabled-by-default `BraveSearchProvider` with `BRAVE_SEARCH_API_KEY`, `BRAVE_SEARCH_ENABLED=false`, `BRAVE_SEARCH_TIMEOUT_SECONDS`, `BRAVE_SEARCH_MAX_RESULTS`, `BRAVE_SEARCH_SAFE_SEARCH`, web/news result normalization, setup hints, timeout/401/403/429/malformed-response handling, config-only `web brave doctor`, and `connectors status brave`.
+- Updated `.env.example`, README provider setup, `docs/web/providers/brave.md`, search-provider docs, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, test plan, release checklist, prompt tracking, changelog, and completion report.
+- No paid API default, live provider call in validation, query-history persistence, web-content memory storage, CAPTCHA/login/anti-bot bypass, browser automation, personal-data tool enablement, or ToolBroker/AuditLogger bypass was added.
+- Validation passed in this run: focused provider/search/connector tests 65 passed; focused docs/prompt/command tests 92 passed; full suite 864 passed, 2 skipped; startup policy ok; capability manifest validation ok with 131 capabilities; command registry validation ok with 316 commands; prompt audit ok with `WEB-FETCH-EXTRACTION-HARDENING` next; config-only Brave doctor/status and setup-required explicit search smokes passed without provider calls.
+
+- SearXNG provider v1 completed on `checkpoint/large-working-tree-20260523`.
+- Added `SearXngSearchProvider` with configured/self-hosted-only `SEARXNG_BASE_URL`, disabled-by-default `SEARXNG_ENABLED=false`, JSON result normalization, setup hints, timeout/403/429/malformed-response handling, config-only `web searxng doctor`, and `connectors status searxng`.
+- Updated `.env.example`, README provider setup, `docs/web/providers/searxng.md`, search-provider docs, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, test plan, release checklist, prompt tracking, changelog, and completion report.
+- No public SearXNG instance default, live provider call in validation, paid API use, query-history persistence, web-content memory storage, CAPTCHA/login/anti-bot bypass, browser automation, personal-data tool enablement, or ToolBroker/AuditLogger bypass was added.
+- Validation passed in this run: focused provider/search/connector tests 58 passed; focused docs/prompt/config tests 34 passed; focused prompt tracking regression rerun 5 passed; full suite 857 passed, 2 skipped after fixing the next-prompt expectation; startup policy ok; capability manifest validation ok with 130 capabilities; command registry validation ok with 314 commands; prompt audit ok with `BRAVE-PROVIDER` next; config-only SearXNG doctor/status and setup-required explicit search smokes passed without provider calls.
+
+- Search Provider Registry v1 completed on `checkpoint/large-working-tree-20260523`.
+- Added `agent.web_acquisition.search` provider interface, metadata registry, normalized result/response models, setup/unknown-provider error normalization, brokered `web.search_providers`, generalized explicit `web search "<query>" --provider <provider>` setup-hint behavior, and `docs/web/SEARCH_PROVIDER_REGISTRY.md`.
+- Updated command registry/test matrix, README, feature registry, feature maturity, roadmap, risk register, threat model, test plan, release checklist, prompt tracking, changelog, and completion report.
+- No live provider API call, paid-provider default, public SearXNG default, query-history persistence, web-content memory storage, CAPTCHA/login/anti-bot bypass, browser automation, personal-data tool enablement, or ToolBroker/AuditLogger bypass was added.
+- Validation passed in this run: focused search/web tests 33 passed; focused command/maturity/prompt tests 22 passed; full suite 848 passed, 2 skipped; startup policy ok; capability manifest validation ok with 129 capabilities; command registry validation ok with 312 commands; prompt audit ok with `SEARXNG-PROVIDER` next.
+
+- Internet Access release gate and roadmap reset completed on `checkpoint/large-working-tree-20260523`.
+- Added `docs/decisions/internet_access_graduation_track.md`, `docs/web/WEB_ACCESS_POLICY.md`, `docs/web/INTERNET_PROVIDER_STRATEGY.md`, `docs/web/SOURCE_GROUNDING_REQUIREMENTS.md`, and `docs/web/BLOCKED_SOURCE_POLICY.md`.
+- Updated roadmap, feature registry, feature maturity, prompt tracking, risk register, threat model, test plan, release checklist, changelog, README, and completion report for the clean Internet Access Graduation Track.
+- No runtime provider implementation, live web call, paid API use, CAPTCHA/anti-bot/login-wall bypass, browser automation, browser profile access, or web query/content memory storage was added.
+- Validation passed in this run: focused docs validation 12 passed, focused prompt/docs validation 17 passed, full suite 820 passed and 2 skipped, startup policy ok, capability manifest validation ok, command registry validation ok with 306 commands, and prompt audit ok with `WEB-SEARCH-PROVIDER-REGISTRY` next.
+
+- Messaging / iMessage release gate completed on `checkpoint/large-working-tree-20260523`.
+- Validation passed: final full suite 819 passed, 2 skipped; startup policy ok; capability manifest validation ok; command registry validation ok; focused docs/dogfood/prompt tests 30 passed before prompt completion; focused maturity/prompt tests 16 passed after queue advancement; safe messaging dogfood and dry-run suites returned ok.
+- The macOS Messages metadata probe ran safely on this Mac and reported Messages.app metadata only: app found, AppleScript metadata available, `send_capability_known=false`, no private Messages database access, no Full Disk Access requirement, no message content read, and no send.
+- Capability manifest scan confirms `messaging.send_approved`, `messages.macos.live_send_probe`, `messages.macos.send_approved`, `apple_business.message.send_approved`, `lead.send_approved`, and `email.send_approved` are default-disabled CRITICAL capabilities with `approval_required=per_action` and `approval_reuse_allowed=false`.
+- Live send remains unavailable/unvalidated; current safe paths are draft/handoff, iOS compose payload generation for future user-confirmed compose, mock Apple Business inbound/draft, lead-response dry-run orchestration, and macOS metadata probing.
+
+- Messaging Dogfood Suites completed on `checkpoint/large-working-tree-20260523`.
+- Added default-disabled `messaging_core`, `messaging_handoff`, `messaging_ios_compose`, `messaging_macos_probe`, `messaging_send_dry_run`, and `lead_response` suites.
+- Added `messaging ios-compose-record-result` CLI wrapper for the existing brokered iOS compose result recorder so mock sent/cancelled/failed handoff outcomes can be dogfooded.
+- Updated dogfood/session/bug-triage docs plus command registry/test matrix and source-of-truth tracking docs.
+- The suites exclude `messages macos live-send-probe`, avoid direct `send --from-action` outside preflight checks, keep `all_safe` free of live sends, use fixtures/mock/preflight data, and do not access private Messages data.
+- Validation passed: focused dogfood/command/iOS-compose/maturity tests 37 passed; feature-maturity/prompt-tracking docs tests 16 passed; messaging dry-run suite smokes ok; full suite 819 passed, 2 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 306 commands.
+
+- Approved Lead Response Send workflow v1 completed on `checkpoint/large-working-tree-20260523`.
+- Added `leads create-send-action`, `leads send --from-action`, `leads handoff`, and `leads mark-responded`.
+- Send proposals are CRITICAL exact-preview Action Center records with no approval reuse; draft edits invalidate prior send approvals.
+- `leads send --from-action` routes only through existing channel gates: iOS compose creates user-confirmed handoff payloads, manual handoff returns save/copy fallback, macOS Messages delegates to its disabled-by-default probe/allowlist/rate-limit adapter, and unsupported channels return structured fallbacks.
+- Bulk lead responses, attachments, auto-send, private Messages database access, Full Disk Access, hidden polling, and memory writes are forbidden in v1.
+- Validation passed: targeted lead inbox tests 19 passed; focused lead/messaging tests 62 passed; command/maturity/prompt tracking tests 21 passed; full suite 816 passed, 2 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 305 commands.
+
+- Lead Response Drafting workflow v1 completed on `checkpoint/large-working-tree-20260523`.
+- Added `leads summarize`, `leads suggest-followup`, and `leads suggest-meeting` CLI paths alongside the existing classify/draft-response flow.
+- Lead response drafts now include source, channel, classification, summary, assumptions, editable draft metadata, and explicit no-send/no-memory/no-calendar flags.
+- Follow-up suggestions queue pending Action Center `tasks.create` records only; no real task is created.
+- Meeting suggestions return reply guidance only; no calendar availability is read and no event is created.
+- Lead content remains `UNTRUSTED_MESSAGE`; instruction-like source text is omitted from draft context and cannot request tools, approvals, policy changes, sends, or memory writes.
+- Validation passed: targeted lead response tests 11 passed; focused lead/command/maturity tests 27 passed; full suite 808 passed, 2 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 301 commands.
+
+- Apple Messages for Business provider strategy and connector stub completed on `checkpoint/large-working-tree-20260523`.
+- Added `agent/messaging/providers/apple_business.py` with a disabled-by-default provider model, setup/status/doctor reporting, mock inbound Lead Inbox mapping, conversation status, and draft-only `MessageDraft` response creation.
+- Added brokered `apple_business.doctor`, `apple_business.status`, `apple_business.inbound.receive`, `apple_business.message.draft_response`, and `apple_business.conversation.status`; future `apple_business.message.send_approved` remains CRITICAL, default-disabled, per-action/no-reuse, and unregistered as an executable send tool.
+- Added `python smart_agent.py apple-business doctor`, `apple-business status`, `apple-business mock-inbound`, `apple-business draft-response <lead_id>`, and `apple-business conversation-status <lead_id>`.
+- Mock inbound content is labeled `UNTRUSTED_MESSAGE`, stored locally under `./workspace/leads/apple_business`, mapped to Lead Inbox records, and never written to memory by default; draft responses create local drafts only and do not create send actions.
+- No live provider calls, provider credentials, hidden webhook polling, personal iMessage automation, private Messages database access, Full Disk Access request, send execution, auto-response path, credential printing, or memory write path was added.
+- Validation passed: Apple Business provider tests 7 passed; focused Apple Business/Lead Inbox/Messaging/Command/Maturity tests 41 passed; connector/privacy regression tests 23 passed; full suite 806 passed, 2 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 298 commands.
+
+- macOS approved iMessage send adapter v1 completed on `checkpoint/large-working-tree-20260523`.
+- Added `agent/messaging/macos_send.py` with status, local recipient allowlist, CRITICAL live-send probe, CRITICAL approved-send execution, local probe/send status files, and rate-limit history.
+- Added brokered `messages.macos.status`, `messages.macos.allowed_recipients.manage`, `messages.macos.live_send_probe`, and `messages.macos.send_approved`.
+- Added `python smart_agent.py messages macos status`, `messages macos allow-recipient`, `messages macos live-send-probe --to`, and `messages send --from-action`.
+- Send remains disabled by default via `MACOS_MESSAGES_ENABLED=false`, `MACOS_MESSAGES_ALLOW_SEND=false`, and disabled manifest entries for CRITICAL send/probe.
+- Sends require a `channel=macos_messages` local draft, a `messages.macos.send_approved` Action Center item, exact preview match, CRITICAL no-reuse approval, allowlisted recipient, recent passing live-send probe, daily rate limit, and ToolBroker execution.
+- No private Messages database read, Full Disk Access request, UI scripting of Send buttons, background responder, attachments, group/bulk send, non-allowlisted send, memory write, or fake success path was added.
+- Validation passed: targeted macOS/message tests 42 passed; docs/command tests 23 passed; focused prompt/macos/command/maturity tests 33 passed; full suite 799 passed, 2 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 293 commands.
+
+- Incoming message strategy and manual/mock inbox v1 completed on `checkpoint/large-working-tree-20260523`.
+- Added `agent/messaging/inbound.py`, manual/mock inbox providers, brokered `messages.inbox.import_manual`, `messages.inbox.list`, `messages.inbox.show`, and `messages.inbox.draft_reply`.
+- Added `python smart_agent.py messages import --from-file ./workspace/incoming_message.md`, `messages inbox list`, `messages inbox show <message_id>`, and `messages inbox draft-reply <message_id>`.
+- Manual imports are constrained to `./workspace`, block private Messages database paths such as `~/Library/Messages/chat.db`, label content `UNTRUSTED_MESSAGE`, store local records under `./workspace/messaging/inbound`, expose Lead Inbox candidate metadata, and create local `MessageDraft` replies only.
+- No automatic send, no auto-reply, no background watcher, no Full Disk Access dependency, no real Gmail/Telegram/Apple Messages provider read, no CRM sync, and no memory write was added.
+- Validation passed: targeted incoming message tests 7 passed; focused messaging/lead tests 49 passed; connector-status regression tests 11 passed; docs/command validation tests 27 passed; full suite 787 passed, 2 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 290 commands.
+
+- Messages draft/handoff workflow v1 completed on `checkpoint/large-working-tree-20260523`.
+- Added `python smart_agent.py messages draft --to ... --body ...` for local manual-handoff draft creation through brokered `messaging.draft.create`.
+- Updated `messages draft-from-text` to store a local draft record under `./workspace/messaging/drafts/` and include draft-id handoff next steps while preserving the existing Action Center save/copy path.
+- Added `python smart_agent.py messages handoff <draft_id>` to create reviewed save/copy handoff Action Center items for an existing local draft.
+- Added draft-id execution ergonomics for `messages save-draft <draft_id>` and `messages copy-draft <draft_id>`; they execute only when a matching approved Action Center item exists and otherwise return approval instructions.
+- Added brokered `messages.draft_from_lead` and `messages.open_handoff_instructions`; both are no-send, no-memory, ToolBroker-audited handoff helpers.
+- No automatic send, Messages database access, Full Disk Access dependency, bulk sending, or memory write was added.
+- Validation passed: targeted Messages safe handoff tests 16 passed; focused messaging/lead/probe tests 50 passed; full suite 780 passed, 2 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 286 commands; command/dogfood validation tests 16 passed; prompt audit clean with `INCOMING-MESSAGE-STRATEGY` next.
+
+- macOS Messages automation feasibility probe completed on `checkpoint/large-working-tree-20260523`.
+- Added `agent/messaging/macos_probe.py` for platform detection, standard Messages.app detection, harmless AppleScript app id/version metadata checks, permission-denied interpretation, structured result serialization, and connector-status metadata.
+- Added brokered `messages.probe` and `python smart_agent.py messages probe` / `messages probe --explain-permissions`.
+- Live local CLI smoke returned only app metadata, wrote `data/macos_messages_probe.json`, and audited the probe; it did not read `~/Library/Messages`, request Full Disk Access, inspect account status, read message content, press Send, or execute any send verb.
+- `messages.probe` is a metadata-only `messages_probe` capability and is excluded from personal `messages` connector enablement; the personal `messages` connector remains disabled by default.
+- Validation passed: targeted probe tests 8 passed; focused connector invariant tests 11 passed; docs validation 11 passed; full suite 776 passed, 2 skipped; startup policy ok; capability manifest ok; command registry ok with 281 commands; prompt audit clean with `MESSAGES-DRAFT-HANDOFF-WORKFLOW` next.
+
+- iOS user-confirmed compose bridge v1 completed on `agent/overnight-2026-05-23`.
+- Added `agent/messaging/ios_compose.py` and `agent/messaging/handoff_payloads.py` for local handoff payload creation, status inspection, and result recording.
+- Added brokered `messaging.ios_compose.create_handoff`, `messaging.ios_compose.record_result`, and `messaging.ios_compose.status` capabilities.
+- Added `python smart_agent.py messaging ios-compose-payload <draft_id>` and `python smart_agent.py messaging ios-compose-status <draft_id>`.
+- Handoff payloads live under `./workspace/messaging/ios_compose/payloads`, include expiration, nonce, integrity hash, risk level, approval status, exact recipient, and exact body, and never send.
+- Approved-action payload creation verifies the current draft fingerprint against the Action Center preview; compose-only mode remains user-confirmed through iOS compose UI.
+- Result recording accepts `sent`, `queued`, `cancelled`, or `failed`; the agent only marks completion when iOS reports `sent` or `queued`, and expired payloads cannot record sent/queued.
+- No iOS app project, deep-link transport, attachment support, silent send adapter, Messages database read, Full Disk Access request, bulk send path, or memory write was added.
+- Targeted validation passed: iOS compose bridge tests 7 passed; focused messaging tests 24 passed.
+
+- ORCH batch recovery completed on `checkpoint/large-working-tree-20260523`.
+- Wrote `docs/runtime/ORCH_BATCH_RECOVERY_REPORT.md`.
+- Confirmed ORCH-01 through ORCH-10 were already complete; no partial ORCH prompt and no not-started ORCH prompt remained.
+- Corrected stale queued ORCH rows in `docs/PROMPT_LEDGER.md` to completed evidence rows.
+- Updated `docs/PROMPT_AUDIT.md` so `MACOS-MESSAGES-PROBE` remains the next recommended prompt.
+- Revalidated ORCH runtime controls without rerunning implementation: targeted runtime tests 31 passed; safe eval 21 passed, 0 failed, 8 skipped; full suite 766 passed, 2 skipped; startup policy, capability manifest, command registry, native skill, prompt pack, and prompt audit validations passed.
+- No runtime behavior, personal-data access, send/write capability, background persistence, package install, commit, or push was added.
+
+- Lead Inbox abstraction v1 completed on `agent/overnight-2026-05-23`.
+- Added `agent/leads/` models, source registry, mock provider, classifier, and brokered lead tools.
+- Added `python smart_agent.py leads list`, `leads show`, `leads classify`, `leads draft-response`, and `leads create-followup`.
+- `leads list/classify/draft-response/create-followup` use synthetic mock records only; no Gmail, Telegram, Apple Messages for Business, personal iMessage, web-form, CRM, or provider adapter is contacted.
+- `leads show` models future selected full lead reads and remains HIGH risk plus disabled by default.
+- `leads draft-response` creates local `MessageDraft` files only and does not create send actions or send.
+- `leads create-followup` creates pending Action Center `tasks.create` records only and does not create a real task.
+- Lead text is `UNTRUSTED_MESSAGE`, instruction-like content is filtered from drafts, no lead content is written to memory by default, and future lead sends remain CRITICAL per-action/no-reuse.
+- Validation passed: targeted Lead Inbox tests 9 passed; focused privacy/lead regression 10 passed; lead/command registry tests 14 passed; full suite 759 passed, 2 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 279 commands.
+
+- Agent Runtime Orchestration v1 completed on `agent/overnight-2026-05-23`.
+- Imported and split `prompts/packs/agent-runtime-orchestration-v1.promptpack.md` into ORCH-01 through ORCH-10 under `prompts/queued/` and placed them at the top of `docs/PROMPT_QUEUE.md`.
+- Added runtime architecture and contract docs under `docs/runtime/` plus `docs/decisions/agent_runtime_orchestration.md`.
+- Added lightweight `agent/runtime/` control-plane modules for models, state, service registry, feature flags, kernel/lifecycle, event bus, job queue, workflow runner, scheduler policy, and frontend bridge contract.
+- Added metadata-only commands: `runtime status`, `runtime doctor`, `runtime services`, `runtime features`, `runtime health`, `jobs list`, `jobs show`, `workflows list`, `workflows run`, and `events tail`.
+- Verified runtime commands do not call LM Studio, execute tools, read personal connectors, enable personal-data features, or start background persistence.
+- Release gate passed: full suite 750 passed, 2 skipped; safe eval 21 passed, 0 failed, 8 skipped; startup policy ok; capability manifest validation ok; command registry validation ok; prompt pack validation ok; native skill validation ok; prompt audit clean.
+
+- Python runtime and developer command standardization completed on `agent/overnight-2026-05-23`.
+- Verified `smart_agent.py` still enforces Python 3.11+ before importing agent modules and updated the setup guidance to prefer Python 3.12 plus `./scripts/agent`.
+- Updated `scripts/agent` to prefer `AI_AGENT_PYTHON`, then `./.venv/bin/python`, then `python3.12`, and otherwise print a clear setup error instead of falling through to Apple Python 3.9.
+- Added `Makefile` shortcuts for `doctor`, `test`, `policy-check`, `command-check`, and no-tool `run`.
+- Kept `pyproject.toml` at `requires-python = ">=3.11"` and made existing PDF runtime/test dependencies explicit (`pypdf`, `reportlab`) so fresh `.venv` installs include the packages required by the suite.
+- Updated README setup docs, AGENTS runtime rules, command registry/test matrix, changelog, project state, and completion report.
+- Validation passed: `.venv/bin/python --version` reported Python 3.12.13; startup ergonomics and command registry tests 8 passed; full `.venv` suite 719 passed, 2 skipped; bundled Codex Python full suite 729 passed, 1 skipped; `make policy-check` passed; `make command-check` passed; `LMSTUDIO_MODEL=qwopus3.6-35b-a3b-v1@q5_k_m make doctor` passed.
+- No agent behavior, model/provider logic, ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, AuditLogger, or personal-data defaults were changed.
+
+- Message Safety Policy and Action Center integration completed on `agent/overnight-2026-05-23`.
+- Added brokered `messaging.draft.create`, `messaging.draft.preview`, and `messaging.action.create_send` capabilities plus `python smart_agent.py messaging draft-create` and `messaging create-send-action`.
+- Local drafts are stored only under `./workspace/messaging/drafts`; creating/replacing drafts invalidates stale pending/approved send actions for the same draft.
+- Send proposals create CRITICAL `messaging.send_approved` Action Center records with exact local previews, explicit per-action approval, no approval reuse, rollback-impossible notes, allowlist status, and rate-limit status.
+- No `messaging.send_approved` ToolBroker tool, send adapter, private Messages database access, Full Disk Access request, personal-data default enablement, bulk/group send support, attachment sending, hidden polling, or memory write was added.
+- Validation passed: targeted messaging/action tests 17 passed; focused action/message/command docs tests 31 passed and 6 passed; full suite 729 passed, 1 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 259 commands; prompt audit reports `LEAD-INBOX-ABSTRACTION` next.
+
+- Message Channel Abstraction v1 completed on `agent/overnight-2026-05-23`.
+- Added `agent/messaging/` channel-neutral models, registry, validation, previews, and brokered channel/draft inspection tools.
+- Added `messaging.channels`, `messaging.draft_show`, and `messaging.draft_validate` capabilities plus `python smart_agent.py messaging channels`, `messaging draft show`, and `messaging draft validate` CLI paths.
+- All channels report `supports_send=false`; no `messaging.send` tool, real send adapter, Messages database read, Full Disk Access request, personal-data tool enablement, bulk/group send support, hidden polling, or memory write was added.
+- Validation passed: targeted message-channel tests 9 passed; focused command/docs validation 23 passed; full suite 721 passed, 1 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 257 commands; prompt audit reports `MESSAGE-SAFETY-ACTION-CENTER` next.
+
+- Apple Messaging / iMessage roadmap track planning addendum completed on `agent/overnight-2026-05-23`.
+- Created decision records for Apple messaging architecture, iOS user-confirmed compose, macOS Messages automation strategy, and personal iMessage vs business messaging.
+- Updated Apple Messages for Business planning to emphasize Apple/business/provider setup, API/webhook-style lead workflows, and approval-gated sends unless a future auto-response policy is explicitly approved.
+- Created a messaging rollout plan covering message channel abstraction, safety policy, LeadInbox, iOS compose, macOS probe, draft/handoff, incoming strategy, approved send blockers, dogfood, and release gate.
+- Updated roadmap, feature registry, feature maturity, risk register, threat model, changelog, prompt ledger/queue/audit, project state, and completion report.
+- Validated with full tests, docs/prompt/command validation, command registry validation, startup policy validation, and capability manifest validation.
+- No runtime message sending, Messages database access, broad Full Disk Access request, personal-data tool enablement, bulk sending, silent send path, memory write, ToolBroker bypass, PolicyEngine weakening, ApprovalManager bypass, or AuditLogger bypass was added.
+
+- Apple Ecosystem + Lead Response Track planning completed on `agent/overnight-2026-05-23`.
+- Created decision records for Apple ecosystem architecture, consumer Messages strategy, Apple Messages for Business strategy, and LeadInbox abstraction.
+- Created a lead response workflow spec covering rollout levels 0 through 5, with sends CRITICAL and auto-response deferred.
+- Updated roadmap, feature registry, feature maturity, risk register, threat model, changelog, prompt tracking, project state, and completion report.
+- Validated docs/policy status with feature maturity docs validation, startup policy validation, capability manifest validation, and command registry validation.
+- No runtime connector, personal-data read, private Messages database access, Full Disk Access dependency, send path, background polling, memory write, ToolBroker bypass, PolicyEngine weakening, ApprovalManager bypass, or AuditLogger bypass was added.
+
+- Gmail and Telegram connector doctors completed on `agent/overnight-2026-05-23`.
+- Added config-only `python smart_agent.py gmail doctor`, `python smart_agent.py gmail scopes`, `python smart_agent.py telegram doctor`, and `python smart_agent.py telegram status`.
+- Gmail doctor validates env presence, token path metadata, configured scopes, broad/send-capable scope warnings, and disabled CRITICAL send status without reading inboxes or sending email.
+- Telegram doctor validates bot-token presence, allowed/default chat-id metadata, missing chat-id warnings, and disabled CRITICAL send status without reading chats or sending messages.
+- No full Gmail/Telegram connector, provider API call, token validation, inbox/chat read, send path enablement, memory write, personal-data tool enablement, ToolBroker bypass, PolicyEngine weakening, ApprovalManager bypass, or AuditLogger bypass was added.
+- `GMAIL-TELEGRAM-DOCTORS` was selected out of queue order by explicit user request; `APPLE-MESSAGING-ROADMAP` remains the next queued prompt.
+
+- Cost-aware weather provider selector completed on `agent/overnight-2026-05-23`.
+- Added action-aware weather auto selection: Open-Meteo for current/forecast, NOAA/NWS for U.S. alerts, and WeatherAPI only when configured and explicitly selected or allowed by paid-provider policy.
+- Added optional WeatherAPI provider normalization for current, forecast, hourly, and alerts through the existing brokered weather tools.
+- Added `python smart_agent.py weather providers`, `python smart_agent.py weather provider auto "Phoenix, AZ"`, `weather current --provider auto`, and `weather current --provider weatherapi`.
+- Provider decisions are included in structured weather results and audit summaries; API keys are not returned or logged.
+- Added mocked tests for auto current, auto alerts, WeatherAPI paid-default denial, explicit WeatherAPI, missing-key setup hints, provider-decision audit, no memory writes, secret redaction, and CLI provider commands.
+- No WeatherAPI default-by-key behavior, system location inference, memory location storage, personal-data tool enablement, ToolBroker bypass, PolicyEngine weakening, ApprovalManager bypass, or AuditLogger bypass was added.
+- `WEATHER-PROVIDER-SELECTOR` was marked complete out of queue order by explicit user request; `APPLE-MESSAGING-ROADMAP` remains the next queued prompt.
+
+- Optional SerpAPI fallback provider completed on `agent/overnight-2026-05-23`.
+- Added `web.search.serpapi` as a brokered, LOW-risk, rate-limited capability with cost-policy checks.
+- Added explicit CLI support for `python smart_agent.py web search "query" --provider serpapi` and `python smart_agent.py research "query" --provider serpapi`.
+- Added SerpAPI result normalization to the existing search result schema with `UNTRUSTED_WEB` labels.
+- Added missing-key, paid-API disabled, timeout/API error, no-auto-default, redaction, audit, and research-routing tests using mocks only.
+- Updated command registry/test matrix, README, connector cost docs, risk/threat/test/release docs, feature registry, feature maturity, roadmap, changelog, prompt ledger/queue/audit, and completion report.
+- No direct Google scraping, search-history memory storage, default SerpAPI selection, API-key exposure, personal-data tool enablement, ToolBroker bypass, PolicyEngine weakening, ApprovalManager bypass, or AuditLogger bypass was added.
+- Free-first Web Acquisition Layer v1 completed on `agent/overnight-2026-05-23`.
+- Added brokered `web.robots`, `web.sitemap`, `web.feed`, `web.acquire_url`, and `web.acquire` tools and CLI commands.
+- Added public robots.txt checks, sitemap parsing, RSS/Atom item extraction, TTL acquisition cache, robots-aware direct public URL acquisition, blocked/CAPTCHA page unavailability, untrusted-content wrapping, and provider ladder skip reporting.
+- Added config placeholders `WEB_ACQUISITION_CACHE_ENABLED` and `WEB_ACQUISITION_CACHE_TTL_SECONDS`.
+- Updated command registry/test matrix, README, connector cost docs, risk/threat/test/release docs, feature registry, feature maturity, roadmap, changelog, prompt ledger/queue/audit, and completion report.
+- No CAPTCHA/anti-bot bypass, logged-in scraping, browser profile/cookie/session access, paid provider defaulting, search history storage, personal-data tool enablement, ToolBroker bypass, PolicyEngine weakening, ApprovalManager bypass, or AuditLogger bypass was added.
+- `FREE-FIRST-WEB-ACQUISITION` was marked complete out of queue order by explicit user request; `APPLE-MESSAGING-ROADMAP` remains the next queued prompt.
+
+- Prompt Tracker Maturity Track completed on `agent/overnight-2026-05-23`.
+- PTM-01 was repaired by adding prompt tracker audit/gap artifacts and then marked complete.
+- PTM-02 through PTM-10 were executed sequentially and marked complete with targeted test/docs evidence.
+- Added prompt evidence classification, conservative recovery commands, embedded-delimiter prompt pack parsing, prompt tracker dogfood suites, prompt tracker evals, and PTM release-gate docs.
+- At that point `prompts audit` reported zero active prompts and `APPLE-MESSAGING-ROADMAP` as the next queued prompt; after the Apple track, current prompt tracking now points to `MESSAGE-CHANNEL-ABSTRACTION`.
+- No prompt body was executed automatically; no personal-data tool was enabled; no ToolBroker, PolicyEngine, ApprovalManager, or AuditLogger behavior was weakened.
+
+- Secret/config doctor completed on `agent/overnight-2026-05-23`.
+- Added redacted credential/config presence checks for SerpAPI, WeatherAPI, Gmail, and Telegram.
+- Added `python smart_agent.py secrets doctor`, `python smart_agent.py secrets status`, and connector status entries for `serpapi`, `weatherapi`, `gmail`, and `telegram`.
+- The doctor warns on tracked `.env`, repo-local token paths, and secret-looking docs/tests/config values while never printing raw secrets.
+- SerpAPI and WeatherAPI remain non-default paid/quota-limited providers unless cost policy explicitly allows them.
+- No provider API calls, Gmail inbox reads, Telegram sends, personal-data access, memory writes, ToolBroker bypasses, PolicyEngine weakening, ApprovalManager bypasses, or AuditLogger bypasses were added.
+- `SECRET-CONFIG-DOCTOR` was marked complete out of prompt queue order by explicit user request; `PTM-01` remains the next recommended prompt.
+
+- Cost-aware provider policy completed on `agent/overnight-2026-05-23`.
+- Added reusable `agent/connectors/cost_policy.py` with `ProviderCostConfig`, provider candidates, free-first selection, paid/quota gates, setup hints, redacted decision payloads, and `provider.select` audit helper.
+- Added provider ordering docs for web/search, weather, and personal communications.
+- Added config defaults: `PROVIDER_COST_MODE`, `ALLOW_PAID_APIS`, `MAX_PAID_API_CALLS_PER_DAY`, `SEARCH_DEFAULT_PROVIDER`, and `WEATHER_DEFAULT_PROVIDER`.
+- Added focused tests for no-key provider preference, paid-provider denial, SerpAPI/WeatherAPI gates, provider-decision audit events, redaction, and missing-provider setup hints.
+- No new provider API calls, personal-data tools, sends, writes, policy weakening, ToolBroker bypass, ApprovalManager bypass, or AuditLogger bypass were added.
+- `COST-AWARE-PROVIDER-POLICY` was marked complete out of prompt queue order by explicit user request; `PTM-01` remains the next recommended prompt.
+
+- Prompt Tracker Maturity prompt pack imported on `agent/overnight-2026-05-23`.
+- Source pack: `prompts/packs/prompt-tracker-maturity-v1.promptpack.md`.
+- Original pack copy created at `prompts/packs/prompt-tracker-maturity-v1.md`.
+- Created queued prompt files `prompts/queued/PTM-01.md` through `prompts/queued/PTM-10.md`.
+- Verified the split prompt body text for all 10 PTM prompts exactly matches the original pack body sections.
+- Updated `docs/PROMPT_LEDGER.md`, `docs/PROMPT_QUEUE.md`, and `docs/PROMPT_AUDIT.md`; PTM-01 through PTM-10 are now top-of-queue.
+- Set `next_prompt_id` to `PTM-01`; no PTM prompt was executed.
+- Existing prompt-pack validator rejected the pack because PTM-03 includes example delimiter text by design, so the pack was split manually with PTM-specific delimiters.
+- `prompts next` returns `PTM-01`.
+- Focused prompt/maturity/command validation passed: 19 passed in 0.23s.
+- Full suite passed: 663 passed, 1 skipped in 20.90s.
+- Startup policy validation passed: ok.
+- Capability manifest validation passed: ok.
+- Command registry/docs validation passed: 228 commands, no problems.
+
+- Live Dogfood + Session Review release gate completed on `agent/overnight-2026-05-23`.
+- Validation session `sess_20260523T182508Z_abdad880` captured safe command `cmd_d205fdc403f7` through `session run -- setup`.
+- Feedback `fb_11c10fcb408c` attached to the captured command and redacted a fake secret as `<REDACTED_SECRET>`.
+- `session review --last --create-bugs` created local redacted bug `BUG-0002`.
+- `bugs create-regression BUG-0002` created skipped redacted scaffold `tests/regressions/test_bug_0002.py`.
+- `quality status`, `quality bugs`, and `quality regressions` reported the validation session, open bugs, and regression coverage.
+- Safe dogfood `all_safe --dry-run` returned status ok with 8 skipped commands by design.
+- Redaction search found no raw fake token in generated session/review/bug/regression artifacts.
+- Policy invariant scan passed: no personal-data capabilities enabled by default, no HIGH capability missing approval, and no CRITICAL capability allows approval reuse.
+- Focused docs/dogfood/bug/quality validation passed: 45 passed in 0.51s.
+- Full suite passed: 663 passed, 1 skipped in 20.78s.
+- Startup policy validation passed: ok.
+- Capability manifest validation passed: ok.
+- Command registry/docs validation passed: 228 commands, no problems.
+- Native skill validation passed: 3 manifests valid.
+
+- Product Quality Dashboard v1 completed on `agent/overnight-2026-05-23`.
+- Added `agent/ui/product_quality.py` with read-only quality summaries over redacted sessions, feedback, bugs, regression links, eval reports, full-test status, feature maturity, dogfood recommendations, and release-gate docs.
+- Added `python smart_agent.py quality status`, `quality sessions`, `quality bugs`, `quality regressions`, `quality features`, and `quality next`.
+- Quality dashboard reads local metadata/log files only; it does not execute tools, access personal connectors, grant approvals, write memory, or expose raw personal data.
+- Focused Product Quality Dashboard tests passed: 7 passed in 0.14s.
+- Focused quality/command/prompt/maturity validation passed: 26 passed in 0.26s.
+- Command registry validation passed: 228 commands, no problems.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Diff whitespace check passed.
+- Full suite passed: 663 passed in 20.68s.
+
+- Live Test Runbook and Daily Dogfood Workflow completed on `agent/overnight-2026-05-23`.
+- Added `agent/dogfood/planner.py` with daily/weekly dogfood plans, checklist output, and next-step recommendations based on latest redacted session metadata plus feature-maturity notes.
+- Added `python smart_agent.py dogfood plan`, `python smart_agent.py dogfood next`, and `python smart_agent.py dogfood checklist`.
+- Added `docs/dogfood/LIVE_TEST_RUNBOOK.md`, `docs/dogfood/DAILY_DOGFOOD_CHECKLIST.md`, `docs/dogfood/WEEKLY_RELEASE_CHECK.md`, and `docs/templates/dogfood_session_notes.md`.
+- Dogfood planning commands are metadata-only; they do not run suites, access personal data, grant approvals, send messages, or write memory.
+- Focused dogfood tests passed: 11 passed in 0.44s.
+- Focused dogfood/command/prompt/maturity validation passed: 30 passed in 0.45s.
+- Command registry validation passed: 222 commands, no problems.
+- Startup policy validation passed: startup policy ok.
+- Capability manifest validation passed: capability manifest ok.
+- Diff whitespace check passed.
+- Full suite passed: 656 passed in 21.58s.
 
 - Session Review and Bug Generator completed on `agent/overnight-2026-05-23`.
 - Added `agent/session_logs/review.py` with redacted session review, optional local bug creation, stable `BUG-0001` style ids, severity classification, and audit events.
@@ -756,10 +1201,68 @@ This is the next product-feature track to keep visible before starting implement
 
 ## Current Work In Progress
 
-None. Session Review and Bug Generator is complete for local/full tests.
+None. Internet Access release gate and roadmap reset is complete and local/full validations passed with `./.venv/bin/python` 3.12.13.
 
 ## Files Being Changed
 
+- Internet Access release gate and roadmap reset additions/changes:
+  - `docs/decisions/internet_access_graduation_track.md`
+  - `docs/web/WEB_ACCESS_POLICY.md`
+  - `docs/web/INTERNET_PROVIDER_STRATEGY.md`
+  - `docs/web/SOURCE_GROUNDING_REQUIREMENTS.md`
+  - `docs/web/BLOCKED_SOURCE_POLICY.md`
+  - `tests/test_feature_maturity_docs.py`
+  - README, CHANGELOG, feature registry, feature maturity, roadmap, prompt ledger/queue/audit, project state, completion report, risk register, threat model, test plan, and release checklist.
+- PTM batch additions/changes:
+  - `agent/prompts/evidence.py`
+  - `agent/prompts/recovery.py`
+  - `agent/prompts/pack_parser.py`
+  - `agent/prompts/prompt_store.py`
+  - `agent/ui/prompts.py`
+  - `agent/ui/cli_commands.py`
+  - `agent/ui/evals.py`
+  - `agent/ui/command_registry.py`
+  - `agent/promptops/state.py`
+  - `tests/test_prompt_tracker_maturity.py`
+  - `tests/test_prompt_tracking.py`
+  - `dogfood_suites/prompt_tracker_core.yaml`
+  - `dogfood_suites/prompt_pack_import.yaml`
+  - `dogfood_suites/promptops_workbench.yaml`
+  - `eval_cases/prompt_tracker.json`
+  - `docs/prompt_tracker/`
+  - `prompts/completed/PTM-01.md` through `prompts/completed/PTM-10.md`
+  - Prompt tracking, feature tracking, command registry, risk/threat/test/release, README, CHANGELOG, and completion docs.
+- Free-first web acquisition additions/changes:
+  - `agent/tools/web/acquisition.py`
+  - `agent/tools/registry.py`
+  - `smart_agent.py`
+  - `config/capabilities.yaml`
+  - `.env.example`
+  - `tests/test_web_acquisition.py`
+  - `README.md`
+  - `docs/connectors/PROVIDER_SELECTION.md`
+  - `docs/connectors/COST_POLICY.md`
+  - `docs/COMMAND_REGISTRY.md`
+  - `docs/COMMAND_TEST_MATRIX.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/PROMPT_LEDGER.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/COMPLETION_REPORT.md`
+  - `CHANGELOG.md`
+- `.env.example`
+- `agent/connectors/cost_policy.py`
+- `tests/test_provider_cost_policy.py`
+- `docs/decisions/cost_aware_provider_policy.md`
+- `docs/connectors/PROVIDER_SELECTION.md`
+- `docs/connectors/COST_POLICY.md`
 - `.gitignore`
 - `agent/session_logs/review.py`
 - `agent/ui/cli_commands.py`
@@ -790,6 +1293,46 @@ None. Session Review and Bug Generator is complete for local/full tests.
 
 ## Commands Run
 
+- Internet Access release gate and roadmap reset commands:
+  - `./.venv/bin/python -m pytest tests/test_feature_maturity_docs.py -q`
+  - `./.venv/bin/python -m pytest tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q`
+  - `./.venv/bin/python -m pytest -q`
+  - `./.venv/bin/python -c "from agent.safety.validation import validate_startup_policy; validate_startup_policy(); print('startup policy ok')"`
+  - `./.venv/bin/python -m agent.safety.validation config/capabilities.yaml`
+  - `./scripts/agent commands validate`
+  - `./scripts/agent prompts audit`
+- PTM batch commands:
+  - `.venv/bin/pytest tests/test_prompt_tracking.py tests/test_prompt_pack.py tests/test_promptops_workbench.py -q`
+  - `.venv/bin/pytest tests/test_prompt_tracking.py tests/test_prompt_pack.py tests/test_promptops_workbench.py tests/test_prompt_tracker_maturity.py tests/test_dogfood_suites.py tests/test_command_registry.py tests/test_feature_maturity_docs.py -q`
+  - `./scripts/agent prompts mark-active PTM-01..PTM-10`
+  - `./scripts/agent prompts mark-complete PTM-01..PTM-10 --test-result "targeted prompt tracker tests passed: 54 passed" --docs-updated yes`
+  - `./scripts/agent eval run --prompt-tracker --json`
+  - `./scripts/agent prompts validate-pack prompts/packs/prompt-tracker-maturity-v1.promptpack.md`
+  - `./scripts/agent dogfood run prompt_tracker_core --dry-run`
+  - `./scripts/agent prompts evidence PTM-10`
+  - `./scripts/agent prompts recover-plan`
+  - `./scripts/agent commands validate`
+  - Startup policy validation and capability manifest validation snippets.
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest -q`
+- Free-first web acquisition commands:
+  - `./scripts/agent prompts mark-active FREE-FIRST-WEB-ACQUISITION --notes ...`
+  - `.venv/bin/python -m pytest tests/test_web_acquisition.py`
+  - `./scripts/agent tools list | rg "web\\.(robots|sitemap|feed|acquire)"`
+  - `.venv/bin/python -m pytest tests/test_web.py tests/test_web_acquisition.py tests/test_command_registry.py`
+  - `.venv/bin/python -m agent.safety.validation config/capabilities.yaml`
+  - `.venv/bin/python - <<'PY' ... validate_capabilities_config(...) ... PY`
+  - `./scripts/agent commands validate`
+  - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest`
+  - `./scripts/agent prompts mark-complete FREE-FIRST-WEB-ACQUISITION --test-result ... --docs-updated yes`
+- Required governance/tracking docs read with `sed` and `rg` for the cost-aware provider policy task.
+- Existing web/weather provider, connector registry, audit, runtime config, redaction, and test files inspected with `rg` and `sed`.
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_provider_cost_policy.py`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_provider_cost_policy.py tests/test_prompt_tracking.py tests/test_feature_maturity_docs.py -q`
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py commands validate`
+- Startup policy validation.
+- Capability manifest validation.
+- `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest -q`
+- `git diff --check`
 - Required governance/tracking docs read with `sed` and `rg`.
 - Inspected session logging, replay, store, dogfood, and command registry code with `rg` and `sed`.
 - `/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 -m pytest tests/test_session_logs.py -q`
@@ -1188,6 +1731,30 @@ None. Session Review and Bug Generator is complete for local/full tests.
 
 ## Test Status
 
+- Internet Access release gate and roadmap reset: focused docs validation 12 passed; focused prompt/docs validation 17 passed; full suite 820 passed, 2 skipped; startup policy ok; capability manifest validation ok; command registry validation ok with 306 commands; prompt audit ok with zero active prompts and `WEB-SEARCH-PROVIDER-REGISTRY` next.
+- Free-first web acquisition targeted tests: 8 passed in 0.13s.
+- Focused web/acquisition/command registry tests: 27 passed in 0.19s.
+- Startup policy validation after free-first web acquisition: startup policy ok.
+- Capability manifest validation after free-first web acquisition: capability manifest ok (82 capabilities).
+- Command registry validation after free-first web acquisition: status ok, 247 commands, no problems.
+- Full suite after free-first web acquisition with bundled Codex Python runtime: 691 passed, 1 skipped in 22.39s.
+- `.venv` full-suite attempt remains blocked by missing optional `reportlab`; bundled runtime should be used for PDF/full-suite coverage in this workspace.
+- Prompt Tracker Maturity focused tests: 54 passed in 1.31s.
+- Prompt Tracker Maturity docs/command/prompt tracker validation: 63 passed in 1.42s.
+- Prompt tracker eval: 3 passed, 0 failed, 5 skipped personal-data checks.
+- Prompt pack validation: `prompt-tracker-maturity-v1`, 10 prompts, status ok.
+- Command registry validation: status ok, 242 commands, no problems.
+- Startup policy validation: startup policy ok.
+- Capability manifest validation: capability manifest ok (77 capabilities).
+- Full suite with bundled Codex Python runtime: 683 passed, 1 skipped in 22.34s.
+- `.venv` full-suite attempt is blocked by missing optional `reportlab`; bundled runtime passed and should be used for PDF/full-suite coverage in this workspace.
+- Cost-aware provider policy focused tests: 7 passed in 0.07s.
+- Focused provider/prompt/maturity docs validation: 21 passed in 0.22s.
+- Command registry validation: status ok, 228 commands, no problems.
+- Startup policy validation: startup policy ok.
+- Capability manifest validation: capability manifest ok (77 capabilities).
+- Full suite: 670 passed, 1 skipped in 20.82s.
+- Diff whitespace check: passed.
 - Session feedback focused tests: 14 passed in 0.69s.
 - Focused session/command/prompt/maturity validation: 33 passed in 0.81s.
 - Full suite after feedback capture: 638 passed in 19.15s.
@@ -1389,10 +1956,24 @@ None. Session Review and Bug Generator is complete for local/full tests.
 
 ## Blockers
 
-None currently. `.DS_Store` files are untracked local noise and should not be committed.
+None for optional SerpAPI fallback v1. Live SerpAPI smoke requires user-provided `SERPAPI_API_KEY` and `ALLOW_PAID_APIS=true`. Environment note: `.venv` lacks optional `reportlab`, so full-suite PDF coverage used the bundled Codex Python runtime.
 
 ## Decisions Made During Current Task
 
+- Treat the Internet Access release gate as docs/tracking only; no live web calls, provider implementation, paid API use, browser automation, query-history storage, or memory writes were added.
+- Supersede the stale `WEB-ACQUISITION-LAYER` queue row with the already completed `FREE-FIRST-WEB-ACQUISITION` implementation evidence.
+- Make `WEB-SEARCH-PROVIDER-REGISTRY` the next prompt so future web provider work starts with metadata and governance before adding provider calls.
+- Define future internet access graduation in a separate track with no CAPTCHA/anti-bot/login-wall bypass, no browser profile access, no paid defaults, and source-grounding/citation gates before maturity claims.
+- Implement SerpAPI as a dedicated `web.search.serpapi` tool/capability instead of changing the default `web.search` behavior.
+- Keep `web "query"` and default `research "query"` on the existing provider path; SerpAPI requires explicit `--provider serpapi`.
+- Require `ALLOW_PAID_APIS=true` for SerpAPI runtime calls, even when the provider is explicitly selected, so paid/quota-limited use is deliberate.
+- Treat SerpAPI results as `UNTRUSTED_WEB`, redact search queries in audit logs with the same default behavior as `web.search`, and never include `SERPAPI_API_KEY` in tool results, docs, or audit records.
+- Use mocked HTTP transport in unit tests; no live SerpAPI network call was made during this task.
+- Treat `web acquire "query"` as a free-first ladder that uses local cache/direct URL/domain sitemap paths and returns a clear limitation when no free source can satisfy an arbitrary query.
+- Keep paid/quota-limited providers skipped by default through the existing cost policy; do not call SerpAPI, Brave, WeatherAPI, SearXNG, or any new paid provider from this task.
+- Use a TTL operational cache for public acquisition results, not memory and not raw query-history storage.
+- Return robots-disallowed, blocked, or CAPTCHA-like pages as unavailable with `bypass_attempted=false` instead of trying alternate bypass techniques.
+- Label public webpage text as `UNTRUSTED_WEB` and fetched feed/sitemap documents as `UNTRUSTED_DOCUMENT`.
 - Treat the overnight runbook as a planning gate only; `OVERNIGHT-SAFE-6H` ran only after explicit user approval in this thread, and future overnight runs require separate approval.
 - Add `improve overnight-plan` as a read-only planner that uses brokered `filesystem.read` calls against tracking docs.
 - Rank docs, tests, and hardening work first for overnight safe-mode.
@@ -1535,6 +2116,9 @@ None currently. `.DS_Store` files are untracked local noise and should not be co
 
 ## Things To Verify Before Marking Complete
 
+- Reddit + Multilingual Forum Intelligence Track planning verification is complete: forum policy docs, roadmap updates, risk/threat updates, feature registry/maturity, prompt tracking, changelog, completion report, project state, focused docs/prompt tests, startup policy validation, capability manifest validation, command registry validation, full suite, and prompt audit are updated; no runtime Reddit API calls, scraping, permanent forum storage, training, personal-data default enablement, paid API default, or CLI command changes were added.
+- Internet Access release gate and roadmap reset verification is complete: docs validation, full suite, startup policy validation, capability manifest validation, command registry validation, prompt audit, web policy docs, roadmap reset, risk/threat updates, feature registry/maturity, completion report, and project state are updated; no live web calls or provider implementation occurred.
+- Optional SerpAPI fallback v1 verification is complete: targeted web/research workflow tests, focused provider/command docs tests, docs validation, full suite, startup policy validation, capability manifest validation, command registry validation, completion report, project state, feature registry, maturity tracking, roadmap, risk register, threat model, test plan, release checklist, changelog, and prompt tracking are updated.
 - Prompt pack parser rejects duplicate ids/orders, missing end markers, missing metadata, invalid risk levels, missing dependencies, cycles, completed-on-import, and `execute_all`.
 - `validate-pack` writes no files.
 - `import`/`split` write pack and queued prompt files, update ledger/queue/audit, preserve prompt bodies, and do not execute prompts.
@@ -1597,12 +2181,8 @@ None currently. `.DS_Store` files are untracked local noise and should not be co
 
 ## Next Queue
 
-1. REGRESSION-TEST-GENERATOR: Regression test generator from bugs.
-2. LIVE-TEST-RUNBOOK: Live test runbook and daily dogfood workflow.
-3. PRODUCT-QUALITY-DASHBOARD: Product quality dashboard.
-4. DOGFOOD-RELEASE-GATE: Dogfood system release gate.
-5. APPLE-MESSAGING-ROADMAP: Apple Messaging roadmap and decision records.
-8. See `docs/PROMPT_QUEUE.md` for the full ordered prompt queue and blocked approval gates.
+1. REDDIT-PROVIDER-POLICY-COMPLIANCE: Reddit provider policy and compliance scaffolding.
+2. See `docs/PROMPT_QUEUE.md` for the full ordered prompt queue and blocked approval gates.
 
 ## Next Feature Set: Controlled Actions and Proactive Workflows
 
@@ -1669,4 +2249,4 @@ Before finishing any run:
 
 ## Last Run Summary
 
-Completed `SESSION-REVIEW-BUG-GENERATOR`. Added redacted session review reports, optional local bug generation, `session review`, `bugs list/show/export`, P0 safety classification for bypass/data-leak signals, command registry entries, docs, and tests. Focused session review tests passed with 21 tests, focused session/command/prompt/maturity validation passed with 40 tests, and the full suite passed with 645 tests. Startup policy, capability manifest, command registry validation, and `git diff --check` passed. Next recommended prompt is `REGRESSION-TEST-GENERATOR`.
+Completed Tracker Hygiene, Indexing, and Compaction Pass. Created tracker dashboard, tracker index, maintenance guide, archive policy, and consistency report; added anchored tracker rules and navigation links; added tracker docs validation; ran full tests and release validations relevant to docs-only work; kept readiness YELLOW because clean release boundary and live/manual validation remain incomplete. Full suite passed with 1039 passed, 1 skipped. Next recommended prompt: `CONTINUE-RELEASE-HARDENING-CLEAN-BOUNDARY`.

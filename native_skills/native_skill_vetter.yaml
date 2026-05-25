@@ -5,27 +5,48 @@ category: security
 version: "1.0.0"
 status: available
 maturity_level: "4 Tested"
+root_id: project_skills
+source: project
+provenance:
+  source_type: native
+  review_status: reviewed_local
 risk_level: LOW
 trust_level: UNTRUSTED_DOCUMENT
 allowed_tools:
+  - native_skills.inspect_skill
   - native_skills.vet_skill_file
   - native_skills.vet_skill_folder
   - native_skills.score_candidate
+  - native_skills.report_last
 required_capabilities:
+  - native_skills.inspect_skill
   - native_skills.vet_skill_file
   - native_skills.vet_skill_folder
   - native_skills.score_candidate
+  - native_skills.report_last
+required_connectors: []
+required_env: []
+required_config: []
+required_binaries: []
+required_files: []
+required_platforms:
+  - any
+required_python: ">=3.11"
+required_model_features: []
 approval_required: false
+approval_reuse_allowed: true
 memory_behavior: no_store
 audit_required: true
+network_behavior: none
+filesystem_behavior: workspace_read
 inputs_schema:
   type: object
   properties:
-    path:
+    path_or_skill_id:
       type: string
-      description: Workspace path to a candidate SKILL.md or skill folder.
+      description: Approved workspace/project path or native skill id for a candidate SKILL.md, manifest, or skill folder.
   required:
-    - path
+    - path_or_skill_id
 outputs_schema:
   type: object
   properties:
@@ -33,9 +54,19 @@ outputs_schema:
       type: string
     safe_to_port:
       type: string
+    safe_to_import:
+      type: string
+    safe_to_enable:
+      type: string
     findings:
       type: array
-docs_path: docs/native_skills/SKILL_INTAKE_PROCESS.md
-tests_path: tests/test_native_skills.py
+docs_path: docs/native_skills/SKILL_VETTING.md
+tests_path: tests/native_skills/test_skill_inspection_vetting.py
+dogfood_suite: ""
 owner: local-agent
+license: project-internal
 last_reviewed: "2026-05-23"
+setup_hint: Built-in static inspector/vetter; no external skill execution, network access, plugin runtime, or dependency installation.
+known_limitations:
+  - Static heuristic vetting can miss obfuscated behavior.
+  - Static reports are review evidence only and do not authorize importing, enabling, or executing candidate skills.

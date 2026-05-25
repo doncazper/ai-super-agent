@@ -12,6 +12,8 @@ from agent.safety.trust import TrustLevel
 
 VALID_STATUSES = {"candidate", "available", "disabled", "deprecated", "experimental"}
 VALID_MEMORY_BEHAVIORS = {"no_store", "session_only", "store_preference", "store_project_fact", "approval_required"}
+VALID_NETWORK_BEHAVIORS = {"none", "disabled", "local_only", "configured_provider", "web_allowed"}
+VALID_FILESYSTEM_BEHAVIORS = {"none", "workspace_read", "workspace_write", "metadata_only", "approval_required"}
 MATURITY_VALUES = {
     "candidate",
     "researched",
@@ -35,6 +37,32 @@ MATURITY_VALUES = {
 PERSONAL_TRUST_LEVELS = {"LOCAL_PRIVATE_DATA", "UNTRUSTED_EMAIL", "UNTRUSTED_MESSAGE"}
 FORBIDDEN_KEYS = {"script", "scripts", "entrypoint", "command", "commands", "module", "code_path", "install", "package_install"}
 BYPASS_PHRASES = ("bypass toolbroker", "direct tool access", "disable audit", "ignore policy", "grant permissions")
+NON_EMPTY_REQUIRED_FIELDS = {
+    "skill_id",
+    "name",
+    "description",
+    "category",
+    "version",
+    "status",
+    "maturity_level",
+    "root_id",
+    "source",
+    "risk_level",
+    "trust_level",
+    "approval_required",
+    "memory_behavior",
+    "audit_required",
+    "network_behavior",
+    "filesystem_behavior",
+    "inputs_schema",
+    "outputs_schema",
+    "docs_path",
+    "tests_path",
+    "owner",
+    "license",
+    "last_reviewed",
+    "setup_hint",
+}
 
 
 def known_capabilities_from_config(path: str | Path = "config/capabilities.yaml") -> set[str]:
@@ -50,8 +78,11 @@ def validate_manifest(manifest: NativeSkillManifest, known_capabilities: set[str
     warnings: list[str] = []
 
     for field in REQUIRED_FIELDS:
+        if manifest.raw and field not in manifest.raw:
+            errors.append(f"missing required field: {field}")
+            continue
         value = manifest.raw.get(field) if manifest.raw else getattr(manifest, field)
-        if value in (None, "", []):
+        if field in NON_EMPTY_REQUIRED_FIELDS and value in (None, "", []):
             errors.append(f"missing required field: {field}")
 
     if manifest.status and manifest.status not in VALID_STATUSES:
@@ -72,6 +103,10 @@ def validate_manifest(manifest: NativeSkillManifest, known_capabilities: set[str
         errors.append(f"invalid memory_behavior: {manifest.memory_behavior}")
     if not isinstance(manifest.audit_required, bool):
         errors.append("audit_required must be boolean")
+    if manifest.network_behavior and manifest.network_behavior not in VALID_NETWORK_BEHAVIORS:
+        errors.append(f"invalid network_behavior: {manifest.network_behavior}")
+    if manifest.filesystem_behavior and manifest.filesystem_behavior not in VALID_FILESYSTEM_BEHAVIORS:
+        errors.append(f"invalid filesystem_behavior: {manifest.filesystem_behavior}")
     if not isinstance(manifest.inputs_schema, dict):
         errors.append("inputs_schema must be an object")
     if not isinstance(manifest.outputs_schema, dict):
@@ -90,6 +125,8 @@ def validate_manifest(manifest: NativeSkillManifest, known_capabilities: set[str
     if manifest.risk_level == RiskLevel.CRITICAL.value:
         if manifest.approval_required != "per_action":
             errors.append("CRITICAL native skills require approval_required: per_action")
+        if manifest.approval_reuse_allowed is not False:
+            errors.append("CRITICAL native skills must set approval_reuse_allowed: false")
     elif manifest.risk_level in {RiskLevel.HIGH.value, RiskLevel.MEDIUM.value} and not manifest.approval_required:
         warnings.append("non-low native skill should document approval requirements")
 

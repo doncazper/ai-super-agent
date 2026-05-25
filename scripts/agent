@@ -10,10 +10,34 @@ if [[ -n "${AI_AGENT_PYTHON:-}" ]]; then
   PY="$AI_AGENT_PYTHON"
 elif [[ -x "$ROOT/.venv/bin/python" ]]; then
   PY="$ROOT/.venv/bin/python"
-elif [[ -x "$CODEX_PY" ]]; then
-  PY="$CODEX_PY"
+elif command -v python3.12 >/dev/null 2>&1; then
+  PY="$(command -v python3.12)"
 else
-  PY="python3"
+  PY=""
+fi
+
+if [[ -z "$PY" ]]; then
+  cat >&2 <<EOF
+AI Super Agent requires Python 3.11 or newer.
+
+No supported interpreter was found.
+
+Recommended local setup:
+  cd "$ROOT"
+  python3.12 -m venv .venv
+  source .venv/bin/activate
+  python -m pip install -e '.[dev]'
+  export LMSTUDIO_BASE_URL="http://localhost:1234/v1"
+  export LMSTUDIO_MODEL="<model id from LM Studio>"
+  ./scripts/agent doctor
+
+If Python 3.12 is not installed:
+  brew install python@3.12
+
+To list LM Studio model IDs after starting the Developer Server:
+  curl http://localhost:1234/v1/models
+EOF
+  exit 2
 fi
 
 if ! "$PY" - "$MIN_MAJOR" "$MIN_MINOR" <<'PY'
@@ -32,15 +56,15 @@ Executable: $PY
 
 Recommended local setup:
   cd "$ROOT"
-  python3.11 -m venv .venv
+  python3.12 -m venv .venv
   source .venv/bin/activate
   python -m pip install -e '.[dev]'
   export LMSTUDIO_BASE_URL="http://localhost:1234/v1"
   export LMSTUDIO_MODEL="<model id from LM Studio>"
   ./scripts/agent doctor
 
-If Python 3.11 is not installed:
-  brew install python@3.11
+If Python 3.12 is not installed:
+  brew install python@3.12
 
 To list LM Studio model IDs after starting the Developer Server:
   curl http://localhost:1234/v1/models

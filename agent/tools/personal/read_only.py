@@ -38,6 +38,7 @@ from agent.tools.personal.tasks import (
     tasks_connector_from_env,
     update_task,
 )
+from agent.tools.errors import ToolError
 from agent.tools.personal.write_actions import _require_action_center_approval, _require_matching_action_args
 
 
@@ -186,6 +187,33 @@ def make_personal_tools(
             context_file=context_file,
         )
 
+    def messages_draft_from_lead(lead_id: str) -> dict[str, object]:
+        from agent.leads.inbox import LeadInbox
+
+        payload = LeadInbox(project_root, action_center=action_center).draft_response(lead_id)
+        payload["_audit"] = {
+            "files_written": [payload["draft_path"]],
+            "result_summary": f"Message draft created from selected/mock lead {lead_id}; no send action created.",
+        }
+        return payload
+
+    def messages_open_handoff_instructions(draft_id: str, save_path: str = "") -> dict[str, object]:
+        from agent.workflows.message_handoff import draft_message_handoff_actions_for_draft
+
+        if action_center is None:
+            raise ToolError("Action Center is required for message draft handoff")
+        payload = draft_message_handoff_actions_for_draft(
+            str(Path(project_root).resolve()),
+            action_center,
+            draft_id=draft_id,
+            save_path=save_path,
+            source_workflow="draft_handoff",
+        )
+        payload["_audit"] = {
+            "result_summary": f"Message draft {draft_id} handoff actions created; no send executed.",
+        }
+        return payload
+
     def messages_save_draft(
         to: str,
         draft: str,
@@ -283,6 +311,8 @@ def make_personal_tools(
         "messages.summarize_thread": messages_summarize_thread,
         "messages.draft_reply": messages_draft_reply,
         "messages.draft_from_text": messages_draft_from_text,
+        "messages.draft_from_lead": messages_draft_from_lead,
+        "messages.open_handoff_instructions": messages_open_handoff_instructions,
         "messages.save_draft": messages_save_draft,
         "messages.copy_draft": messages_copy_draft,
         "browser.selected_tab": browser_read_selected_tab,
@@ -419,6 +449,18 @@ PERSONAL_SCHEMAS = {
             "user_instruction": {"type": "string"},
         },
         required=["to", "context_file"],
+    ),
+    "messages.draft_from_lead": _schema(
+        "messages.draft_from_lead",
+        "Create a local message draft from one selected/mock lead without sending.",
+        {"lead_id": {"type": "string"}},
+        required=["lead_id"],
+    ),
+    "messages.open_handoff_instructions": _schema(
+        "messages.open_handoff_instructions",
+        "Create Action Center save/copy handoff actions for one local message draft without sending.",
+        {"draft_id": {"type": "string"}, "save_path": {"type": "string"}},
+        required=["draft_id"],
     ),
     "messages.save_draft": _schema(
         "messages.save_draft",

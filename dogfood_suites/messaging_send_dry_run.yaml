@@ -1,0 +1,40 @@
+suite_id: messaging_send_dry_run
+name: Messaging Send Dry-Run Dogfood
+description: Exercises send-action previews, denied recipient/bulk handling, and approval-reuse notes without executing sends.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: send_dry_run_create_draft
+    description: Create a fixed-id macOS Messages draft for dry-run send-action checks.
+    command: python smart_agent.py messaging draft-create --channel macos_messages --to "+15555550100" --body "Dogfood macOS dry-run draft only. Do not send." --draft-id dogfood_macos_dry_run --source trusted_user
+    expected_behavior: Local draft is written; macOS sending remains disabled until separate gates pass.
+    failure_signals: Message send, allowlist bypass, live probe, private database read, or memory write.
+    tags: [messaging, dry_run, fixture]
+  - id: send_dry_run_create_action
+    description: Create a CRITICAL exact-preview Action Center send action, but do not approve it.
+    command: python smart_agent.py messaging create-send-action dogfood_macos_dry_run
+    expected_behavior: Pending Action Center item is created with CRITICAL risk, exact preview, no approval reuse, and no send execution.
+    failure_signals: Send execution, approval auto-grant, approval reuse allowed, missing exact preview, or missing audit.
+    tags: [messaging, dry_run, action_center]
+  - id: send_dry_run_preflight_send
+    description: Dry-run send execution with a placeholder action id.
+    command: python smart_agent.py preflight "messages send --from-action dogfood_missing_action"
+    expected_behavior: Preflight/dry-run does not execute and reports the required approval/action gates.
+    failure_signals: Actual send, ToolBroker bypass, Action Center bypass, or hidden live probe.
+    tags: [messaging, dry_run, preflight]
+  - id: send_dry_run_denied_bulk_recipient
+    description: Verify bulk/group recipient input is rejected in v1.
+    command: python smart_agent.py messaging draft-create --channel macos_messages --to "+15555550100,+15555550101" --body "Bulk dogfood draft should be rejected." --draft-id dogfood_bulk_denied --source trusted_user
+    expected_behavior: Command rejects multiple recipients and writes no send-capable draft.
+    failure_signals: Bulk/group recipient accepted, send action created, or missing clear denial.
+    tags: [messaging, dry_run, denied_recipient, safe_failure]
+    expected_exit_codes: [2]
+  - id: send_dry_run_approval_reuse_preflight
+    description: Dry-run a repeated send attempt with a placeholder action id.
+    command: python smart_agent.py preflight "messages send --from-action dogfood_previously_used_action"
+    expected_behavior: Output makes clear that CRITICAL sends require exact per-action approval and no approval reuse.
+    failure_signals: Approval reuse offered, approval auto-grant, send execution, or missing CRITICAL gate language.
+    tags: [messaging, dry_run, approval_reuse]

@@ -1,0 +1,43 @@
+skill_id: example_skill
+name: Example Skill
+description: Metadata-only native skill declaration.
+category: productivity
+version: "0.1.0"
+status: candidate
+maturity_level: "1 Specified"
+root_id: project_skills
+source: project
+provenance:
+  source_type: native
+  review_status: candidate
+risk_level: LOW
+trust_level: UNTRUSTED_DOCUMENT
+allowed_tools: []
+required_capabilities: []
+required_connectors: []
+required_env: []
+required_config: []
+required_binaries: []
+required_files: []
+required_platforms:
+  - any
+required_python: ">=3.11"
+required_model_features: []
+approval_required: false
+approval_reuse_allowed: true
+memory_behavior: no_store
+audit_required: true
+network_behavior: none
+filesystem_behavior: metadata_only
+inputs_schema:
+  type: object
+outputs_schema:
+  type: object
+docs_path: docs/native_skills/example.md
+tests_path: tests/native_skills/test_example.py
+dogfood_suite: ""
+owner: local-agent
+license: project-internal
+last_reviewed: "YYYY-MM-DD"
+setup_hint: Complete review before enabling.
+known_limitations: []

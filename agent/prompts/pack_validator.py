@@ -3,10 +3,16 @@ from __future__ import annotations
 from agent.prompts.pack_models import IMPORT_STATUSES, RISK_LEVELS, PromptPack, PromptPackError
 
 
+ALLOWED_IMPORT_MODES = {"import_only", "controlled_batch_until_blocked"}
+
+
 def validate_prompt_pack(pack: PromptPack, *, allow_completed: bool = False) -> None:
-    if pack.mode != "import_only":
-        raise PromptPackError("prompt pack mode must be import_only")
-    if pack.default_execution != "one_prompt_at_a_time":
+    if pack.mode not in ALLOWED_IMPORT_MODES:
+        raise PromptPackError("prompt pack mode must be import_only or controlled_batch_until_blocked")
+    allowed_execution = {"one_prompt_at_a_time"}
+    if pack.mode == "controlled_batch_until_blocked":
+        allowed_execution.add("sequential")
+    if pack.default_execution not in allowed_execution:
         raise PromptPackError("default_execution must be one_prompt_at_a_time")
     ids = [prompt.prompt_id for prompt in pack.prompts]
     if len(ids) != len(set(ids)):

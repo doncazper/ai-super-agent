@@ -6,6 +6,12 @@ Build a local Mac AI agent that can chat naturally through LM Studio/Qwopus and,
 
 Safety comes first. Capabilities are added only after the policy, permission, approval, and audit control plane can enforce boundaries in Python code. The model may request tools, but it never directly executes tools and never approves its own actions.
 
+## Cloneability And Portability
+
+The project must remain cloneable into a new repo, model backend, or platform shell without losing its safety identity. `docs/AGENT_DNA.md`, `docs/ARCHITECTURE_PRINCIPLES.md`, and `docs/CLONE_BLUEPRINT.md` define the invariants that must survive a rewrite.
+
+Any clone, model migration, or platform port must preserve ToolBroker-only execution, PolicyEngine-enforced permissions, PermissionManager selected scopes, ApprovalManager HIGH/CRITICAL rules, AuditLogger evidence, untrusted-content isolation, personal-data disabled-by-default behavior, prompt tracking, command registry tracking, feature maturity tracking, and release gates.
+
 ## Non-Goals
 
 - No unrestricted system automation.

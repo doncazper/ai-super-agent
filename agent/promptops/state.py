@@ -13,6 +13,10 @@ def update_prompt_state(
     next_prompt_id: str | None = None,
     active_prompt_pack: str | None = None,
     prompt_queue_status: str | None = None,
+    last_prompt_audit_result: str | None = None,
+    current_prompt_batch: str | None = None,
+    prompt_blockers: str | None = None,
+    prompt_resume_instructions: str | None = None,
 ) -> None:
     root = Path(project_root)
     path = root / PROJECT_STATE_PATH
@@ -27,6 +31,10 @@ def update_prompt_state(
         "next_prompt_id": next_prompt_id,
         "active_prompt_pack": active_prompt_pack,
         "prompt_queue_status": prompt_queue_status,
+        "last_prompt_audit_result": last_prompt_audit_result,
+        "current_prompt_batch": current_prompt_batch,
+        "prompt_blockers": prompt_blockers,
+        "prompt_resume_instructions": prompt_resume_instructions,
     }
     for key, value in replacements.items():
         if value is None:
@@ -51,4 +59,3 @@ def _replace_bullet(content: str, key: str, value: str) -> str:
     if after == -1:
         return content.rstrip() + f"\n\n{insertion}\n"
     return content[: after + 1] + insertion + "\n" + content[after + 1 :]
-

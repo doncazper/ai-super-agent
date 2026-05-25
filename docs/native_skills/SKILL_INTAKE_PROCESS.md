@@ -24,20 +24,23 @@ The intake process reviews skill ideas and public skill examples. It does not in
 The local vetter helps intake reviewers inspect candidate skills before any native port or installation.
 
 ```bash
+python smart_agent.py skills inspect ./workspace/skills/example/SKILL.md
 python smart_agent.py skills vet ./workspace/skills/example/SKILL.md
 python smart_agent.py skills vet-folder ./workspace/skills/example
 python smart_agent.py skills score ./workspace/skills/example/SKILL.md
+python smart_agent.py skills report --last
 ```
 
 Vetter rules:
 
-- Reads only files under approved workspace paths.
+- Reads only files under approved workspace/project skill paths or known native skill ids.
 - Treats every skill file as `UNTRUSTED_DOCUMENT`.
 - Parses `SKILL.md` frontmatter when present.
 - Never executes scripts, shell commands, binaries, package managers, or imported code.
 - Never installs dependencies, grants permissions, or stores skill content in memory by default.
 - Executes through `ToolBroker`, `PolicyEngine`, and `AuditLogger`.
-- Produces a risk report with risk level, trust level, required capabilities, approval gates, reasons, `safe_to_port`, recommended native implementation path, and findings.
+- Produces a risk report with risk level, trust level, required capabilities, approval gates, reasons, `safe_to_import`, `safe_to_enable`, recommended native implementation path, and findings.
+- Saves vetting reports under `reports/native_skills/` for review evidence.
 
 The v1 vetter is heuristic static analysis. A low-risk report is not permission to install or run an external skill; it is evidence for the next human-reviewed native specification step.
 

@@ -14,5 +14,20 @@ reports/sessions/*
 !reports/sessions/fixtures/
 reports/session_reviews/*
 !reports/session_reviews/.gitkeep
+reports/native_skills/*
+!reports/native_skills/.gitkeep
 bugs/*.json
 !bugs/.gitkeep
+
+# Local generated workspace artifacts. Keep source fixtures such as
+# workspace/dogfood/ and workspace/skills/ reviewable unless explicitly moved.
+workspace/eval/*
+!workspace/eval/.gitkeep
+workspace/leads/apple_business/*.json
+workspace/leads/status/*.json
+workspace/messaging/drafts/*.json
+workspace/messaging/inbound/*.json
+workspace/messaging/ios_compose/payloads/*.json
+workspace/messaging/ios_compose/results/*.json
+workspace/reddit_threads/*
+!workspace/reddit_threads/.gitkeep

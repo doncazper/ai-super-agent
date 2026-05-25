@@ -27,6 +27,24 @@ class NativeSkillManifest:
     tests_path: str
     owner: str
     last_reviewed: str
+    root_id: str = ""
+    source: str = ""
+    provenance: dict[str, Any] = field(default_factory=dict)
+    required_connectors: list[str] = field(default_factory=list)
+    required_env: list[str] = field(default_factory=list)
+    required_config: list[str] = field(default_factory=list)
+    required_binaries: list[str] = field(default_factory=list)
+    required_files: list[str] = field(default_factory=list)
+    required_platforms: list[str] = field(default_factory=list)
+    required_python: str = ""
+    required_model_features: list[str] = field(default_factory=list)
+    approval_reuse_allowed: bool | str = True
+    network_behavior: str = "none"
+    filesystem_behavior: str = "none"
+    dogfood_suite: str = ""
+    license: str = ""
+    setup_hint: str = ""
+    known_limitations: list[str] = field(default_factory=list)
     source_path: str = ""
     raw: dict[str, Any] = field(default_factory=dict)
 

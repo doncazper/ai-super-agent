@@ -12,34 +12,41 @@ PROMPT_RE = re.compile(r'<<<PROMPT_START\s+id="([^"]+)"\s+order="([0-9]+)">>')
 
 
 def parse_prompt_pack(text: str) -> PromptPack:
-    if text.count(PACK_START) != 1:
-        raise PromptPackError("prompt pack must contain exactly one PROMPT_PACK_START")
-    if text.count(PACK_END) != 1:
-        raise PromptPackError("prompt pack must contain exactly one PROMPT_PACK_END")
-    start_index = text.index(PACK_START) + len(PACK_START)
-    end_index = text.index(PACK_END)
+    start_index = text.find(PACK_START)
+    end_index = text.rfind(PACK_END)
+    if start_index == -1:
+        raise PromptPackError("prompt pack must contain PROMPT_PACK_START")
+    if end_index == -1:
+        raise PromptPackError("prompt pack must contain PROMPT_PACK_END")
+    start_index += len(PACK_START)
     if end_index <= start_index:
         raise PromptPackError("PROMPT_PACK_END appears before pack body")
     pack_body = text[start_index:end_index]
-    starts = list(PROMPT_RE.finditer(pack_body))
-    if not starts:
+    first_start = PROMPT_RE.search(pack_body)
+    if first_start is None:
         raise PromptPackError("prompt pack contains no prompts")
-    header = pack_body[: starts[0].start()]
+    header = pack_body[: first_start.start()]
+    if PACK_START in header or PACK_END in header:
+        raise PromptPackError("pack metadata contains unexpected prompt-pack delimiter")
     pack_metadata = _parse_key_values(header)
     prompts: list[PackedPrompt] = []
-    for index, match in enumerate(starts):
+    cursor = first_start.start()
+    while cursor < len(pack_body):
+        match = PROMPT_RE.search(pack_body, cursor)
+        if match is None:
+            if pack_body[cursor:].strip():
+                raise PromptPackError("unexpected content after final PROMPT_END")
+            break
         prompt_id = match.group(1)
         order = int(match.group(2))
         content_start = match.end()
-        next_start = starts[index + 1].start() if index + 1 < len(starts) else len(pack_body)
-        block = pack_body[content_start:next_start]
         end_marker = f'<<<PROMPT_END id="{prompt_id}">>'
-        if end_marker not in block:
+        end_marker_index = pack_body.find(end_marker, content_start)
+        if end_marker_index == -1:
             raise PromptPackError(f"prompt {prompt_id} is missing matching PROMPT_END")
-        prompt_content, trailing = block.split(end_marker, 1)
-        if trailing.strip():
-            raise PromptPackError(f"unexpected content after PROMPT_END for {prompt_id}")
+        prompt_content = pack_body[content_start:end_marker_index]
         prompts.append(_parse_prompt(prompt_id, order, prompt_content))
+        cursor = end_marker_index + len(end_marker)
     return PromptPack(
         pack_id=_required(pack_metadata, "pack_id", "pack metadata"),
         pack_title=_required(pack_metadata, "pack_title", "pack metadata"),

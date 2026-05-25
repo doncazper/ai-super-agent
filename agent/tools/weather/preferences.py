@@ -10,7 +10,17 @@ from agent.config.runtime import parse_int
 
 
 DEFAULT_PREFERENCES_PATH = "config/weather_preferences.json"
-PROVIDER_VALUES = {"auto", "open_meteo", "open-meteo", "openmeteo", "nws", "weatherkit", "disabled", "none"}
+PROVIDER_VALUES = {
+    "auto",
+    "open_meteo",
+    "open-meteo",
+    "openmeteo",
+    "nws",
+    "weatherapi",
+    "weatherkit",
+    "disabled",
+    "none",
+}
 UNIT_VALUES = {"metric", "imperial"}
 
 

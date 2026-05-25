@@ -43,6 +43,57 @@ def test_web_missing_provider_status(monkeypatch) -> None:
     assert "BRAVE_SEARCH_API_KEY" in status["docs_setup_hint"]
 
 
+def test_searxng_connector_status_config_only(monkeypatch) -> None:
+    monkeypatch.setenv("SEARXNG_BASE_URL", "https://search.example")
+    monkeypatch.setenv("SEARXNG_ENABLED", "false")
+
+    status = connector_status("searxng")
+
+    assert status["name"] == "searxng"
+    assert status["configured"] is False
+    assert status["default_provider"] == "searxng"
+    assert status["base_url_host"] == "search.example"
+    assert status["requires_api_key"] is False
+    assert status["default_public_instance_used"] is False
+    assert "SEARXNG_ENABLED=true" in status["setup_hint"]
+
+
+def test_brave_connector_status_config_only(monkeypatch) -> None:
+    monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "brave-secret")
+    monkeypatch.setenv("BRAVE_SEARCH_ENABLED", "true")
+    monkeypatch.setenv("ALLOW_PAID_APIS", "false")
+
+    status = connector_status("brave")
+
+    assert status["name"] == "brave"
+    assert status["configured"] is True
+    assert status["default_provider"] == "brave"
+    assert status["api_key_configured"] is True
+    assert status["requires_api_key"] is True
+    assert status["disabled_by_cost_policy"] is True
+    assert "ALLOW_PAID_APIS=true" in status["setup_hint"]
+    assert "brave-secret" not in json.dumps(status)
+
+
+def test_serpapi_connector_status_config_only(monkeypatch) -> None:
+    monkeypatch.setenv("SERPAPI_API_KEY", "serpapi-secret")
+    monkeypatch.setenv("SERPAPI_ENABLED", "true")
+    monkeypatch.setenv("ALLOW_PAID_APIS", "false")
+
+    status = connector_status("serpapi")
+
+    assert status["name"] == "serpapi"
+    assert status["configured"] is True
+    assert status["default_provider"] == "serpapi"
+    assert status["api_key_configured"] is True
+    assert status["enabled_by_config"] is True
+    assert status["requires_api_key"] is True
+    assert status["disabled_by_cost_policy"] is True
+    assert status["captcha_bypass_supported"] is False
+    assert "ALLOW_PAID_APIS=true" in status["setup_hint"]
+    assert "serpapi-secret" not in json.dumps(status)
+
+
 def test_browser_url_workflow_status_does_not_require_profile_access() -> None:
     status = connector_status("browser")
 
@@ -146,4 +197,13 @@ def test_connectors_cli_list(capsys) -> None:
         "email",
         "messages",
         "tasks",
-    ]
+        "searxng",
+        "brave",
+        "serpapi",
+        "weatherapi",
+        "gmail",
+            "telegram",
+            "reddit",
+            "v2ex",
+            "apple_business",
+        ]

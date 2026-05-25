@@ -49,6 +49,7 @@ def run_preflight(
     router = router or Router()
 
     route = router.route(request, force_no_tools=options.no_tools)
+    routing = router.explain_decision(request, route)
     tool_names = _resolve_tool_names(request, registry, routed_tool_names=route.tool_names)
     broker = ToolBroker(
         registry,
@@ -104,6 +105,13 @@ def run_preflight(
             "use_tools": route.use_tools,
             "risk_level": route.risk_level.value,
             "metadata": route.metadata,
+            "needs_internet": routing["needs_internet"],
+            "reason": routing["reason"],
+            "suggested_sources": routing["suggested_sources"],
+            "provider_policy": routing["provider_policy"],
+            "tools": routing["tools"],
+            "risk_hint": routing["risk_hint"],
+            "ask_clarification": routing["ask_clarification"],
         },
         "tools": tools,
         "notes": _preflight_notes(route.use_tools, tools),
@@ -137,8 +145,12 @@ def _preflight_args(tool_name: str, request: str, metadata: dict[str, Any]) -> t
         return args, True
     if tool_name == "web.search":
         return {"query": request}, True
-    if tool_name == "web.fetch_url" and request.startswith(("http://", "https://")):
-        return {"url": request}, True
+    if tool_name == "web.fetch_url":
+        url = metadata.get("url")
+        if isinstance(url, str) and url:
+            return {"url": url}, True
+        if request.startswith(("http://", "https://")):
+            return {"url": request}, True
     return {}, False
 
 

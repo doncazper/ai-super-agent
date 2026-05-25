@@ -19,15 +19,15 @@ Executable: {executable}
 
 Recommended local setup:
   cd "/Users/sambehdjou/Documents/AI Super Agent"
-  python3.11 -m venv .venv
+  python3.12 -m venv .venv
   source .venv/bin/activate
   python -m pip install -e '.[dev]'
   export LMSTUDIO_BASE_URL="http://localhost:1234/v1"
   export LMSTUDIO_MODEL="<model id from LM Studio>"
-  python smart_agent.py doctor
+  ./scripts/agent doctor
 
-If Python 3.11 is not installed, install it first:
-  brew install python@3.11
+If Python 3.12 is not installed, install it first:
+  brew install python@3.12
 
 If you are running inside Codex, this bundled runtime also works:
   /Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 smart_agent.py doctor
@@ -57,14 +57,16 @@ from agent.core.tool_broker import ToolBroker
 from agent.config.loader import load_capabilities_config
 from agent.native_skills.registry import NativeSkillRegistry
 from agent.safety.audit import AuditLogError, AuditLogger
+from agent.safety.audit import AuditEvent
 from agent.safety.approvals import ApprovalManager, ApprovalStore
-from agent.safety.actions import ActionCenter
+from agent.safety.actions import ActionCenter, ActionStatus
 from agent.safety.policy import PolicyEngine
 from agent.safety.validation import validate_startup_policy
 from agent.tools.registry import default_registry
 from agent.tools.errors import ToolError
 from agent.tools.weather.formatter import format_weather_answer
 from agent.tools.weather.preferences import clear_default_location, set_default_location, weather_preferences
+from agent.tools.weather.provider import weather_providers_status
 from agent.ui.approvals_ui import ConsoleApprovalPrompt
 from agent.ui.cli_commands import dispatch_cli
 from agent.ui.interactive import InteractiveState, run_interactive
@@ -126,7 +128,15 @@ from agent.workflows.message_handoff import (
     draft_message_handoff_actions,
     execute_message_handoff_action,
 )
+from agent.messaging.macos_send import execute_macos_message_send_action
 from agent.workflows.research import source_grounded_research
+from agent.web_acquisition.source_attribution import (
+    ResearchSourceBundle,
+    default_source_bundle_path,
+    load_last_source_bundle,
+    save_last_source_bundle,
+    verify_source_bundle,
+)
 from agent.workflows.self_improvement_backlog import self_improvement_backlog
 from agent.workflows.self_improvement_loop import (
     build_overnight_plan,
@@ -180,7 +190,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     approval_store = ApprovalStore()
     approval_interactive = args.interactive or (
-        bool(args.message) and args.message[0] in {"calendar", "contacts", "email", "messages", "tasks"} and sys.stdin.isatty()
+        bool(args.message)
+        and args.message[0] in {"calendar", "contacts", "email", "messages", "tasks", "leads", "apple-business"}
+        and sys.stdin.isatty()
     )
     approval_prompt = ConsoleApprovalPrompt(interactive=approval_interactive)
     broker = ToolBroker(
@@ -226,6 +238,12 @@ def main(argv: list[str] | None = None) -> int:
         return _run_email_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "messages":
         return _run_messages_command(args.message[1:], broker, debug=debug_enabled)
+    if args.message and args.message[0] == "messaging":
+        return _run_messaging_command(args.message[1:], broker, debug=debug_enabled)
+    if args.message and args.message[0] == "leads":
+        return _run_leads_command(args.message[1:], broker, debug=debug_enabled)
+    if args.message and args.message[0] == "apple-business":
+        return _run_apple_business_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "tasks":
         return _run_tasks_command(args.message[1:], broker, debug=debug_enabled)
     if args.message and args.message[0] == "skills":
@@ -320,9 +338,214 @@ def _run_turn(
 
 
 def _run_web_search_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    if argv and argv[0] in {
+        "search",
+        "fetch",
+        "extract",
+        "metadata",
+        "robots",
+        "sitemap",
+        "feed",
+        "acquire-url",
+        "acquire",
+        "source-status",
+        "providers",
+        "search-providers",
+        "official-apis",
+        "api-status",
+        "api-search",
+        "searxng",
+        "serpapi",
+        "brave",
+        "provider-policy",
+        "provider-decision",
+        "cache",
+        "index",
+    }:
+        parser = argparse.ArgumentParser(
+            prog="smart_agent.py web",
+            description="Free-first public web acquisition without paid APIs by default.",
+        )
+        subparsers = parser.add_subparsers(dest="command", required=True)
+        search_parser = subparsers.add_parser("search", help="Search through the default or explicitly selected provider.")
+        search_parser.add_argument("query", nargs="+")
+        search_parser.add_argument("--provider", default="auto")
+        search_parser.add_argument("--max-results", type=int, default=None)
+        search_parser.add_argument("--locale", default=None)
+        fetch_parser = subparsers.add_parser("fetch", help="Fetch, sanitize, and extract an explicit public URL.")
+        fetch_parser.add_argument("url")
+        fetch_parser.add_argument("--max-chars", type=int, default=20000)
+        extract_parser = subparsers.add_parser("extract", help="Fetch and return readable text for an explicit public URL.")
+        extract_parser.add_argument("url")
+        extract_parser.add_argument("--max-chars", type=int, default=20000)
+        metadata_parser = subparsers.add_parser("metadata", help="Fetch and return metadata for an explicit public URL.")
+        metadata_parser.add_argument("url")
+        robots_parser = subparsers.add_parser("robots", help="Check public robots.txt for a domain.")
+        robots_parser.add_argument("domain")
+        robots_parser.add_argument("--path", default="/")
+        robots_parser.add_argument("--no-cache", action="store_true")
+        sitemap_parser = subparsers.add_parser("sitemap", help="Fetch and parse a public sitemap.")
+        sitemap_parser.add_argument("domain")
+        sitemap_parser.add_argument("--max-urls", type=int, default=500)
+        sitemap_parser.add_argument("--no-cache", action="store_true")
+        feed_parser = subparsers.add_parser("feed", help="Fetch and parse a public RSS/Atom feed.")
+        feed_parser.add_argument("url")
+        feed_parser.add_argument("--max-items", type=int, default=50)
+        feed_parser.add_argument("--no-cache", action="store_true")
+        acquire_url_parser = subparsers.add_parser("acquire-url", help="Acquire an explicit public URL.")
+        acquire_url_parser.add_argument("url")
+        acquire_url_parser.add_argument("--max-chars", type=int, default=20000)
+        acquire_url_parser.add_argument("--no-cache", action="store_true")
+        acquire_url_parser.add_argument("--ignore-robots", action="store_true")
+        acquire_parser = subparsers.add_parser("acquire", help="Run the free-first acquisition ladder for a URL, domain, or query.")
+        acquire_parser.add_argument("query", nargs="+")
+        acquire_parser.add_argument("--max-results", type=int, default=5)
+        acquire_parser.add_argument("--no-cache", action="store_true")
+        source_status_parser = subparsers.add_parser("source-status", help="Inspect acquisition handling for a URL without fetching content.")
+        source_status_parser.add_argument("url")
+        subparsers.add_parser("providers", help="List web provider policy metadata without provider calls.")
+        subparsers.add_parser("search-providers", help="List pluggable search provider registry metadata without provider calls.")
+        subparsers.add_parser("official-apis", help="List official API provider framework metadata without provider calls.")
+        api_status_parser = subparsers.add_parser("api-status", help="Inspect one official API provider without provider calls.")
+        api_status_parser.add_argument("provider")
+        api_search_parser = subparsers.add_parser("api-search", help="Search one configured official API provider.")
+        api_search_parser.add_argument("provider")
+        api_search_parser.add_argument("query", nargs="+")
+        api_search_parser.add_argument("--max-results", type=int, default=10)
+        api_search_parser.add_argument("--locale", default=None)
+        searxng_parser = subparsers.add_parser("searxng", help="SearXNG provider setup checks.")
+        searxng_subparsers = searxng_parser.add_subparsers(dest="searxng_command", required=True)
+        searxng_subparsers.add_parser("doctor", help="Show SearXNG setup status without provider calls.")
+        serpapi_parser = subparsers.add_parser("serpapi", help="SerpAPI provider setup checks.")
+        serpapi_subparsers = serpapi_parser.add_subparsers(dest="serpapi_command", required=True)
+        serpapi_subparsers.add_parser("doctor", help="Show SerpAPI setup status without provider calls.")
+        brave_parser = subparsers.add_parser("brave", help="Brave Search provider setup checks.")
+        brave_subparsers = brave_parser.add_subparsers(dest="brave_command", required=True)
+        brave_subparsers.add_parser("doctor", help="Show Brave setup status without provider calls.")
+        subparsers.add_parser("provider-policy", help="Show cost-aware provider policy without provider calls.")
+        decision_parser = subparsers.add_parser("provider-decision", help="Explain provider selection without provider calls.")
+        decision_parser.add_argument("query", nargs="+")
+        decision_parser.add_argument("--provider", default="auto")
+        decision_parser.add_argument("--cache-available", action="store_true")
+        cache_parser = subparsers.add_parser("cache", help="Inspect or clear the public web cache.")
+        cache_subparsers = cache_parser.add_subparsers(dest="cache_command", required=True)
+        cache_subparsers.add_parser("status", help="Show public web cache and local index status.")
+        cache_subparsers.add_parser("clear", help="Clear public web cache and local index metadata.")
+        cache_show_parser = cache_subparsers.add_parser("show", help="Show one cache entry by source ID.")
+        cache_show_parser.add_argument("source_id")
+        index_parser = subparsers.add_parser("index", help="Search or rebuild the local lightweight web index.")
+        index_subparsers = index_parser.add_subparsers(dest="index_command", required=True)
+        index_search_parser = index_subparsers.add_parser("search", help="Search cached public web source metadata.")
+        index_search_parser.add_argument("query", nargs="+")
+        index_search_parser.add_argument("--limit", type=int, default=10)
+        index_subparsers.add_parser("rebuild", help="Rebuild the local web index from non-expired cache entries.")
+        try:
+            parsed = parser.parse_args(argv)
+        except SystemExit as exc:
+            return int(exc.code)
+
+        if parsed.command == "search":
+            tool_name = "web.search.serpapi" if parsed.provider == "serpapi" else "web.search"
+            arguments = {"query": " ".join(parsed.query)}
+            if parsed.provider != "auto" and parsed.provider != "serpapi":
+                arguments["provider"] = parsed.provider
+            if parsed.max_results is not None:
+                arguments["max_results"] = parsed.max_results
+            if parsed.locale:
+                arguments["locale"] = parsed.locale
+        elif parsed.command == "fetch":
+            tool_name = "web.fetch_url"
+            arguments = {"url": parsed.url, "max_chars": parsed.max_chars}
+        elif parsed.command == "extract":
+            tool_name = "web.extract_readable_text"
+            arguments = {"url": parsed.url, "max_chars": parsed.max_chars}
+        elif parsed.command == "metadata":
+            tool_name = "web.extract_metadata"
+            arguments = {"url": parsed.url}
+        elif parsed.command == "robots":
+            tool_name = "web.robots"
+            arguments = {"domain": parsed.domain, "path": parsed.path, "no_cache": parsed.no_cache}
+        elif parsed.command == "sitemap":
+            tool_name = "web.sitemap"
+            arguments = {"domain": parsed.domain, "max_urls": parsed.max_urls, "no_cache": parsed.no_cache}
+        elif parsed.command == "feed":
+            tool_name = "web.feed"
+            arguments = {"url": parsed.url, "max_items": parsed.max_items, "no_cache": parsed.no_cache}
+        elif parsed.command == "acquire-url":
+            tool_name = "web.acquire_url"
+            arguments = {
+                "url": parsed.url,
+                "max_chars": parsed.max_chars,
+                "no_cache": parsed.no_cache,
+                "respect_robots": not parsed.ignore_robots,
+            }
+        elif parsed.command == "source-status":
+            tool_name = "web.source_status"
+            arguments = {"url": parsed.url}
+        else:
+            if parsed.command == "acquire":
+                tool_name = "web.acquire"
+                arguments = {"query": " ".join(parsed.query), "max_results": parsed.max_results, "no_cache": parsed.no_cache}
+            elif parsed.command == "providers":
+                tool_name = "web.providers"
+                arguments = {}
+            elif parsed.command == "search-providers":
+                tool_name = "web.search_providers"
+                arguments = {}
+            elif parsed.command == "official-apis":
+                tool_name = "web.official_apis"
+                arguments = {}
+            elif parsed.command == "api-status":
+                tool_name = "web.official_api.status"
+                arguments = {"provider": parsed.provider}
+            elif parsed.command == "api-search":
+                tool_name = "web.official_api.search"
+                arguments = {"provider": parsed.provider, "query": " ".join(parsed.query), "max_results": parsed.max_results}
+                if parsed.locale:
+                    arguments["locale"] = parsed.locale
+            elif parsed.command == "searxng":
+                tool_name = "web.searxng.doctor"
+                arguments = {}
+            elif parsed.command == "serpapi":
+                tool_name = "web.serpapi.doctor"
+                arguments = {}
+            elif parsed.command == "brave":
+                tool_name = "web.brave.doctor"
+                arguments = {}
+            elif parsed.command == "provider-policy":
+                tool_name = "web.provider_policy"
+                arguments = {}
+            elif parsed.command == "cache":
+                if parsed.cache_command == "status":
+                    tool_name = "web.cache.status"
+                    arguments = {}
+                elif parsed.cache_command == "clear":
+                    tool_name = "web.cache.clear"
+                    arguments = {}
+                else:
+                    tool_name = "web.cache.lookup"
+                    arguments = {"source_id": parsed.source_id}
+            elif parsed.command == "index":
+                if parsed.index_command == "search":
+                    tool_name = "web.index.search"
+                    arguments = {"query": " ".join(parsed.query), "limit": parsed.limit}
+                else:
+                    tool_name = "web.index.rebuild"
+                    arguments = {}
+            else:
+                tool_name = "web.provider_decision"
+                arguments = {
+                    "query": " ".join(parsed.query),
+                    "provider": parsed.provider,
+                    "cache_available": parsed.cache_available,
+                }
+        result = _execute_web_tool(broker, tool_name, arguments, debug=debug)
+        print(json.dumps(json.loads(result.content), indent=2, sort_keys=True))
+        return 0 if result.allowed else 2
+
     query = " ".join(argv).strip()
     if not query:
-        print('usage: smart_agent.py web "query"', file=sys.stderr)
+        print('usage: smart_agent.py web "query" | web search|fetch|extract|metadata|robots|sitemap|feed|acquire-url|acquire|source-status|providers|search-providers|official-apis|api-status|api-search|cache|index|searxng doctor|serpapi doctor|brave doctor|provider-policy|provider-decision ...', file=sys.stderr)
         return 2
     tool_call = {
         "id": "cli_web_search",
@@ -345,12 +568,44 @@ def _run_web_search_command(argv: list[str], broker: ToolBroker, *, debug: bool 
     return 0 if result.allowed else 2
 
 
+def _execute_web_tool(
+    broker: ToolBroker,
+    tool_name: str,
+    arguments: dict[str, object],
+    *,
+    debug: bool = False,
+) -> object:
+    try:
+        result = broker.execute(
+            {
+                "id": f"cli_{tool_name.replace('.', '_')}",
+                "type": "function",
+                "function": {
+                    "name": tool_name,
+                    "arguments": json.dumps(arguments),
+                },
+            }
+        )
+    except AuditLogError as exc:
+        print(str(exc), file=sys.stderr)
+        raise SystemExit(2) from exc
+    if debug and result.debug:
+        from agent.core.orchestrator import format_debug_payload
+
+        print("[debug] " + format_debug_payload({"event": "tool_broker", **result.debug}), file=sys.stderr)
+    return result
+
+
 def _run_research_command(argv: list[str], broker: ToolBroker) -> int:
+    if argv and argv[0] in {"sources", "export-sources", "verify-sources"}:
+        return _run_research_sources_command(argv, broker)
     parser = argparse.ArgumentParser(prog="smart_agent.py research", description="Run source-grounded web research.")
     parser.add_argument("query", nargs="*", help="Research query.")
-    parser.add_argument("--max-results", type=int, default=3, help="Number of search results to use, 1-5.")
+    parser.add_argument("--max-results", "--max-sources", dest="max_results", type=int, default=3, help="Number of search results/sources to use, 1-5.")
     parser.add_argument("--no-fetch", action="store_true", help="Use search snippets only; do not fetch result pages.")
     parser.add_argument("--locale", default=None, help="Optional search locale, such as en-US or es.")
+    parser.add_argument("--provider", default="auto", help="Optional search provider, such as auto, searxng, brave, or serpapi. Paid providers require explicit opt-in.")
+    parser.add_argument("--freshness", default=None, help="Optional provider-supported freshness filter such as recent.")
     parser.add_argument("--summary-language", default="en", help="Summary language label; defaults to en.")
     try:
         parsed = parser.parse_args(argv)
@@ -368,12 +623,91 @@ def _run_research_command(argv: list[str], broker: ToolBroker) -> int:
             fetch_pages=not parsed.no_fetch,
             locale=parsed.locale,
             summary_language=parsed.summary_language,
+            provider=parsed.provider,
+            freshness=parsed.freshness,
         )
     except AuditLogError as exc:
         print(str(exc), file=sys.stderr)
         return 2
+    if "source_bundle" in report:
+        try:
+            bundle_path = save_last_source_bundle(ResearchSourceBundle.from_dict(report["source_bundle"]))
+            report["last_source_bundle_path"] = str(bundle_path)
+        except (OSError, ValueError, TypeError) as exc:
+            report.setdefault("limitations", []).append(f"Last source bundle was not saved: {exc}")
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report.get("status") == "ok" else 2
+
+
+def _run_research_sources_command(argv: list[str], broker: ToolBroker) -> int:
+    command = argv[0]
+    parser = argparse.ArgumentParser(
+        prog=f"smart_agent.py research {command}",
+        description="Inspect the last metadata-only research source bundle.",
+    )
+    parser.add_argument("--last", action="store_true", help="Use the most recent metadata-only research source bundle.")
+    try:
+        parsed = parser.parse_args(argv[1:])
+    except SystemExit as exc:
+        return int(exc.code)
+    if not parsed.last:
+        print(f"usage: smart_agent.py research {command} --last", file=sys.stderr)
+        return 2
+    try:
+        bundle = load_last_source_bundle()
+    except (FileNotFoundError, ValueError, OSError, TypeError) as exc:
+        print(json.dumps({"status": "error", "error": str(exc), "setup_hint": "Run `python smart_agent.py research \"query\"` first."}, indent=2, sort_keys=True))
+        return 2
+    _audit_research_source_command(broker, command)
+    if command == "verify-sources":
+        payload = verify_source_bundle(bundle)
+    elif command == "export-sources":
+        payload = bundle.to_dict()
+    else:
+        payload = {
+            "status": bundle.status,
+            "generated_at": bundle.generated_at,
+            "provider": bundle.provider,
+            "query_hash": bundle.query_hash,
+            "trust_level": bundle.trust_level,
+            "sources": [
+                {
+                    "source_id": source.source_id,
+                    "title": source.title,
+                    "url": source.url,
+                    "domain": source.domain,
+                    "provider": source.provider,
+                    "retrieved_at": source.retrieved_at,
+                    "evidence_type": source.reliability_signals.get("evidence_type"),
+                    "snippet_only": source.reliability_signals.get("snippet_only", False),
+                    "trust_level": source.trust_level,
+                }
+                for source in bundle.sources
+            ],
+            "failed_sources": [dict(item) for item in bundle.failed_sources],
+            "limitations": list(bundle.limitations),
+        }
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0 if payload.get("status") == "ok" else 2
+
+
+def _audit_research_source_command(broker: ToolBroker, command: str) -> None:
+    broker.audit_logger.log(
+        AuditEvent(
+            session_id=broker.session_id,
+            request_id=f"cli_research_{command.replace('-', '_')}",
+            route=broker.route,
+            model=broker.model,
+            tool_name=f"research.{command}",
+            capability="research.sources.inspect",
+            risk_level="SAFE",
+            trust_level="TRUSTED_USER",
+            policy_decision="ALLOW",
+            sanitized_args={"last": True},
+            result_summary="Inspected metadata-only research source bundle.",
+            files_read=[str(default_source_bundle_path())],
+        )
+    )
 
 
 def _run_browser_command(argv: list[str], broker: ToolBroker) -> int:
@@ -562,6 +896,11 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("doctor", help="Check weather provider configuration without fetching weather data.")
+    subparsers.add_parser("providers", help="List weather providers and cost-policy availability.")
+    provider_parser = subparsers.add_parser("provider", help="Inspect cost-aware weather provider selection.")
+    provider_parser.add_argument("mode", choices=["auto"], help="Selection mode to inspect.")
+    provider_parser.add_argument("location", nargs="+", help="City, ZIP/postal code, or other user-provided location.")
+    provider_parser.add_argument("--json", action="store_true", help="Print the raw structured provider selection payload.")
     config_parser = subparsers.add_parser("config", help="Show or update explicit weather preferences.")
     config_subparsers = config_parser.add_subparsers(dest="config_command", required=True)
     config_subparsers.add_parser("show", help="Show safe weather preferences.")
@@ -619,6 +958,44 @@ def _run_weather_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
         payload["capabilities"] = _weather_capability_status(broker)
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0 if result.allowed else 2
+
+    if parsed.command == "providers":
+        payload = {
+            "status": "ok",
+            "cost_policy": {
+                "provider_order": ["open_meteo", "nws", "weatherapi"],
+                "weather_default_provider": os.getenv("WEATHER_DEFAULT_PROVIDER", "auto"),
+                "allow_paid_apis": os.getenv("ALLOW_PAID_APIS", "false").strip().casefold() in {"1", "true", "yes", "on"},
+                "max_paid_api_calls_per_day": os.getenv("MAX_PAID_API_CALLS_PER_DAY", "0"),
+            },
+            "providers": weather_providers_status(),
+        }
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    if parsed.command == "provider":
+        arguments: dict[str, object] = {"location": " ".join(parsed.location), "provider": parsed.mode}
+        try:
+            result = _execute_weather_tool(broker, "weather.current", arguments, debug=debug)
+        except AuditLogError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        payload = json.loads(result.content)
+        report = {
+            "status": payload.get("status"),
+            "mode": parsed.mode,
+            "location": payload.get("location") or arguments["location"],
+            "selected_provider": payload.get("provider_decision", {}).get("selected_provider") or payload.get("provider"),
+            "provider_decision": payload.get("provider_decision"),
+            "provider": payload.get("provider"),
+            "error": payload.get("error"),
+            "setup_hint": payload.get("setup_hint"),
+        }
+        if parsed.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(json.dumps(report, indent=2, sort_keys=True))
+        return 0 if result.allowed and payload.get("status") == "ok" else 2
 
     if parsed.command == "config":
         if parsed.config_command == "show":
@@ -1085,17 +1462,65 @@ def _run_skills_command(argv: list[str], broker: ToolBroker, *, debug: bool = Fa
     show_parser = subparsers.add_parser("show", help="Show one native skill manifest.")
     show_parser.add_argument("skill_id")
 
-    subparsers.add_parser("validate", help="Validate native skill manifests.")
-    subparsers.add_parser("doctor", help="Check native skill discovery and validation status.")
+    validate_parser = subparsers.add_parser("validate", help="Validate native skill manifests.")
+    validate_parser.add_argument("skill_id", nargs="?")
+    doctor_parser = subparsers.add_parser("doctor", help="Check native skill discovery and validation status.")
+    doctor_parser.add_argument("skill_id", nargs="?")
+    subparsers.add_parser("roots", help="List configured native skill roots without scanning skill contents.")
+    subparsers.add_parser("precedence", help="Show native skill precedence and shadowing diagnostics.")
+    subparsers.add_parser("registry", help="Show native skill root and manifest registry metadata.")
+    lock_parser = subparsers.add_parser("lock", help="Inspect native skill lockfile status.")
+    lock_parser.add_argument("lock_command", choices=["status", "verify"])
 
-    vet_parser = subparsers.add_parser("vet", help="Vet a workspace SKILL.md file.")
-    vet_parser.add_argument("path")
+    explain_root_parser = subparsers.add_parser("explain-root", help="Explain one configured native skill root.")
+    explain_root_parser.add_argument("root_id")
+    provenance_parser = subparsers.add_parser("provenance", help="Show provenance for one native skill.")
+    provenance_parser.add_argument("skill_id")
+    trust_parser = subparsers.add_parser("trust", help="Show trust metadata for one native skill.")
+    trust_parser.add_argument("skill_id")
+    subparsers.add_parser("profiles", help="List native skill visibility profiles.")
+    profile_parser = subparsers.add_parser("profile", help="Inspect native skill profile visibility.")
+    profile_subparsers = profile_parser.add_subparsers(dest="profile_command", required=True)
+    profile_show = profile_subparsers.add_parser("show", help="Show one native skill profile.")
+    profile_show.add_argument("profile_id")
+    profile_allowed = profile_subparsers.add_parser("allowed", help="List skills visible for one profile.")
+    profile_allowed.add_argument("profile_id")
+    profile_validate = profile_subparsers.add_parser("validate", help="Validate one skill profile.")
+    profile_validate.add_argument("profile_id")
+    compatibility_parser = subparsers.add_parser("compatibility", help="Show native skill compatibility matrix.")
+    compatibility_parser.add_argument("skill_id", nargs="?")
+    conflicts_parser = subparsers.add_parser("conflicts", help="Detect native skill metadata conflicts without resolving them.")
+    conflicts_parser.add_argument("--json", action="store_true", help="Emit JSON conflict report.")
+    explain_conflict_parser = subparsers.add_parser("explain-conflict", help="Explain one native skill conflict id.")
+    explain_conflict_parser.add_argument("conflict_id")
+    test_parser = subparsers.add_parser("test", help="Run safe metadata-only native skill harness checks.")
+    test_parser.add_argument("skill_id", nargs="?")
+    test_parser.add_argument("--all-safe", action="store_true", help="Run safe harness checks for all non-high/non-personal native skills.")
+    dogfood_parser = subparsers.add_parser("dogfood", help="Show a safe native skill dogfood plan.")
+    dogfood_parser.add_argument("skill_id")
+    docs_generate_parser = subparsers.add_parser("docs-generate", help="Generate native skill catalog documentation from reviewed metadata.")
+    docs_generate_parser.add_argument("--dry-run", action="store_true", default=True, help="Preview catalog changes without writing files.")
+    docs_generate_parser.add_argument("--write", dest="dry_run", action="store_false", help="Write docs/native_skills/SKILL_CATALOG.md after review.")
+    subparsers.add_parser("catalog", help="Show the generated native skill catalog.")
+    subparsers.add_parser("docs-check", help="Check whether native skill generated docs are current.")
+    platform_parser = subparsers.add_parser("platform", help="Show native skill platform compatibility.")
+    platform_subparsers = platform_parser.add_subparsers(dest="platform_command", required=True)
+    platform_subparsers.add_parser("matrix", help="Show native skill platform matrix.")
+
+    inspect_parser = subparsers.add_parser("inspect", help="Inspect a workspace/project skill candidate or native skill id.")
+    inspect_parser.add_argument("path_or_skill_id")
+
+    vet_parser = subparsers.add_parser("vet", help="Vet a workspace/project skill candidate or native skill id.")
+    vet_parser.add_argument("path_or_skill_id")
 
     folder_parser = subparsers.add_parser("vet-folder", help="Vet a workspace skill folder.")
     folder_parser.add_argument("path")
 
-    score_parser = subparsers.add_parser("score", help="Score a workspace skill candidate file.")
-    score_parser.add_argument("path")
+    score_parser = subparsers.add_parser("score", help="Score a workspace/project skill candidate or native skill id.")
+    score_parser.add_argument("path_or_skill_id")
+
+    report_parser = subparsers.add_parser("report", help="Read native skill vetting reports.")
+    report_parser.add_argument("--last", action="store_true", required=True)
 
     find_parser = subparsers.add_parser("find", help="Find local native skills and reviewed candidates for a requested capability.")
     find_parser.add_argument("query")
@@ -1106,7 +1531,7 @@ def _run_skills_command(argv: list[str], broker: ToolBroker, *, debug: bool = Fa
     except SystemExit as exc:
         return int(exc.code)
 
-    if parsed.command in {"list", "show", "validate", "doctor"}:
+    if parsed.command in {"list", "show", "validate", "doctor", "roots", "precedence", "registry", "explain-root", "lock", "provenance", "trust", "profiles", "profile", "compatibility", "conflicts", "explain-conflict", "test", "dogfood", "docs-generate", "catalog", "docs-check", "platform"}:
         registry = NativeSkillRegistry(Path("."))
         if parsed.command == "list":
             payload = {"status": "ok", "skills": registry.list()}
@@ -1114,18 +1539,64 @@ def _run_skills_command(argv: list[str], broker: ToolBroker, *, debug: bool = Fa
             skill = registry.show(parsed.skill_id)
             payload = {"status": "ok", "skill": skill} if skill else {"status": "error", "error": "native skill not found", "skill_id": parsed.skill_id}
         elif parsed.command == "validate":
-            payload = registry.validate_all()
+            payload = registry.validate_all(skill_id=parsed.skill_id)
+        elif parsed.command == "doctor":
+            payload = registry.doctor(skill_id=parsed.skill_id)
+        elif parsed.command == "roots":
+            payload = registry.root_registry()
+        elif parsed.command == "precedence":
+            payload = registry.precedence()
+        elif parsed.command == "registry":
+            payload = {"status": "ok", "roots": registry.roots(), "skills": registry.list(), "validation": registry.validate_all()}
+        elif parsed.command == "explain-root":
+            root = registry.explain_root(parsed.root_id)
+            payload = {"status": "ok", "root": root} if root else {"status": "error", "error": "skill root not found", "root_id": parsed.root_id}
+        elif parsed.command == "lock":
+            payload = registry.lock_status() if parsed.lock_command == "status" else registry.lock_verify()
+        elif parsed.command == "provenance":
+            payload = registry.provenance(parsed.skill_id)
+        elif parsed.command == "trust":
+            payload = registry.trust(parsed.skill_id)
+        elif parsed.command == "profiles":
+            payload = registry.profiles()
+        elif parsed.command == "profile":
+            if parsed.profile_command == "show":
+                payload = registry.profile(parsed.profile_id)
+            elif parsed.profile_command == "allowed":
+                payload = registry.profile_allowed(parsed.profile_id)
+            else:
+                payload = registry.profile_validate(parsed.profile_id)
+        elif parsed.command == "compatibility":
+            payload = registry.compatibility(parsed.skill_id)
+        elif parsed.command == "conflicts":
+            payload = registry.conflicts()
+        elif parsed.command == "explain-conflict":
+            payload = registry.explain_conflict(parsed.conflict_id)
+        elif parsed.command == "test":
+            payload = registry.test(skill_id=parsed.skill_id, all_safe=parsed.all_safe)
+        elif parsed.command == "dogfood":
+            payload = registry.dogfood(parsed.skill_id)
+        elif parsed.command == "docs-generate":
+            payload = registry.docs_generate(dry_run=parsed.dry_run)
+        elif parsed.command == "catalog":
+            payload = registry.catalog()
+        elif parsed.command == "docs-check":
+            payload = registry.docs_check()
         else:
-            payload = registry.doctor()
+            payload = registry.skill_platform_matrix()
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0 if payload.get("status") == "ok" else 2
 
-    if parsed.command == "vet":
-        payload = _execute_cli_tool(broker, "cli_skills_vet", "native_skills.vet_skill_file", {"path": parsed.path})
+    if parsed.command == "inspect":
+        payload = _execute_cli_tool(broker, "cli_skills_inspect", "native_skills.inspect_skill", {"path_or_skill_id": parsed.path_or_skill_id})
+    elif parsed.command == "vet":
+        payload = _execute_cli_tool(broker, "cli_skills_vet", "native_skills.vet_skill_file", {"path": parsed.path_or_skill_id})
     elif parsed.command == "vet-folder":
         payload = _execute_cli_tool(broker, "cli_skills_vet_folder", "native_skills.vet_skill_folder", {"path": parsed.path})
     elif parsed.command == "score":
-        payload = _execute_cli_tool(broker, "cli_skills_score", "native_skills.score_candidate", {"path": parsed.path})
+        payload = _execute_cli_tool(broker, "cli_skills_score", "native_skills.score_candidate", {"path": parsed.path_or_skill_id})
+    elif parsed.command == "report":
+        payload = _execute_cli_tool(broker, "cli_skills_report_last", "native_skills.report_last", {})
     else:
         payload = _execute_cli_tool(
             broker,
@@ -1807,6 +2278,12 @@ def _run_messages_command(argv: list[str], broker: ToolBroker, *, debug: bool = 
     draft_parser.add_argument("--to", default="", help="Recipient display name for the draft.")
     draft_parser.add_argument("--instruction", default="", help="Optional drafting instruction.")
 
+    local_draft_parser = subparsers.add_parser("draft", help="Create a local manual-handoff message draft without sending.")
+    local_draft_parser.add_argument("--to", required=True, help="Recipient display name, phone, or channel address.")
+    local_draft_parser.add_argument("--body", required=True, help="Draft body text.")
+    local_draft_parser.add_argument("--draft-id", default="", help="Optional local draft id to replace.")
+    local_draft_parser.add_argument("--recipient-display", default="", help="Optional recipient display label.")
+
     manual_parser = subparsers.add_parser("draft-from-text", help="Draft from a manually provided ./workspace text file.")
     manual_parser.add_argument("--to", required=True, help="Recipient display name for the draft.")
     manual_parser.add_argument("--context-file", required=True, help="Path to a UTF-8 text file inside ./workspace.")
@@ -1814,24 +2291,109 @@ def _run_messages_command(argv: list[str], broker: ToolBroker, *, debug: bool = 
     manual_parser.add_argument("--save-path", default="", help="Optional workspace path for the save-draft action.")
 
     save_parser = subparsers.add_parser("save-draft", help="Save an approved message draft inside ./workspace.")
-    save_parser.add_argument("--from-action", required=True)
+    save_parser.add_argument("draft_id", nargs="?", help="Local draft id. If no approved action exists, handoff actions are created.")
+    save_parser.add_argument("--from-action", default="", help="Approved Action Center save action id.")
 
     copy_parser = subparsers.add_parser("copy-draft", help="Copy an approved message draft to clipboard without sending.")
-    copy_parser.add_argument("--from-action", required=True)
+    copy_parser.add_argument("draft_id", nargs="?", help="Local draft id. If no approved action exists, handoff actions are created.")
+    copy_parser.add_argument("--from-action", default="", help="Approved Action Center copy action id.")
+
+    handoff_parser = subparsers.add_parser("handoff", help="Create reviewed save/copy handoff actions for a local draft.")
+    handoff_parser.add_argument("draft_id", help="Local message draft id.")
+    handoff_parser.add_argument("--save-path", default="", help="Optional workspace path for the save-draft action.")
+
+    import_parser = subparsers.add_parser("import", help="Import one workspace message file into the manual inbox.")
+    import_parser.add_argument("--from-file", required=True, help="Path to a message file inside ./workspace.")
+
+    inbox_parser = subparsers.add_parser("inbox", help="Inspect the manual/mock incoming message inbox.")
+    inbox_subparsers = inbox_parser.add_subparsers(dest="inbox_command", required=True)
+    inbox_list_parser = inbox_subparsers.add_parser("list", help="List manual/mock incoming messages.")
+    inbox_list_parser.add_argument("--no-mock", action="store_true", help="Hide built-in mock fixture messages.")
+    inbox_list_parser.add_argument("--limit", type=int, default=25, help="Maximum messages to show.")
+    inbox_show_parser = inbox_subparsers.add_parser("show", help="Show one incoming message.")
+    inbox_show_parser.add_argument("message_id", help="Incoming message id.")
+    inbox_draft_parser = inbox_subparsers.add_parser("draft-reply", help="Create a local draft reply without sending.")
+    inbox_draft_parser.add_argument("message_id", help="Incoming message id.")
+
+    probe_parser = subparsers.add_parser("probe", help="Safely probe macOS Messages automation feasibility without sending.")
+    probe_parser.add_argument("--explain-permissions", action="store_true", help="Include macOS Automation setup guidance.")
+
+    macos_parser = subparsers.add_parser("macos", help="Inspect and manage the disabled-by-default macOS Messages send adapter.")
+    macos_subparsers = macos_parser.add_subparsers(dest="macos_command", required=True)
+    macos_subparsers.add_parser("status", help="Show macOS Messages send adapter gates without sending.")
+    allow_parser = macos_subparsers.add_parser("allow-recipient", help="Allowlist one selected macOS Messages recipient.")
+    allow_parser.add_argument("recipient", help="One recipient phone number, handle, or email.")
+    live_probe_parser = macos_subparsers.add_parser(
+        "live-send-probe",
+        help="Approval-gated harmless self-test send probe; disabled unless explicitly configured.",
+    )
+    live_probe_parser.add_argument("--to", required=True, help="Configured self-test recipient.")
+
+    send_parser = subparsers.add_parser("send", help="Execute one approved macOS Messages send action if all gates pass.")
+    send_parser.add_argument("--from-action", required=True, help="Approved macOS Messages Action Center action id.")
     try:
         parsed = parser.parse_args(argv)
     except SystemExit as exc:
         return int(exc.code)
+    if parsed.command == "import":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messages_import_manual",
+            "messages.inbox.import_manual",
+            {"from_file": parsed.from_file},
+        )
+        if debug and payload.get("debug"):
+            from agent.core.orchestrator import format_debug_payload
+
+            print("[debug] " + format_debug_payload({"event": "messages_inbox_import", **dict(payload["debug"])}), file=sys.stderr)
+        print(json.dumps(payload["content"], indent=2, sort_keys=True))
+        return 0 if payload.get("allowed") else 2
+    if parsed.command == "inbox":
+        if parsed.inbox_command == "list":
+            tool_name = "messages.inbox.list"
+            arguments = {"include_mock": not parsed.no_mock, "limit": parsed.limit}
+            call_id = "cli_messages_inbox_list"
+        elif parsed.inbox_command == "show":
+            tool_name = "messages.inbox.show"
+            arguments = {"message_id": parsed.message_id}
+            call_id = "cli_messages_inbox_show"
+        else:
+            tool_name = "messages.inbox.draft_reply"
+            arguments = {"message_id": parsed.message_id}
+            call_id = "cli_messages_inbox_draft_reply"
+        payload = _execute_cli_tool(broker, call_id, tool_name, arguments)
+        if debug and payload.get("debug"):
+            from agent.core.orchestrator import format_debug_payload
+
+            print("[debug] " + format_debug_payload({"event": "messages_inbox", **dict(payload["debug"])}), file=sys.stderr)
+        print(json.dumps(payload["content"], indent=2, sort_keys=True))
+        return 0 if payload.get("allowed") else 2
     if parsed.command == "save-draft":
+        center = _messages_action_center(broker)
+        action_id = parsed.from_action or _approved_message_handoff_action_id(
+            center,
+            draft_id=parsed.draft_id or "",
+            action_type=MESSAGE_SAVE_DRAFT_ACTION,
+        )
+        if not action_id:
+            if not parsed.draft_id:
+                print("messages save-draft requires <draft_id> or --from-action <action_id>", file=sys.stderr)
+                return 2
+            payload = _execute_cli_tool(
+                broker,
+                "cli_messages_handoff_for_save",
+                "messages.open_handoff_instructions",
+                {"draft_id": parsed.draft_id},
+            )
+            content = dict(payload["content"])
+            content["status"] = "approval_required"
+            content["requested_handoff"] = "save"
+            print(json.dumps(content, indent=2, sort_keys=True))
+            return 0 if payload.get("allowed") else 2
         report = execute_message_handoff_action(
             broker,
-            ActionCenter(
-                audit_logger=broker.audit_logger,
-                session_id=broker.session_id,
-                model=broker.model,
-                route="messages_actions",
-            ),
-            action_id=parsed.from_action,
+            center,
+            action_id=action_id,
             expected_action_type=MESSAGE_SAVE_DRAFT_ACTION,
         )
         if debug and report.get("debug"):
@@ -1841,15 +2403,31 @@ def _run_messages_command(argv: list[str], broker: ToolBroker, *, debug: bool = 
         print(json.dumps(report, indent=2, sort_keys=True))
         return 0 if report.get("status") == "ok" else 2
     if parsed.command == "copy-draft":
+        center = _messages_action_center(broker)
+        action_id = parsed.from_action or _approved_message_handoff_action_id(
+            center,
+            draft_id=parsed.draft_id or "",
+            action_type=MESSAGE_COPY_DRAFT_ACTION,
+        )
+        if not action_id:
+            if not parsed.draft_id:
+                print("messages copy-draft requires <draft_id> or --from-action <action_id>", file=sys.stderr)
+                return 2
+            payload = _execute_cli_tool(
+                broker,
+                "cli_messages_handoff_for_copy",
+                "messages.open_handoff_instructions",
+                {"draft_id": parsed.draft_id},
+            )
+            content = dict(payload["content"])
+            content["status"] = "approval_required"
+            content["requested_handoff"] = "copy"
+            print(json.dumps(content, indent=2, sort_keys=True))
+            return 0 if payload.get("allowed") else 2
         report = execute_message_handoff_action(
             broker,
-            ActionCenter(
-                audit_logger=broker.audit_logger,
-                session_id=broker.session_id,
-                model=broker.model,
-                route="messages_actions",
-            ),
-            action_id=parsed.from_action,
+            center,
+            action_id=action_id,
             expected_action_type=MESSAGE_COPY_DRAFT_ACTION,
         )
         if debug and report.get("debug"):
@@ -1858,6 +2436,88 @@ def _run_messages_command(argv: list[str], broker: ToolBroker, *, debug: bool = 
             print("[debug] " + format_debug_payload({"event": "messages_handoff", **dict(report["debug"])}), file=sys.stderr)
         print(json.dumps(report, indent=2, sort_keys=True))
         return 0 if report.get("status") == "ok" else 2
+    if parsed.command == "probe":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messages_probe",
+            "messages.probe",
+            {"explain_permissions": parsed.explain_permissions},
+        )
+        if debug and payload.get("debug"):
+            from agent.core.orchestrator import format_debug_payload
+
+            print("[debug] " + format_debug_payload({"event": "messages_probe", **dict(payload["debug"])}), file=sys.stderr)
+        print(json.dumps(payload["content"], indent=2, sort_keys=True))
+        return 0 if payload.get("allowed") else 2
+    if parsed.command == "macos":
+        if parsed.macos_command == "status":
+            tool_name = "messages.macos.status"
+            arguments = {}
+            call_id = "cli_messages_macos_status"
+        elif parsed.macos_command == "allow-recipient":
+            tool_name = "messages.macos.allowed_recipients.manage"
+            arguments = {"recipient": parsed.recipient}
+            call_id = "cli_messages_macos_allow_recipient"
+        else:
+            tool_name = "messages.macos.live_send_probe"
+            arguments = {"to": parsed.to}
+            call_id = "cli_messages_macos_live_send_probe"
+        payload = _execute_cli_tool(broker, call_id, tool_name, arguments)
+        if debug and payload.get("debug"):
+            from agent.core.orchestrator import format_debug_payload
+
+            print("[debug] " + format_debug_payload({"event": "messages_macos", **dict(payload["debug"])}), file=sys.stderr)
+        print(json.dumps(payload["content"], indent=2, sort_keys=True))
+        return 0 if payload.get("allowed") else 2
+    if parsed.command == "send":
+        report = execute_macos_message_send_action(
+            broker,
+            _messages_action_center(broker),
+            action_id=parsed.from_action,
+        )
+        if debug and report.get("debug"):
+            from agent.core.orchestrator import format_debug_payload
+
+            print("[debug] " + format_debug_payload({"event": "messages_macos_send", **dict(report["debug"])}), file=sys.stderr)
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0 if report.get("status") == "ok" else 2
+    if parsed.command == "draft":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messages_draft",
+            "messaging.draft.create",
+            {
+                "channel": "manual_handoff",
+                "to": parsed.to,
+                "body": parsed.body,
+                "draft_id": parsed.draft_id,
+                "recipient_display": parsed.recipient_display,
+                "source_context": {"source": "trusted_user", "requested_by": "messages_cli"},
+            },
+        )
+        content = dict(payload["content"])
+        if payload.get("allowed"):
+            content["handoff_next_steps"] = [
+                f"Inspect with: messages handoff {content.get('draft_id')}",
+                f"Save after approval with: messages save-draft {content.get('draft_id')}",
+                f"Copy after approval with: messages copy-draft {content.get('draft_id')}",
+                "No automatic message sending is implemented in v1.",
+            ]
+        print(json.dumps(content, indent=2, sort_keys=True))
+        return 0 if payload.get("allowed") else 2
+    if parsed.command == "handoff":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messages_handoff",
+            "messages.open_handoff_instructions",
+            {"draft_id": parsed.draft_id, "save_path": parsed.save_path},
+        )
+        if debug and payload.get("debug"):
+            from agent.core.orchestrator import format_debug_payload
+
+            print("[debug] " + format_debug_payload({"event": "messages_handoff", **dict(payload["debug"])}), file=sys.stderr)
+        print(json.dumps(payload["content"], indent=2, sort_keys=True))
+        return 0 if payload.get("allowed") else 2
     if parsed.command == "read":
         tool_name = "messages.read_selected_thread"
         arguments: dict[str, object] = {"thread_id": parsed.thread_id}
@@ -1895,16 +2555,35 @@ def _run_messages_command(argv: list[str], broker: ToolBroker, *, debug: bool = 
         print("[debug] " + format_debug_payload({"event": "tool_broker", **result.debug}), file=sys.stderr)
     payload = json.loads(result.content)
     if parsed.command == "draft-from-text" and result.allowed:
+        draft_create = _execute_cli_tool(
+            broker,
+            "cli_messages_draft_from_text_store",
+            "messaging.draft.create",
+            {
+                "channel": "manual_handoff",
+                "to": str(payload.get("to") or parsed.to),
+                "body": str(payload.get("draft") or ""),
+                "source_context": {
+                    "source": "message_context_file",
+                    "context_file": parsed.context_file,
+                    "thread_id": str(payload.get("thread_id") or ""),
+                    "trust": "UNTRUSTED_MESSAGE",
+                    "requested_by": "messages_cli",
+                },
+                "risk_level": "HIGH",
+            },
+        )
+        payload["message_draft_record"] = draft_create["content"]
+        if not draft_create.get("allowed"):
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            return 2
+        draft_id = str(draft_create["content"].get("draft_id") or "")
         try:
             actions = draft_message_handoff_actions(
-                ActionCenter(
-                    audit_logger=broker.audit_logger,
-                    session_id=broker.session_id,
-                    model=broker.model,
-                    route="messages_actions",
-                ),
+                _messages_action_center(broker),
                 to=str(payload.get("to") or parsed.to),
                 draft=str(payload.get("draft") or ""),
+                draft_id=draft_id,
                 source_thread_id=str(payload.get("thread_id") or ""),
                 save_path=parsed.save_path,
             )
@@ -1914,11 +2593,373 @@ def _run_messages_command(argv: list[str], broker: ToolBroker, *, debug: bool = 
         payload["handoff_actions"] = {name: record.to_dict() for name, record in actions.items()}
         payload["handoff_instructions"] = [
             "Review and approve either the save or copy action in Action Center.",
-            "Use messages save-draft --from-action <action_id> or messages copy-draft --from-action <action_id>.",
+            f"Use messages handoff {draft_id} to recreate/review handoff actions if needed.",
+            f"Use messages save-draft {draft_id} or messages copy-draft {draft_id} after approval.",
+            "The legacy --from-action form still works for exact action execution.",
             "No automatic message sending is implemented in v1.",
         ]
     print(json.dumps(payload, indent=2, sort_keys=True))
     return 0 if result.allowed else 2
+
+
+def _messages_action_center(broker: ToolBroker) -> ActionCenter:
+    return ActionCenter(
+        audit_logger=broker.audit_logger,
+        session_id=broker.session_id,
+        model=broker.model,
+        route="messages_actions",
+    )
+
+
+def _approved_message_handoff_action_id(center: ActionCenter, *, draft_id: str, action_type: str) -> str:
+    if not draft_id:
+        return ""
+    for record in center.list_actions():
+        if record.action_type != action_type:
+            continue
+        if record.sanitized_args.get("draft_id") != draft_id:
+            continue
+        if record.status is ActionStatus.APPROVED and not record.is_expired():
+            return record.action_id
+    return ""
+
+
+def _run_messaging_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    parser = argparse.ArgumentParser(
+        prog="smart_agent.py messaging",
+        description="Create reviewed message drafts and inspect channel-neutral schemas without sending.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("channels", help="List known messaging channels and send-support status.")
+    draft_create = subparsers.add_parser("draft-create", help="Create or replace a local workspace message draft.")
+    draft_create.add_argument("--channel", required=True)
+    draft_create.add_argument("--to", required=True)
+    draft_create.add_argument("--body", required=True)
+    draft_create.add_argument("--draft-id", default="")
+    draft_create.add_argument("--recipient-display", default="")
+    draft_create.add_argument("--source", default="trusted_user")
+    create_send = subparsers.add_parser(
+        "create-send-action",
+        help="Create a CRITICAL Action Center message send proposal from a local draft; does not send.",
+    )
+    create_send.add_argument("draft_id")
+    ios_payload = subparsers.add_parser(
+        "ios-compose-payload",
+        help="Create a local iOS user-confirmed compose handoff payload from a local draft; does not send.",
+    )
+    ios_payload.add_argument("draft_id")
+    ios_payload.add_argument("--from-action", default="", help="Approved Action Center messaging send action id.")
+    ios_payload.add_argument("--expires-minutes", type=int, default=15)
+    ios_status = subparsers.add_parser(
+        "ios-compose-status",
+        help="Show local iOS compose handoff payload/result status for a draft.",
+    )
+    ios_status.add_argument("draft_id")
+    ios_record = subparsers.add_parser(
+        "ios-compose-record-result",
+        help="Record a mock/future iOS compose result for a local handoff payload; does not send.",
+    )
+    ios_record.add_argument("draft_id")
+    ios_record.add_argument("--result", required=True, choices=["sent", "queued", "cancelled", "failed"])
+    ios_record.add_argument("--from-action", default="", help="Optional Action Center id to match the handoff payload.")
+    ios_record.add_argument("--provider-message-id", default="")
+    ios_record.add_argument("--error", default="")
+    draft_parser = subparsers.add_parser("draft", help="Inspect local workspace message drafts.")
+    draft_subparsers = draft_parser.add_subparsers(dest="draft_command", required=True)
+    show_parser = draft_subparsers.add_parser("show", help="Show one redacted local draft preview.")
+    show_parser.add_argument("draft_id")
+    validate_parser = draft_subparsers.add_parser("validate", help="Validate one local draft against messaging v1 rules.")
+    validate_parser.add_argument("draft_id")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    if parsed.command == "channels":
+        payload = _execute_cli_tool(broker, "cli_messaging_channels", "messaging.channels", {})
+    elif parsed.command == "draft-create":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messaging_draft_create",
+            "messaging.draft.create",
+            {
+                "channel": parsed.channel,
+                "to": parsed.to,
+                "body": parsed.body,
+                "draft_id": parsed.draft_id,
+                "recipient_display": parsed.recipient_display,
+                "source_context": {"source": parsed.source, "requested_by": "user_cli"},
+            },
+        )
+    elif parsed.command == "create-send-action":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messaging_create_send_action",
+            "messaging.action.create_send",
+            {"draft_id": parsed.draft_id, "source_workflow": "messaging.cli", "user_requested": True},
+        )
+    elif parsed.command == "ios-compose-payload":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messaging_ios_compose_payload",
+            "messaging.ios_compose.create_handoff",
+            {
+                "draft_id": parsed.draft_id,
+                "action_id": parsed.from_action,
+                "compose_only": not bool(parsed.from_action),
+                "expires_minutes": parsed.expires_minutes,
+            },
+        )
+    elif parsed.command == "ios-compose-status":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messaging_ios_compose_status",
+            "messaging.ios_compose.status",
+            {"draft_id": parsed.draft_id},
+        )
+    elif parsed.command == "ios-compose-record-result":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messaging_ios_compose_record_result",
+            "messaging.ios_compose.record_result",
+            {
+                "draft_id": parsed.draft_id,
+                "result": parsed.result,
+                "action_id": parsed.from_action,
+                "provider_message_id": parsed.provider_message_id,
+                "error": parsed.error,
+            },
+        )
+    elif parsed.draft_command == "show":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messaging_draft_show",
+            "messaging.draft.preview",
+            {"draft_id": parsed.draft_id},
+        )
+    else:
+        payload = _execute_cli_tool(
+            broker,
+            "cli_messaging_draft_validate",
+            "messaging.draft_validate",
+            {"draft_id": parsed.draft_id},
+        )
+    if debug and payload.get("debug"):
+        from agent.core.orchestrator import format_debug_payload
+
+        print("[debug] " + format_debug_payload({"event": "messaging", **dict(payload["debug"])}), file=sys.stderr)
+    print(json.dumps(payload["content"], indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
+
+
+def _run_leads_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    parser = argparse.ArgumentParser(
+        prog="smart_agent.py leads",
+        description="Inspect and draft from a mock/channel-neutral Lead Inbox without sending.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    list_parser = subparsers.add_parser("list", help="List mock lead metadata; no real providers are read.")
+    list_parser.add_argument("--max-results", type=int, default=20)
+    show_parser = subparsers.add_parser("show", help="Read one selected lead; real personal/customer reads are disabled by default.")
+    show_parser.add_argument("lead_id")
+    classify_parser = subparsers.add_parser("classify", help="Classify one lead without creating actions.")
+    classify_parser.add_argument("lead_id")
+    summarize_parser = subparsers.add_parser("summarize", help="Summarize one selected/mock lead without storing memory.")
+    summarize_parser.add_argument("lead_id")
+    draft_parser = subparsers.add_parser("draft-response", help="Create a local MessageDraft response; does not send.")
+    draft_parser.add_argument("lead_id")
+    followup_parser = subparsers.add_parser("create-followup", help="Create a pending task Action Center item; does not create a task.")
+    followup_parser.add_argument("lead_id")
+    suggest_followup_parser = subparsers.add_parser("suggest-followup", help="Suggest a follow-up by queuing a pending task action; does not create a task.")
+    suggest_followup_parser.add_argument("lead_id")
+    suggest_meeting_parser = subparsers.add_parser("suggest-meeting", help="Suggest meeting reply text without reading calendars or creating events.")
+    suggest_meeting_parser.add_argument("lead_id")
+    send_action_parser = subparsers.add_parser(
+        "create-send-action",
+        help="Create a CRITICAL Action Center send proposal from a lead response draft; does not send.",
+    )
+    send_action_parser.add_argument("lead_id")
+    send_action_parser.add_argument("draft_id")
+    send_action_parser.add_argument(
+        "--allow-channel-override",
+        action="store_true",
+        help="Allow an explicit user-selected channel that differs from the lead source.",
+    )
+    send_parser = subparsers.add_parser(
+        "send",
+        help="Execute the approved channel path for a lead response action; unsupported channels return fallbacks.",
+    )
+    send_parser.add_argument("--from-action", required=True, dest="action_id")
+    handoff_parser = subparsers.add_parser("handoff", help="Create save/copy handoff actions for a lead draft; does not send.")
+    handoff_parser.add_argument("draft_id")
+    handoff_parser.add_argument("--save-path", default="")
+    responded_parser = subparsers.add_parser("mark-responded", help="Mark one lead as responded after verified send or explicit handoff.")
+    responded_parser.add_argument("lead_id")
+    responded_parser.add_argument("--action-id", default="")
+    responded_parser.add_argument("--draft-id", default="")
+    responded_parser.add_argument("--channel", default="")
+    responded_parser.add_argument("--note", default="")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    if parsed.command == "list":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_leads_list",
+            "lead.inbox.list",
+            {"max_results": parsed.max_results},
+        )
+    elif parsed.command == "show":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_leads_show",
+            "lead.inbox.read_selected",
+            {"lead_id": parsed.lead_id},
+        )
+    elif parsed.command == "classify":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_leads_classify",
+            "lead.classify",
+            {"lead_id": parsed.lead_id},
+        )
+    elif parsed.command == "summarize":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_leads_summarize",
+            "lead.summarize",
+            {"lead_id": parsed.lead_id},
+        )
+    elif parsed.command == "draft-response":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_leads_draft_response",
+            "lead.draft_response",
+            {"lead_id": parsed.lead_id},
+        )
+    elif parsed.command in {"create-followup", "suggest-followup"}:
+        payload = _execute_cli_tool(
+            broker,
+            "cli_leads_create_followup",
+            "lead.create_follow_up_task",
+            {"lead_id": parsed.lead_id},
+        )
+    elif parsed.command == "suggest-meeting":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_leads_suggest_meeting",
+            "lead.suggest_meeting_times",
+            {"lead_id": parsed.lead_id},
+        )
+    elif parsed.command == "create-send-action":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_leads_create_send_action",
+            "lead.create_send_action",
+            {
+                "lead_id": parsed.lead_id,
+                "draft_id": parsed.draft_id,
+                "allow_channel_override": parsed.allow_channel_override,
+            },
+        )
+    elif parsed.command == "handoff":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_leads_handoff",
+            "lead.handoff",
+            {"draft_id": parsed.draft_id, "save_path": parsed.save_path},
+        )
+    elif parsed.command == "mark-responded":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_leads_mark_responded",
+            "lead.mark_responded",
+            {
+                "lead_id": parsed.lead_id,
+                "action_id": parsed.action_id,
+                "draft_id": parsed.draft_id,
+                "channel": parsed.channel,
+                "note": parsed.note,
+            },
+        )
+    else:
+        from agent.leads.send_workflow import execute_lead_send_action
+
+        content = execute_lead_send_action(
+            Path.cwd(),
+            broker,
+            _messages_action_center(broker),
+            action_id=parsed.action_id,
+        )
+        payload = {"allowed": content.get("status") != "error", "content": content, "debug": content.get("debug", {})}
+    if debug and payload.get("debug"):
+        from agent.core.orchestrator import format_debug_payload
+
+        print("[debug] " + format_debug_payload({"event": "leads", **dict(payload["debug"])}), file=sys.stderr)
+    print(json.dumps(payload["content"], indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
+
+
+def _run_apple_business_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:
+    parser = argparse.ArgumentParser(
+        prog="smart_agent.py apple-business",
+        description="Apple Messages for Business provider strategy and mock connector stub.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("doctor", help="Inspect Apple Business provider readiness without provider calls.")
+    subparsers.add_parser("status", help="Show disabled-by-default Apple Business provider status.")
+    mock_parser = subparsers.add_parser("mock-inbound", help="Create a local mock inbound Apple Business lead.")
+    mock_parser.add_argument("--sender", default="", help="Mock sender display name.")
+    mock_parser.add_argument("--message", default="", help="Mock inbound message preview.")
+    mock_parser.add_argument("--subject", default="", help="Mock subject or context.")
+    mock_parser.add_argument("--conversation-id", default="", help="Optional mock provider conversation id.")
+    draft_parser = subparsers.add_parser("draft-response", help="Create a local MessageDraft response; does not send.")
+    draft_parser.add_argument("lead_id", help="Local Apple Business lead id from mock-inbound.")
+    status_parser = subparsers.add_parser("conversation-status", help="Show local mock conversation status.")
+    status_parser.add_argument("lead_id", help="Local Apple Business lead id from mock-inbound.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    if parsed.command == "doctor":
+        payload = _execute_cli_tool(broker, "cli_apple_business_doctor", "apple_business.doctor", {})
+    elif parsed.command == "status":
+        payload = _execute_cli_tool(broker, "cli_apple_business_status", "apple_business.status", {})
+    elif parsed.command == "mock-inbound":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_apple_business_mock_inbound",
+            "apple_business.inbound.receive",
+            {
+                "sender": parsed.sender,
+                "message": parsed.message,
+                "subject": parsed.subject,
+                "conversation_id": parsed.conversation_id,
+            },
+        )
+    elif parsed.command == "draft-response":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_apple_business_draft_response",
+            "apple_business.message.draft_response",
+            {"lead_id": parsed.lead_id},
+        )
+    else:
+        payload = _execute_cli_tool(
+            broker,
+            "cli_apple_business_conversation_status",
+            "apple_business.conversation.status",
+            {"lead_id": parsed.lead_id},
+        )
+    if debug and payload.get("debug"):
+        from agent.core.orchestrator import format_debug_payload
+
+        print("[debug] " + format_debug_payload({"event": "apple_business", **dict(payload["debug"])}), file=sys.stderr)
+    print(json.dumps(payload["content"], indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
 
 
 def _run_tasks_command(argv: list[str], broker: ToolBroker, *, debug: bool = False) -> int:

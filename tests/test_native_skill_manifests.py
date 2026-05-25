@@ -18,19 +18,37 @@ def manifest_data(**overrides: object) -> dict[str, object]:
         "version": "1.0.0",
         "status": "available",
         "maturity_level": "specified",
+        "root_id": "project_skills",
+        "source": "project",
+        "provenance": {"source_type": "native"},
         "risk_level": "LOW",
         "trust_level": "UNTRUSTED_DOCUMENT",
         "allowed_tools": ["filesystem.read"],
         "required_capabilities": ["filesystem.read"],
+        "required_connectors": [],
+        "required_env": [],
+        "required_config": [],
+        "required_binaries": [],
+        "required_files": [],
+        "required_platforms": ["any"],
+        "required_python": ">=3.11",
+        "required_model_features": [],
         "approval_required": False,
+        "approval_reuse_allowed": True,
         "memory_behavior": "no_store",
         "audit_required": True,
+        "network_behavior": "none",
+        "filesystem_behavior": "metadata_only",
         "inputs_schema": {"type": "object"},
         "outputs_schema": {"type": "object"},
         "docs_path": "docs/demo.md",
         "tests_path": "tests/test_demo.py",
+        "dogfood_suite": "",
         "owner": "local-agent",
+        "license": "project-internal",
         "last_reviewed": "2026-05-23",
+        "setup_hint": "demo",
+        "known_limitations": [],
     }
     data.update(overrides)
     return data
@@ -58,11 +76,18 @@ tools:
             lines.append(f"{key}:")
             lines.extend(f"  - {item}" for item in value)
         elif isinstance(value, dict):
-            lines.append(f"{key}: {{}}")
+            if value:
+                lines.append(f"{key}:")
+                lines.extend(f"  {child_key}: {child_value}" for child_key, child_value in value.items())
+            else:
+                lines.append(f"{key}: {{}}")
         elif isinstance(value, bool):
             lines.append(f"{key}: {'true' if value else 'false'}")
         else:
-            lines.append(f"{key}: {value}")
+            rendered = str(value)
+            if rendered.startswith((">", "@", "{", "[", "*", "&")) or ":" in rendered:
+                rendered = json.dumps(rendered)
+            lines.append(f"{key}: {rendered}")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
 
@@ -135,6 +160,10 @@ def test_skills_list_show_validate_and_doctor_commands(tmp_path: Path, monkeypat
     assert _run_skills_command(["validate"], broker=None) == 0  # type: ignore[arg-type]
     validated = json.loads(capsys.readouterr().out)
     assert validated["status"] == "ok"
+
+    assert _run_skills_command(["validate", "demo_skill"], broker=None) == 0  # type: ignore[arg-type]
+    one_validated = json.loads(capsys.readouterr().out)
+    assert one_validated["manifest_count"] == 1
 
     assert _run_skills_command(["doctor"], broker=None) == 0  # type: ignore[arg-type]
     doctor = json.loads(capsys.readouterr().out)

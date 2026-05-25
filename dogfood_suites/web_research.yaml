@@ -1,0 +1,35 @@
+suite_id: web_research
+name: Web Research Dogfood
+description: Source-grounded research and routing checks, with live provider use only when explicitly configured.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: true
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: web_research_current_route
+    description: Confirm current-facts questions route toward internet tools.
+    command: python smart_agent.py router explain "What are the latest public AI regulation updates?"
+    expected_behavior: Reports needs_internet=true with research/search tools suggested and no provider call.
+    failure_signals: Current query stays offline, routing reason omitted, or tools execute during explain.
+    tags: [internet, router, mock_safe]
+  - id: web_research_stable_route
+    description: Confirm stable explanations do not route to internet by default.
+    command: python smart_agent.py router explain "Explain photosynthesis in simple terms."
+    expected_behavior: Reports needs_internet=false unless citations/current facts are requested.
+    failure_signals: Stable explanation routes to web without source requirement or no-tools policy ignored.
+    tags: [internet, router, mock_safe]
+  - id: web_research_source_grounded_no_fetch
+    description: Run source-grounded research without selected-source fetching.
+    command: python smart_agent.py research "latest Open-Meteo API updates" --provider auto --max-sources 3 --freshness recent --no-fetch
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Produces sources or a clear no-provider/setup limitation without fabricated citations.
+    failure_signals: Fabricated URLs, claims current facts without sources, paid provider used by default, or web query stored.
+    tags: [internet, research, source_grounding, provider_optional]
+  - id: web_research_no_provider_behavior
+    description: Confirm unavailable provider behavior stays explicit and graceful.
+    command: python smart_agent.py web search "internet dogfood no provider fixture" --provider searxng
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Returns setup hints when SearXNG is not configured, or normalized UNTRUSTED_WEB results when configured.
+    failure_signals: Crash, raw secret leak, paid fallback without approval, or search history persistence.
+    tags: [internet, research, provider_optional]

@@ -1,0 +1,33 @@
+suite_id: web_providers
+name: Web Provider Dogfood
+description: Provider setup, doctor, and fallback policy checks that avoid live provider calls by default.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: web_providers_searxng_doctor
+    description: Check SearXNG setup metadata without calling the instance.
+    command: python smart_agent.py web searxng doctor
+    expected_behavior: Reports base URL/enabled status and setup hint; no public SearXNG default is used.
+    failure_signals: Network search executed, secret printed, or public fallback instance silently selected.
+    tags: [internet, providers, searxng, mock_safe]
+  - id: web_providers_brave_doctor
+    description: Check Brave Search setup metadata without calling Brave.
+    command: python smart_agent.py web brave doctor
+    expected_behavior: Reports redacted API-key presence, enabled state, and paid/quota gate status.
+    failure_signals: API key printed, network call made, or Brave shown as free-first default.
+    tags: [internet, providers, brave, paid_provider, mock_safe]
+  - id: web_providers_serpapi_doctor
+    description: Check SerpAPI setup metadata without calling SerpAPI.
+    command: python smart_agent.py web serpapi doctor
+    expected_behavior: Reports redacted API-key presence, enabled state, and paid/quota gate status.
+    failure_signals: API key printed, network call made, CAPTCHA-bypass behavior exposed, or SerpAPI selected by default.
+    tags: [internet, providers, serpapi, paid_provider, mock_safe]
+  - id: web_providers_fallback_decision
+    description: Check provider fallback behavior in free-first mode.
+    command: python smart_agent.py web provider-decision "OpenAI API docs latest release notes"
+    expected_behavior: Shows cache/free/self-hosted providers before paid fallback and audits the provider decision.
+    failure_signals: Paid provider selected without explicit allowance, no audit decision, or query persisted.
+    tags: [internet, provider_policy, mock_safe]

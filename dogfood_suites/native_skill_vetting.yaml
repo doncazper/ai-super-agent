@@ -1,0 +1,27 @@
+suite_id: native_skill_vetting
+name: Native Skill Vetting Harness
+description: Exercises static native skill vetting and harness fixtures without running candidate code or external dependencies.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: skills_vet_safe_fixture
+    description: Vet a safe local skill fixture.
+    command: python smart_agent.py skills vet ./workspace/skills/dogfood_safe/SKILL.md
+    expected_behavior: Static report stays low risk and confirms no script execution.
+    failure_signals: Fixture instructions executed, dependency installed, or memory write.
+    tags: [skills, vetting, fixture]
+  - id: skills_vet_risky_fixture
+    description: Vet a risky local skill fixture.
+    command: python smart_agent.py skills vet ./workspace/skills/dogfood_risky/SKILL.md
+    expected_behavior: Shell, network, secret, and bypass language are flagged.
+    failure_signals: Risky instructions followed, script executed, or provider called.
+    tags: [skills, vetting, fixture, denial]
+  - id: skills_test_vetter
+    description: Run safe harness checks for the reviewed native skill vetter.
+    command: python smart_agent.py skills test native_skill_vetter
+    expected_behavior: Harness checks pass or skip setup-only checks without executing external skills.
+    failure_signals: External skill execution, plugin runtime execution, or high-risk auto-run.
+    tags: [skills, harness, vetting]

@@ -33,6 +33,8 @@ P0_PATTERNS = (
 )
 CORE_COMMAND_HINTS = ("doctor", "tools list", "--no-tools", "session", "feedback", "dogfood")
 REVIEW_REPORT_VERSION = 1
+BUG_STATUSES = {"open", "triaged", "regression_added", "fixed", "wontfix", "blocked"}
+PERSONAL_BUG_FEATURES = {"calendar", "contacts", "email", "messages", "tasks"}
 
 
 @dataclass
@@ -54,6 +56,9 @@ class BugRecord:
     suggested_regression_test: str = ""
     created_at: str = ""
     last_updated: str = ""
+    linked_tests: list[str] = field(default_factory=list)
+    resolution_note: str = ""
+    regression_test_path: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -78,6 +83,9 @@ class BugRecord:
             suggested_regression_test=str(data.get("suggested_regression_test", "")),
             created_at=str(data.get("created_at", "")),
             last_updated=str(data.get("last_updated", "")),
+            linked_tests=list(data.get("linked_tests", [])),
+            resolution_note=redact_text(str(data.get("resolution_note", ""))),
+            regression_test_path=str(data.get("regression_test_path", "")),
         )
 
 
@@ -124,6 +132,13 @@ class BugStore:
         self.bug_path(record.bug_id).write_text(json.dumps(record.to_dict(), indent=2, sort_keys=True), encoding="utf-8")
         return record
 
+    def save(self, record: BugRecord) -> BugRecord:
+        if record.status not in BUG_STATUSES:
+            raise ValueError("invalid bug status")
+        record.last_updated = utc_now_iso()
+        self.bug_path(record.bug_id).write_text(json.dumps(record.to_dict(), indent=2, sort_keys=True), encoding="utf-8")
+        return record
+
     def list_bugs(self) -> list[BugRecord]:
         records: list[BugRecord] = []
         for path in sorted(self.root.glob("BUG-*.json")):
@@ -144,6 +159,18 @@ class BugStore:
 
     def export(self) -> dict[str, Any]:
         return {"bugs": [record.to_dict() for record in self.list_bugs()]}
+
+
+@dataclass(frozen=True)
+class RegressionResult:
+    bug_id: str
+    status: str
+    test_path: str
+    skipped: bool
+    reason: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 class SessionReviewer:
@@ -213,6 +240,96 @@ class SessionReviewer:
         payload = self.bug_store.export()
         self._audit("bugs.export", session_id="bug_cli", request_id="bugs_export", summary=f"exported {len(payload['bugs'])} bugs")
         return payload
+
+    def create_regression(self, bug_id: str) -> RegressionResult:
+        record = self.bug_store.get(bug_id)
+        if record is None:
+            raise ValueError("bug not found")
+        result = _write_regression_test(record, self.project_root)
+        record.status = "regression_added"
+        record.regression_test_path = result.test_path
+        if result.test_path not in record.linked_tests:
+            record.linked_tests.append(result.test_path)
+        self.bug_store.save(record)
+        self._audit(
+            "bugs.create_regression",
+            session_id=record.session_id or "bug_cli",
+            request_id=record.bug_id,
+            summary=f"created regression scaffold for {record.bug_id}",
+            files_written=[result.test_path],
+            args={"bug_id": record.bug_id, "test_path": result.test_path, "skipped": result.skipped},
+        )
+        return result
+
+    def create_regressions_for_session(self, session_id: str) -> list[RegressionResult]:
+        results: list[RegressionResult] = []
+        for record in self.bug_store.list_bugs():
+            if record.session_id == session_id and record.status not in {"fixed", "wontfix"}:
+                results.append(self.create_regression(record.bug_id))
+        if not results:
+            self._audit(
+                "bugs.create_regressions",
+                session_id=session_id,
+                request_id=f"regressions_{session_id}",
+                summary="no eligible bugs for regression scaffolds",
+                args={"session_id": session_id},
+            )
+        return results
+
+    def link_test(self, bug_id: str, test_path: str) -> BugRecord:
+        record = self.bug_store.get(bug_id)
+        if record is None:
+            raise ValueError("bug not found")
+        normalized = _safe_relative_test_path(test_path)
+        if normalized not in record.linked_tests:
+            record.linked_tests.append(normalized)
+        if not record.regression_test_path:
+            record.regression_test_path = normalized
+        updated = self.bug_store.save(record)
+        self._audit(
+            "bugs.link_test",
+            session_id=record.session_id or "bug_cli",
+            request_id=record.bug_id,
+            summary=f"linked test to {record.bug_id}",
+            args={"bug_id": record.bug_id, "test_path": normalized},
+        )
+        return updated
+
+    def mark_fixed(self, bug_id: str, *, reason: str = "") -> BugRecord:
+        record = self.bug_store.get(bug_id)
+        if record is None:
+            raise ValueError("bug not found")
+        if not record.linked_tests and not reason.strip():
+            raise ValueError("mark-fixed requires a linked regression test or an explicit --reason")
+        record.status = "fixed"
+        if reason.strip():
+            record.resolution_note = redact_text(reason.strip())
+        updated = self.bug_store.save(record)
+        self._audit(
+            "bugs.mark_fixed",
+            session_id=record.session_id or "bug_cli",
+            request_id=record.bug_id,
+            summary=f"marked {record.bug_id} fixed",
+            args={"bug_id": record.bug_id, "has_linked_tests": bool(record.linked_tests)},
+        )
+        return updated
+
+    def mark_wontfix(self, bug_id: str, *, reason: str = "") -> BugRecord:
+        record = self.bug_store.get(bug_id)
+        if record is None:
+            raise ValueError("bug not found")
+        record.status = "wontfix"
+        if reason.strip():
+            record.resolution_note = redact_text(reason.strip())
+        updated = self.bug_store.save(record)
+        self._audit(
+            "bugs.mark_wontfix",
+            session_id=record.session_id or "bug_cli",
+            request_id=record.bug_id,
+            summary=f"marked {record.bug_id} wontfix",
+            args={"bug_id": record.bug_id},
+        )
+        return updated
 
     def _write_report(self, session_id: str, report: dict[str, Any]) -> Path:
         path = self.report_root / f"review_{session_id}.json"
@@ -536,3 +653,141 @@ def _approval_friction(commands: list[CommandRecord], feedback: list[FeedbackRec
         if command.exit_code != 0 and "approval" in text:
             flags.append(_command_summary(command))
     return flags
+
+
+def _write_regression_test(record: BugRecord, project_root: Path) -> RegressionResult:
+    regression_dir = project_root / "tests" / "regressions"
+    regression_dir.mkdir(parents=True, exist_ok=True)
+    path = regression_dir / f"test_{record.bug_id.lower().replace('-', '_')}.py"
+    content, skipped, reason = _regression_test_content(record)
+    if not path.exists():
+        path.write_text(content, encoding="utf-8")
+    relative = path.relative_to(project_root).as_posix()
+    return RegressionResult(record.bug_id, "created" if path.exists() else "error", relative, skipped, reason)
+
+
+def _regression_test_content(record: BugRecord) -> tuple[str, bool, str]:
+    reproduction = _sanitize_for_test(record.reproduction_command)
+    expected = _sanitize_for_test(record.expected_behavior)
+    actual = _sanitize_for_test(record.actual_behavior)
+    title = _sanitize_for_test(record.title)
+    suggested = _sanitize_for_test(record.suggested_regression_test)
+    markers = _regression_markers(record)
+    skip_reason = _regression_skip_reason(record)
+    lines = [
+        "from __future__ import annotations",
+        "",
+        "import pytest",
+        "",
+        f"BUG_ID = {record.bug_id!r}",
+        f"BUG_TITLE = {title!r}",
+        f"REPRODUCTION_COMMAND = {reproduction!r}",
+        f"EXPECTED_BEHAVIOR = {expected!r}",
+        f"ACTUAL_BEHAVIOR = {actual!r}",
+        f"SUGGESTED_REGRESSION = {suggested!r}",
+        "",
+        *_comment_block("Reproduction command", reproduction),
+        *_comment_block("Expected behavior", expected),
+        *_comment_block("Observed behavior", actual),
+        "",
+    ]
+    lines.extend(markers)
+    lines.extend(
+        [
+            f"def test_{record.bug_id.lower().replace('-', '_')}_regression_scaffold() -> None:",
+            f"    pytest.skip({skip_reason!r})",
+            "",
+        ]
+    )
+    return "\n".join(lines), True, skip_reason
+
+
+def _regression_markers(record: BugRecord) -> list[str]:
+    markers: list[str] = []
+    if _is_live_only_bug(record):
+        markers.append("@pytest.mark.integration")
+        if "lmstudio" in _bug_text(record) or "lm studio" in _bug_text(record):
+            markers.append("@pytest.mark.live_lmstudio")
+        elif "web" in _bug_text(record) or "brave" in _bug_text(record):
+            markers.append("@pytest.mark.live_web")
+    if _is_personal_data_bug(record):
+        markers.append("@pytest.mark.personal_data")
+    return markers
+
+
+def _regression_skip_reason(record: BugRecord) -> str:
+    if _is_personal_data_bug(record):
+        return f"{record.bug_id}: personal-data regression requires a sanitized fixture before enabling"
+    if _is_live_only_bug(record):
+        return f"{record.bug_id}: live-provider regression scaffold; convert to mocked/unit coverage when possible"
+    return f"{record.bug_id}: regression scaffold generated from bug report; replace skip with focused mocked assertions"
+
+
+def _safe_relative_test_path(test_path: str) -> str:
+    candidate = Path(test_path)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        raise ValueError("test path must be relative and stay inside tests/")
+    normalized = candidate.as_posix()
+    if not normalized.startswith("tests/"):
+        raise ValueError("test path must be under tests/")
+    return normalized
+
+
+def _sanitize_for_test(value: str) -> str:
+    return redact_text(value).replace("\r", "\n")[:1200]
+
+
+def _comment_block(label: str, value: str) -> list[str]:
+    lines = [f"# {label}:"]
+    text = value or "unavailable"
+    for line in text.splitlines() or ["unavailable"]:
+        lines.append(f"#   {line[:160]}")
+    return lines
+
+
+def _bug_text(record: BugRecord) -> str:
+    return "\n".join(
+        [
+            record.title,
+            record.feature,
+            record.reproduction_command,
+            record.expected_behavior,
+            record.actual_behavior,
+            record.stdout_stderr_excerpt,
+            record.suggested_regression_test,
+        ]
+    ).lower()
+
+
+def _is_live_only_bug(record: BugRecord) -> bool:
+    text = _bug_text(record)
+    return any(
+        token in text
+        for token in (
+            "live provider",
+            "live-only",
+            "requires live",
+            "real provider",
+            "configured provider",
+            "lmstudio",
+            "lm studio",
+            "brave search",
+        )
+    )
+
+
+def _is_personal_data_bug(record: BugRecord) -> bool:
+    text = _bug_text(record)
+    return record.feature.lower() in PERSONAL_BUG_FEATURES or any(
+        token in text
+        for token in (
+            "local_private_data",
+            "untrusted_email",
+            "untrusted_message",
+            "personal data",
+            "calendar",
+            "contacts",
+            "email",
+            "messages",
+        )
+    )

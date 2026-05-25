@@ -22,9 +22,145 @@ tools:
     - policy_decision
     - approval_result
     - sanitized_args
+    - network_domains
     - result_summary
     setup_hint: Safe local time tool.
     docs_reference: README.md#usage
+  platform.doctor:
+    capability_name: platform.doctor
+    tool_name: platform.doctor
+    connector_name: platform
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows platform detection, bridge readiness, config, warnings, and next setup steps without platform actions.
+    docs_reference: docs/platforms/PLATFORM_BRIDGE_STRATEGY.md
+  platform.status:
+    capability_name: platform.status
+    tool_name: platform.status
+    connector_name: platform
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows short platform and bridge status metadata without platform actions.
+    docs_reference: docs/platforms/PLATFORM_BRIDGE_STRATEGY.md
+  platform.capabilities:
+    capability_name: platform.capabilities
+    tool_name: platform.capabilities
+    connector_name: platform
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Lists static platform capability metadata; planned/stubbed records are not executable.
+    docs_reference: docs/platforms/CAPABILITY_MATRIX.md
+  platform.matrix:
+    capability_name: platform.matrix
+    tool_name: platform.matrix
+    connector_name: platform
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows a read-only matrix for macOS, iOS companion, Windows, and future app/web bridge capabilities.
+    docs_reference: docs/platforms/CAPABILITY_MATRIX.md
+  platform.explain:
+    capability_name: platform.explain
+    tool_name: platform.explain
+    connector_name: platform
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Explains one platform capability record without executing platform actions.
+    docs_reference: docs/platforms/CAPABILITY_MATRIX.md
   web.search:
     capability_name: web.search
     tool_name: web.search
@@ -49,12 +185,1436 @@ tools:
     - policy_decision
     - approval_result
     - sanitized_args
+    - network_domains
     - result_summary
     - network_domains
     setup_hint: Configure web provider if needed; Brave requires WEB_SEARCH_PROVIDER=brave
       and BRAVE_SEARCH_API_KEY.
     docs_reference: README.md#web-search-and-research
     requires_web_access: true
+  web.search.serpapi:
+    capability_name: web.search.serpapi
+    tool_name: web.search.serpapi
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 5
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    - network_domains
+    setup_hint: Set SERPAPI_API_KEY and ALLOW_PAID_APIS=true, then explicitly choose
+      --provider serpapi. SerpAPI is never selected by default under free_first mode.
+    docs_reference: README.md#web-search-and-research
+    requires_web_access: true
+  web.serpapi.doctor:
+    capability_name: web.serpapi.doctor
+    tool_name: web.serpapi.doctor
+    connector_name: web
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows SerpAPI setup status without provider calls.
+    docs_reference: docs/web/providers/serpapi.md
+  web.searxng.doctor:
+    capability_name: web.searxng.doctor
+    tool_name: web.searxng.doctor
+    connector_name: web
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows SearXNG setup status without provider calls.
+    docs_reference: docs/web/providers/searxng.md
+  web.brave.doctor:
+    capability_name: web.brave.doctor
+    tool_name: web.brave.doctor
+    connector_name: web
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows Brave Search setup status without provider calls or printing API keys.
+    docs_reference: docs/web/providers/brave.md
+  web.providers:
+    capability_name: web.providers
+    tool_name: web.providers
+    connector_name: web
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Lists web provider policy metadata only; no provider API calls are made.
+    docs_reference: docs/connectors/PROVIDER_SELECTION.md
+  web.search_providers:
+    capability_name: web.search_providers
+    tool_name: web.search_providers
+    connector_name: web
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Lists pluggable search provider registry metadata only; no provider API calls are made.
+    docs_reference: docs/web/SEARCH_PROVIDER_REGISTRY.md
+  web.official_apis:
+    capability_name: web.official_apis
+    tool_name: web.official_apis
+    connector_name: web
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Lists official API provider registry metadata only; no provider API calls are made.
+    docs_reference: docs/web/OFFICIAL_API_CONNECTORS.md
+  web.official_api.status:
+    capability_name: web.official_api.status
+    tool_name: web.official_api.status
+    connector_name: web
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows one official API provider setup status without provider calls.
+    docs_reference: docs/web/OFFICIAL_API_CONNECTORS.md
+  web.official_api.search:
+    capability_name: web.official_api.search
+    tool_name: web.official_api.search
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Uses configured official API providers only; framework stubs return setup hints until live connectors are explicitly implemented/configured.
+    docs_reference: docs/web/OFFICIAL_API_CONNECTORS.md
+    requires_web_access: true
+  reddit.status:
+    capability_name: reddit.status
+    tool_name: reddit.status
+    connector_name: reddit
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Reddit status/doctor diagnostics are metadata-only and fetch no posts/comments; set REDDIT_ENABLED=true with OAuth config before read-only connector use.
+    docs_reference: docs/forums/REDDIT_COMPLIANCE.md
+  reddit.auth_check:
+    capability_name: reddit.auth_check
+    tool_name: reddit.auth_check
+    connector_name: reddit
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 5
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Reddit auth-check must be explicitly invoked and may call only Reddit OAuth/token status endpoints; it never fetches posts or comments.
+    docs_reference: docs/forums/REDDIT_COMPLIANCE.md
+    requires_web_access: true
+  reddit.search_posts:
+    capability_name: reddit.search_posts
+    tool_name: reddit.search_posts
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit search uses the official Reddit Data API only; set REDDIT_ENABLED=true with OAuth config before use. Web scraping fallback is forbidden.
+    docs_reference: docs/forums/REDDIT_COMPLIANCE.md
+    requires_web_access: true
+  reddit.search_subreddit:
+    capability_name: reddit.search_subreddit
+    tool_name: reddit.search_subreddit
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit subreddit search uses the official Reddit Data API only; OAuth and rate-limit compliance are required before use.
+    docs_reference: docs/forums/REDDIT_COMPLIANCE.md
+    requires_web_access: true
+  reddit.fetch_subreddit_info:
+    capability_name: reddit.fetch_subreddit_info
+    tool_name: reddit.fetch_subreddit_info
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit subreddit info fetch uses the official Reddit Data API only; OAuth and rate-limit compliance are required before use.
+    docs_reference: docs/forums/REDDIT_COMPLIANCE.md
+    requires_web_access: true
+  reddit.fetch_post:
+    capability_name: reddit.fetch_post
+    tool_name: reddit.fetch_post
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit post fetch uses the official Reddit Data API only; fetched content must be UNTRUSTED_WEB and retention-bounded.
+    docs_reference: docs/forums/REDDIT_RETENTION.md
+    requires_web_access: true
+  reddit.fetch_comments:
+    capability_name: reddit.fetch_comments
+    tool_name: reddit.fetch_comments
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit comments fetch uses the official Reddit Data API only; deleted/removed content and author metadata must not be retained by default.
+    docs_reference: docs/forums/REDDIT_RETENTION.md
+    requires_web_access: true
+  reddit.fetch_thread:
+    capability_name: reddit.fetch_thread
+    tool_name: reddit.fetch_thread
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit thread fetch uses the official Reddit Data API only; comments are bounded, author metadata is redacted by default, and web scraping fallback is forbidden.
+    docs_reference: docs/forums/REDDIT_THREAD_FETCH.md
+    requires_web_access: true
+  reddit.thread_export:
+    capability_name: reddit.thread_export
+    tool_name: reddit.thread_export
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: workspace_write
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - files_written
+    - result_summary
+    setup_hint: Reddit thread export fetches through the official API connector and writes only to the approved workspace as UNTRUSTED_DOCUMENT.
+    docs_reference: docs/forums/REDDIT_THREAD_FETCH.md
+    requires_web_access: true
+  reddit.summarize_thread:
+    capability_name: reddit.summarize_thread
+    tool_name: reddit.summarize_thread
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit thread summaries fetch through the official API connector, cite source IDs/permalinks, exclude deleted/removed content, and store no summary memory.
+    docs_reference: docs/forums/REDDIT_SUMMARIZATION.md
+    requires_web_access: true
+  reddit.summarize_search:
+    capability_name: reddit.summarize_search
+    tool_name: reddit.summarize_search
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit search summaries use official API search snippets only unless a thread is explicitly fetched; no search history or summaries are stored in memory.
+    docs_reference: docs/forums/REDDIT_SUMMARIZATION.md
+    requires_web_access: true
+  reddit.consensus:
+    capability_name: reddit.consensus
+    tool_name: reddit.consensus
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit consensus summaries are anecdotal and source-grounded; they must not claim statistical representativeness.
+    docs_reference: docs/forums/REDDIT_SUMMARIZATION.md
+    requires_web_access: true
+  reddit.pros_cons:
+    capability_name: reddit.pros_cons
+    tool_name: reddit.pros_cons
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit pros/cons summaries are source-grounded and anecdotal; source IDs and limitations are required.
+    docs_reference: docs/forums/REDDIT_SUMMARIZATION.md
+    requires_web_access: true
+  reddit.complaints:
+    capability_name: reddit.complaints
+    tool_name: reddit.complaints
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit complaint summaries are anecdotal and must cite source IDs/permalinks without storing summaries in memory.
+    docs_reference: docs/forums/REDDIT_SUMMARIZATION.md
+    requires_web_access: true
+  reddit.buying_advice:
+    capability_name: reddit.buying_advice
+    tool_name: reddit.buying_advice
+    connector_name: reddit
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Reddit buying advice summaries use anecdotal Reddit evidence only; verify current specs, prices, and safety elsewhere.
+    docs_reference: docs/forums/REDDIT_SUMMARIZATION.md
+    requires_web_access: true
+  reddit.explain_result:
+    capability_name: reddit.explain_result
+    tool_name: reddit.explain_result
+    connector_name: reddit
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 120
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Reddit explain-result reads local TTL cache metadata by source_id only; it does not call Reddit, scrape web pages, or store search history.
+    docs_reference: docs/forums/REDDIT_SEARCH.md
+    requires_web_access: false
+  reddit.cache_clear:
+    capability_name: reddit.cache_clear
+    tool_name: reddit.cache_clear
+    connector_name: reddit
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - retention_action
+    - result_summary
+    setup_hint: Reddit cache clear deletes TTL-bounded local Reddit cache data only; no permanent user content is stored by default.
+    docs_reference: docs/forums/REDDIT_RETENTION.md
+  reddit.cache_status:
+    capability_name: reddit.cache_status
+    tool_name: reddit.cache_status
+    connector_name: reddit
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Reddit cache status returns TTL cache counts and policy metadata only; no raw Reddit content or search history is returned.
+    docs_reference: docs/forums/REDDIT_RETENTION.md
+  reddit.retention_status:
+    capability_name: reddit.retention_status
+    tool_name: reddit.retention_status
+    connector_name: reddit
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - retention_action
+    - result_summary
+    setup_hint: Reddit retention status returns configured TTL, author-metadata, query-history, and policy-guarantee flags without raw content.
+    docs_reference: docs/forums/REDDIT_RETENTION.md
+  reddit.retention_sweep:
+    capability_name: reddit.retention_sweep
+    tool_name: reddit.retention_sweep
+    connector_name: reddit
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - retention_action
+    - result_summary
+    setup_hint: Reddit retention sweep deletes expired cached content and author-identifying data according to configured TTLs.
+    docs_reference: docs/forums/REDDIT_RETENTION.md
+  reddit.privacy_report:
+    capability_name: reddit.privacy_report
+    tool_name: reddit.privacy_report
+    connector_name: reddit
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - retention_action
+    - result_summary
+    setup_hint: Reddit privacy report returns counts only; it never returns raw post/comment bodies, authors, or query text.
+    docs_reference: docs/forums/REDDIT_RETENTION.md
+  v2ex.status:
+    capability_name: v2ex.status
+    tool_name: v2ex.status
+    connector_name: v2ex
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows V2EX config and policy status without fetching topics or replies.
+    docs_reference: docs/forums/providers/v2ex.md
+  v2ex.nodes.get:
+    capability_name: v2ex.nodes.get
+    tool_name: v2ex.nodes.get
+    connector_name: v2ex
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: cache_only
+    audit_fields: &v2ex_audit_fields
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Set V2EX_ENABLED=true for documented read-only API access; V2EX_TOKEN is optional and redacted.
+    docs_reference: docs/forums/providers/v2ex.md
+  v2ex.node_topics:
+    capability_name: v2ex.node_topics
+    tool_name: v2ex.node_topics
+    connector_name: v2ex
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: cache_only
+    audit_fields: *v2ex_audit_fields
+    setup_hint: Fetches public V2EX node topics through documented read-only API endpoints only.
+    docs_reference: docs/forums/providers/v2ex.md
+  v2ex.topic.get:
+    capability_name: v2ex.topic.get
+    tool_name: v2ex.topic.get
+    connector_name: v2ex
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: cache_only
+    audit_fields: *v2ex_audit_fields
+    setup_hint: Fetches one public V2EX topic through documented read-only API endpoints only.
+    docs_reference: docs/forums/providers/v2ex.md
+  v2ex.topic_replies:
+    capability_name: v2ex.topic_replies
+    tool_name: v2ex.topic_replies
+    connector_name: v2ex
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: cache_only
+    audit_fields: *v2ex_audit_fields
+    setup_hint: Fetches public V2EX replies through documented read-only API endpoints only.
+    docs_reference: docs/forums/providers/v2ex.md
+  v2ex.latest:
+    capability_name: v2ex.latest
+    tool_name: v2ex.latest
+    connector_name: v2ex
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: cache_only
+    audit_fields: *v2ex_audit_fields
+    setup_hint: Fetches latest public V2EX topics through documented read-only API endpoints only.
+    docs_reference: docs/forums/providers/v2ex.md
+  v2ex.hot:
+    capability_name: v2ex.hot
+    tool_name: v2ex.hot
+    connector_name: v2ex
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: cache_only
+    audit_fields: *v2ex_audit_fields
+    setup_hint: Fetches hot public V2EX topics through documented read-only API endpoints only.
+    docs_reference: docs/forums/providers/v2ex.md
+  forums.research:
+    capability_name: forums.research
+    tool_name: forums.research
+    connector_name: forums
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    requires_web_access: true
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Cross-language forum research uses configured official/API providers only; V2EX/web/Chinese discovery paths return setup or unavailable until approved connectors are configured.
+    docs_reference: docs/forums/CROSS_LANGUAGE_RESEARCH.md
+  forums.compare:
+    capability_name: forums.compare
+    tool_name: forums.compare
+    connector_name: forums
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    requires_web_access: true
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Cross-language forum comparison compares source-labeled items only and does not claim cultural or statistical consensus from sparse data.
+    docs_reference: docs/forums/CROSS_LANGUAGE_RESEARCH.md
+  forums.providers:
+    capability_name: forums.providers
+    tool_name: forums.providers
+    connector_name: forums
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Forum provider registry lists static provider metadata without network calls, logged-in reads, or personal-data access.
+    docs_reference: docs/forums/FORUM_PROVIDER_REGISTRY.md
+  forums.status:
+    capability_name: forums.status
+    tool_name: forums.status
+    connector_name: forums
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Forum provider status reports static/config metadata only and performs no forum content fetch.
+    docs_reference: docs/forums/FORUM_PROVIDER_REGISTRY.md
+  forums.doctor:
+    capability_name: forums.doctor
+    tool_name: forums.doctor
+    connector_name: forums
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Forum doctor checks registry metadata only and never uses login cookies, private pages, or provider APIs.
+    docs_reference: docs/forums/FORUM_PROVIDER_REGISTRY.md
+  forums.capabilities:
+    capability_name: forums.capabilities
+    tool_name: forums.capabilities
+    connector_name: forums
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Forum provider capabilities lists read/write metadata only; write capabilities are absent or deferred.
+    docs_reference: docs/forums/FORUM_PROVIDER_REGISTRY.md
+  cn_forums.providers:
+    capability_name: cn_forums.providers
+    tool_name: cn_forums.providers
+    connector_name: cn_forums
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Chinese/forum provider listing is static metadata only and performs no network, login, cookie, or personal-data reads.
+    docs_reference: docs/forums/CHINESE_FORUM_DISCOVERY.md
+  cn_forums.search:
+    capability_name: cn_forums.search
+    tool_name: cn_forums.search
+    connector_name: cn_forums
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Chinese/forum search uses approved web search provider site filters only; configure a free/self-hosted search provider such as SearXNG for live use.
+    docs_reference: docs/forums/CHINESE_FORUM_DISCOVERY.md
+  cn_forums.fetch:
+    capability_name: cn_forums.fetch
+    tool_name: cn_forums.fetch
+    connector_name: cn_forums
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Chinese/forum fetch reads selected public URLs only through safe web fetch policy; blocked/login/CAPTCHA pages return unavailable.
+    docs_reference: docs/forums/CHINESE_FORUM_DISCOVERY.md
+  cn_forums.research:
+    capability_name: cn_forums.research
+    tool_name: cn_forums.research
+    connector_name: cn_forums
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 5
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Chinese/forum research combines approved site-filter search, selected public fetch, and local translation labels; no scraping, cookies, paid provider default, or memory write.
+    docs_reference: docs/forums/CHINESE_FORUM_DISCOVERY.md
+  language.detect:
+    capability_name: language.detect
+    tool_name: language.detect
+    connector_name: language
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Language detection is local heuristic detection for forum/web/document text; it does not call external APIs or store text.
+    docs_reference: docs/language/MULTILINGUAL_SUPPORT.md
+  language.translate_text:
+    capability_name: language.translate_text
+    tool_name: language.translate_text
+    connector_name: language
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Translation uses the local LM Studio/Qwopus model by default, labels output as model-generated, and does not use external translation APIs.
+    docs_reference: docs/language/MULTILINGUAL_SUPPORT.md
+  language.summarize_multilingual:
+    capability_name: language.summarize_multilingual
+    tool_name: language.summarize_multilingual
+    connector_name: language
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Multilingual summaries are model-generated interpretation layers over untrusted sources and are not new evidence.
+    docs_reference: docs/language/MULTILINGUAL_SUPPORT.md
+  language.extract_terms:
+    capability_name: language.extract_terms
+    tool_name: language.extract_terms
+    connector_name: language
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Glossary extraction preserves source terms with notes and writes no memory by default.
+    docs_reference: docs/language/MULTILINGUAL_SUPPORT.md
+  web.provider_policy:
+    capability_name: web.provider_policy
+    tool_name: web.provider_policy
+    connector_name: web
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows cost-aware web provider policy and defaults without provider calls.
+    docs_reference: docs/connectors/COST_POLICY.md
+  web.provider_decision:
+    capability_name: web.provider_decision
+    tool_name: web.provider_decision
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Explains deterministic web provider selection without executing provider calls or storing query history.
+    docs_reference: docs/connectors/PROVIDER_SELECTION.md
   web.fetch_url:
     capability_name: web.fetch_url
     tool_name: web.fetch_url
@@ -88,6 +1648,514 @@ tools:
     timeout_seconds: 10
     blocked_domains: []
     allowed_domains: []
+  web.extract_readable_text:
+    capability_name: web.extract_readable_text
+    tool_name: web.extract_readable_text
+    connector_name: web
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Fetches a selected public URL and returns sanitized readable text as untrusted web data.
+    docs_reference: docs/web/SAFE_FETCH_AND_EXTRACTION.md
+    requires_web_access: true
+  web.extract_metadata:
+    capability_name: web.extract_metadata
+    tool_name: web.extract_metadata
+    connector_name: web
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Fetches a selected public URL and returns title/canonical/author/date metadata as untrusted web data.
+    docs_reference: docs/web/SAFE_FETCH_AND_EXTRACTION.md
+    requires_web_access: true
+  web.robots:
+    capability_name: web.robots
+    tool_name: web.robots
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Fetches public robots.txt only; no CAPTCHA, login, browser profile, or
+      anti-bot bypass is attempted.
+    docs_reference: README.md#free-first-web-acquisition
+    requires_web_access: true
+  web.sitemap:
+    capability_name: web.sitemap
+    tool_name: web.sitemap
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Uses robots-discovered sitemaps or /sitemap.xml for public URLs; fetched
+      XML is untrusted document data.
+    docs_reference: README.md#free-first-web-acquisition
+    requires_web_access: true
+  web.feed:
+    capability_name: web.feed
+    tool_name: web.feed
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Fetches explicit RSS/Atom feed URLs only; feed content is untrusted data.
+    docs_reference: README.md#free-first-web-acquisition
+    requires_web_access: true
+  web.robots.check:
+    capability_name: web.robots.check
+    tool_name: web.robots.check
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Alias for public robots.txt checks; no CAPTCHA, login, browser profile,
+      or anti-bot bypass is attempted.
+    docs_reference: docs/web/ROBOTS_AND_RATE_LIMITS.md
+    requires_web_access: true
+  web.sitemap.fetch:
+    capability_name: web.sitemap.fetch
+    tool_name: web.sitemap.fetch
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Alias for public sitemap fetches; fetched XML is untrusted document
+      data and article/page bodies are not fetched.
+    docs_reference: docs/web/FEEDS_AND_SITEMAPS.md
+    requires_web_access: true
+  web.feed.fetch:
+    capability_name: web.feed.fetch
+    tool_name: web.feed.fetch
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Alias for explicit RSS/Atom feed fetches; feed content is untrusted
+      data and article bodies are not fetched.
+    docs_reference: docs/web/FEEDS_AND_SITEMAPS.md
+    requires_web_access: true
+  web.acquire_url:
+    capability_name: web.acquire_url
+    tool_name: web.acquire_url
+    connector_name: web
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Fetches an explicit public URL through the free-first acquisition ladder,
+      respects robots.txt when available, and returns blocked/CAPTCHA pages as unavailable.
+    docs_reference: README.md#free-first-web-acquisition
+    requires_web_access: true
+  web.acquire:
+    capability_name: web.acquire
+    tool_name: web.acquire
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Queries use local cache, direct URL, domain sitemap, RSS/Atom, or configured
+      free providers first; paid providers are skipped unless cost policy explicitly allows them.
+    docs_reference: README.md#free-first-web-acquisition
+    requires_web_access: true
+  web.source_status:
+    capability_name: web.source_status
+    tool_name: web.source_status
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - network_domains
+    setup_hint: Inspects acquisition routing for an explicit public URL without fetching
+      content, using the cost-aware provider policy and blocked-domain rules.
+    docs_reference: README.md#free-first-web-acquisition
+    requires_web_access: false
+  web.cache.lookup:
+    capability_name: web.cache.lookup
+    tool_name: web.cache.lookup
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - files_read
+    - network_domains
+    - result_summary
+    setup_hint: Looks up public web cache metadata by source ID, URL, or query hash;
+      raw search queries are not persisted by default.
+    docs_reference: docs/web/WEB_CACHE_POLICY.md
+    requires_web_access: false
+  web.cache.clear:
+    capability_name: web.cache.clear
+    tool_name: web.cache.clear
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - files_written
+    - network_domains
+    - result_summary
+    setup_hint: Clears public web cache and local index metadata.
+    docs_reference: docs/web/WEB_CACHE_POLICY.md
+    requires_web_access: false
+  web.cache.status:
+    capability_name: web.cache.status
+    tool_name: web.cache.status
+    connector_name: web
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - files_read
+    - network_domains
+    - result_summary
+    setup_hint: Shows public web cache/index status without network calls.
+    docs_reference: docs/web/WEB_CACHE_POLICY.md
+    requires_web_access: false
+  web.index.search:
+    capability_name: web.index.search
+    tool_name: web.index.search
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - files_read
+    - network_domains
+    - result_summary
+    setup_hint: Searches local public web index metadata; query text is redacted in
+      audit logs and not persisted.
+    docs_reference: docs/web/LOCAL_WEB_INDEX.md
+    requires_web_access: false
+  web.index.add_public_source:
+    capability_name: web.index.add_public_source
+    tool_name: web.index.add_public_source
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - files_written
+    - network_domains
+    - result_summary
+    setup_hint: Adds public unauthenticated web source metadata to the cache and index;
+      personal/authenticated content and raw query history are denied by default.
+    docs_reference: docs/web/LOCAL_WEB_INDEX.md
+    requires_web_access: false
+  web.index.rebuild:
+    capability_name: web.index.rebuild
+    tool_name: web.index.rebuild
+    connector_name: web
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit: null
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - files_read
+    - files_written
+    - network_domains
+    - result_summary
+    setup_hint: Rebuilds the local web index from non-expired public cache metadata
+      only; it does not refresh sources or make network calls.
+    docs_reference: docs/web/LOCAL_WEB_INDEX.md
+    requires_web_access: false
   weather.status:
     capability_name: weather.status
     tool_name: weather.status
@@ -729,6 +2797,35 @@ tools:
     setup_hint: Memory context injection is bounded, non-personal by default, and
       audited with injected memory ids.
     docs_reference: README.md#memory
+  native_skills.inspect_skill:
+    capability_name: native_skills.inspect_skill
+    tool_name: native_skills.inspect_skill
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Inspect only approved workspace/project skill paths or native skill
+      ids. Skill text is untrusted document data and is never executed.
+    docs_reference: docs/native_skills/SKILL_INSPECTION.md
   native_skills.vet_skill_file:
     capability_name: native_skills.vet_skill_file
     tool_name: native_skills.vet_skill_file
@@ -757,7 +2854,7 @@ tools:
     - files_read
     setup_hint: Vet only workspace skill files. External skill text is untrusted
       data and is never executed during intake.
-    docs_reference: docs/native_skills/SKILL_INTAKE_PROCESS.md
+    docs_reference: docs/native_skills/SKILL_VETTING.md
   native_skills.vet_skill_folder:
     capability_name: native_skills.vet_skill_folder
     tool_name: native_skills.vet_skill_folder
@@ -786,7 +2883,7 @@ tools:
     - files_read
     setup_hint: Vet only workspace skill folders. Scripts, binaries, and dependency
       manifests are inventoried but never executed.
-    docs_reference: docs/native_skills/SKILL_INTAKE_PROCESS.md
+    docs_reference: docs/native_skills/SKILL_VETTING.md
   native_skills.score_candidate:
     capability_name: native_skills.score_candidate
     tool_name: native_skills.score_candidate
@@ -815,7 +2912,36 @@ tools:
     - files_read
     setup_hint: Score a workspace skill candidate without storing content in memory
       or executing external code.
-    docs_reference: docs/native_skills/SKILL_INTAKE_PROCESS.md
+    docs_reference: docs/native_skills/SKILL_VETTING.md
+  native_skills.report_last:
+    capability_name: native_skills.report_last
+    tool_name: native_skills.report_last
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Read the latest local static vetting report from reports/native_skills
+      without executing candidate code.
+    docs_reference: docs/native_skills/SKILL_VETTING.md
   native_skills.find_skill:
     capability_name: native_skills.find_skill
     tool_name: native_skills.find_skill
@@ -1236,6 +3362,1119 @@ tools:
     selected_scope_only: true
     draft_only: true
     sending_implemented: false
+  messaging.channels:
+    capability_name: messaging.channels
+    tool_name: messaging.channels
+    connector_name: messaging
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists channel-neutral messaging metadata only; no private app data,
+      connector reads, or sends.
+    docs_reference: README.md#messaging-architecture
+    sends_message: false
+    reads_private_app_data: false
+  messaging.draft_show:
+    capability_name: messaging.draft_show
+    tool_name: messaging.draft_show
+    connector_name: messaging
+    risk_level: LOW
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows a redacted local draft preview from ./workspace/messaging/drafts;
+      no private app data or send path is used.
+    docs_reference: README.md#messaging-architecture
+    workspace_only: true
+    sends_message: false
+  messaging.draft.preview:
+    capability_name: messaging.draft.preview
+    tool_name: messaging.draft.preview
+    connector_name: messaging
+    risk_level: LOW
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows a redacted local draft preview from ./workspace/messaging/drafts;
+      no private app data or send path is used.
+    docs_reference: README.md#messaging-architecture
+    workspace_only: true
+    sends_message: false
+  messaging.draft.create:
+    capability_name: messaging.draft.create
+    tool_name: messaging.draft.create
+    connector_name: messaging
+    risk_level: MEDIUM
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    setup_hint: Creates or replaces a local workspace message draft; no private app
+      data is read, no memory is written, and any stale send action approval is invalidated.
+    docs_reference: README.md#messaging-architecture
+    workspace_only: true
+    sends_message: false
+  messaging.draft_validate:
+    capability_name: messaging.draft_validate
+    tool_name: messaging.draft_validate
+    connector_name: messaging
+    risk_level: LOW
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Validates a local draft schema from ./workspace/messaging/drafts; no
+      private app data or send path is used.
+    docs_reference: README.md#messaging-architecture
+    workspace_only: true
+    sends_message: false
+  messaging.action.create_send:
+    capability_name: messaging.action.create_send
+    tool_name: messaging.action.create_send
+    connector_name: messaging
+    risk_level: MEDIUM
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Creates a CRITICAL Action Center send proposal from a local draft;
+      it does not send and stores exact preview locally for approval only.
+    docs_reference: README.md#messaging-architecture
+    workspace_only: true
+    sends_message: false
+  messages.inbox.import_manual:
+    capability_name: messages.inbox.import_manual
+    tool_name: messages.inbox.import_manual
+    connector_name: messaging_inbound
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
+    setup_hint: Imports one user-selected workspace message file into the local manual
+      inbox; no private Messages database, Full Disk Access, watcher, or send path is used.
+    docs_reference: docs/decisions/incoming_message_strategy.md
+    workspace_only: true
+    sends_message: false
+    reads_private_app_data: false
+    requires_full_disk_access: false
+  messages.inbox.list:
+    capability_name: messages.inbox.list
+    tool_name: messages.inbox.list
+    connector_name: messaging_inbound
+    risk_level: LOW
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists local manual/mock incoming message metadata only; no private
+      Messages database or background watcher is used.
+    docs_reference: docs/decisions/incoming_message_strategy.md
+    sends_message: false
+    reads_private_app_data: false
+  messages.inbox.show:
+    capability_name: messages.inbox.show
+    tool_name: messages.inbox.show
+    connector_name: messaging_inbound
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 60
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows one local manual/mock incoming message as untrusted data; no
+      private Messages database read or memory write occurs.
+    docs_reference: docs/decisions/incoming_message_strategy.md
+    sends_message: false
+    reads_private_app_data: false
+  messages.inbox.draft_reply:
+    capability_name: messages.inbox.draft_reply
+    tool_name: messages.inbox.draft_reply
+    connector_name: messaging_inbound
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    setup_hint: Creates a local draft reply to one manual/mock incoming message; it
+      never sends, auto-replies, or writes message content to memory.
+    docs_reference: docs/decisions/incoming_message_strategy.md
+    workspace_only: true
+    sends_message: false
+    automatic_reply: false
+  messaging.ios_compose.create_handoff:
+    capability_name: messaging.ios_compose.create_handoff
+    tool_name: messaging.ios_compose.create_handoff
+    connector_name: messaging
+    risk_level: MEDIUM
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    setup_hint: Creates a local iOS user-confirmed compose handoff payload from a
+      local draft; requires an approved Action Center item or explicit compose-only
+      mode and never sends from the agent.
+    docs_reference: README.md#messaging-architecture
+    workspace_only: true
+    sends_message: false
+    silent_send_supported: false
+  messaging.ios_compose.record_result:
+    capability_name: messaging.ios_compose.record_result
+    tool_name: messaging.ios_compose.record_result
+    connector_name: messaging
+    risk_level: MEDIUM
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    setup_hint: Records a result returned by a future iOS companion compose UI;
+      no send is marked complete unless iOS reports sent or queued.
+    docs_reference: README.md#messaging-architecture
+    workspace_only: true
+    sends_message: false
+    silent_send_supported: false
+  messaging.ios_compose.status:
+    capability_name: messaging.ios_compose.status
+    tool_name: messaging.ios_compose.status
+    connector_name: messaging
+    risk_level: LOW
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows local iOS compose handoff payload/result status only; it does
+      not query iOS or send.
+    docs_reference: README.md#messaging-architecture
+    workspace_only: true
+    sends_message: false
+  messaging.send_approved:
+    capability_name: messaging.send_approved
+    tool_name: messaging.send_approved
+    connector_name: messaging
+    risk_level: CRITICAL
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Future message sending remains disabled in v1; any future send must
+      originate from an exact Action Center preview and explicit per-action approval.
+    docs_reference: README.md#messaging-architecture
+    sends_message: true
+    bulk_send_allowed: false
+    direct_send_supported: false
+  messages.macos.status:
+    capability_name: messages.macos.status
+    tool_name: messages.macos.status
+    connector_name: macos_messages_send
+    risk_level: LOW
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Inspects macOS Messages approved-send adapter status only; no send,
+      private Messages database read, or Full Disk Access is used.
+    docs_reference: docs/decisions/macos_messages_automation_strategy.md
+    sends_message: false
+    reads_private_app_data: false
+    requires_full_disk_access: false
+  messages.macos.allowed_recipients.manage:
+    capability_name: messages.macos.allowed_recipients.manage
+    tool_name: messages.macos.allowed_recipients.manage
+    connector_name: macos_messages_send
+    risk_level: MEDIUM
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    setup_hint: Adds one selected recipient to a local allowlist; this does not enable
+      sending and does not bypass Action Center approval.
+    docs_reference: docs/decisions/macos_messages_automation_strategy.md
+    sends_message: false
+    bulk_send_allowed: false
+  messages.macos.live_send_probe:
+    capability_name: messages.macos.live_send_probe
+    tool_name: messages.macos.live_send_probe
+    connector_name: macos_messages_send
+    risk_level: CRITICAL
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 2
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - commands_run
+    - files_written
+    setup_hint: Disabled by default. Sends only a harmless self-test message to an
+      allowlisted self-test recipient after explicit approval.
+    docs_reference: docs/decisions/macos_messages_automation_strategy.md
+    sends_message: true
+    live_probe_only: true
+    reads_private_app_data: false
+    requires_full_disk_access: false
+  messages.macos.send_approved:
+    capability_name: messages.macos.send_approved
+    tool_name: messages.macos.send_approved
+    connector_name: macos_messages_send
+    risk_level: CRITICAL
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 5
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - commands_run
+    - files_written
+    setup_hint: Disabled by default. Executes only one allowlisted macOS Messages
+      draft from an exact approved Action Center item after a recent passing live
+      probe.
+    docs_reference: docs/decisions/macos_messages_automation_strategy.md
+    sends_message: true
+    bulk_send_allowed: false
+    group_send_allowed: false
+    attachments_supported: false
+    direct_send_supported: true
+    requires_action_center: true
+    requires_live_probe: true
+    reads_private_app_data: false
+    requires_full_disk_access: false
+  messages.probe:
+    capability_name: messages.probe
+    tool_name: messages.probe
+    connector_name: messages_probe
+    risk_level: LOW
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - commands_run
+    - files_written
+    setup_hint: Safely probes macOS Messages automation feasibility using metadata-only
+      checks; no message content, private Messages database, Full Disk Access, or
+      send path is used.
+    docs_reference: README.md#messages-draft-only
+    sends_message: false
+    reads_private_app_data: false
+    requires_full_disk_access: false
+    send_capability_known: false
+  apple_business.doctor:
+    capability_name: apple_business.doctor
+    tool_name: apple_business.doctor
+    connector_name: apple_business
+    risk_level: LOW
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Config-only Apple Messages for Business doctor; no provider API call,
+      inbox read, credential print, or send.
+    docs_reference: docs/decisions/apple_messages_for_business_provider.md
+    live_provider_enabled: false
+    sends_message: false
+  apple_business.status:
+    capability_name: apple_business.status
+    tool_name: apple_business.status
+    connector_name: apple_business
+    risk_level: LOW
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows disabled-by-default Apple Messages for Business provider metadata;
+      no credentials or provider calls are used.
+    docs_reference: docs/decisions/apple_messages_for_business_provider.md
+    live_provider_enabled: false
+    sends_message: false
+  apple_business.inbound.receive:
+    capability_name: apple_business.inbound.receive
+    tool_name: apple_business.inbound.receive
+    connector_name: apple_business
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    setup_hint: Mock inbound only in v1; stores a local untrusted Lead Inbox record
+      under ./workspace/leads/apple_business and does not call a live provider.
+    docs_reference: docs/decisions/apple_messages_for_business_provider.md
+    workspace_only: true
+    live_provider_enabled: false
+    sends_message: false
+  apple_business.message.draft_response:
+    capability_name: apple_business.message.draft_response
+    tool_name: apple_business.message.draft_response
+    connector_name: apple_business
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
+    setup_hint: Creates a local MessageDraft from a mock Apple Business lead; it
+      does not send or create a send action.
+    docs_reference: docs/decisions/apple_messages_for_business_provider.md
+    workspace_only: true
+    sends_message: false
+  apple_business.conversation.status:
+    capability_name: apple_business.conversation.status
+    tool_name: apple_business.conversation.status
+    connector_name: apple_business
+    risk_level: LOW
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Shows local mock Apple Business conversation metadata only; no provider
+      call or send.
+    docs_reference: docs/decisions/apple_messages_for_business_provider.md
+    sends_message: false
+  apple_business.message.send_approved:
+    capability_name: apple_business.message.send_approved
+    tool_name: apple_business.message.send_approved
+    connector_name: apple_business
+    risk_level: CRITICAL
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Future Apple Messages for Business send remains disabled; any future
+      provider send must require exact Action Center preview and CRITICAL per-action
+      approval.
+    docs_reference: docs/decisions/apple_messages_for_business_provider.md
+    sends_message: true
+    bulk_send_allowed: false
+    live_provider_enabled: false
+  lead.inbox.list:
+    capability_name: lead.inbox.list
+    tool_name: lead.inbox.list
+    connector_name: leads
+    risk_level: LOW
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists synthetic/mock lead metadata only; real personal/customer lead
+      providers remain disabled until selected-scope adapters are implemented.
+    docs_reference: docs/workflows/lead_inbox.md
+    provider: mock_only
+    personal_connector_enabled: false
+    sends_message: false
+  lead.inbox.read_selected:
+    capability_name: lead.inbox.read_selected
+    tool_name: lead.inbox.read_selected
+    connector_name: leads
+    risk_level: HIGH
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: true
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Selected lead reads are HIGH risk and disabled by default for real
+      personal/customer data; v1 does not read external providers.
+    docs_reference: docs/workflows/lead_inbox.md
+    selected_scope_only: true
+    personal_connector_enabled: false
+    sends_message: false
+  lead.classify:
+    capability_name: lead.classify
+    tool_name: lead.classify
+    connector_name: leads
+    risk_level: LOW
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Classifies mock/local lead preview text only; no provider reads or
+      actions execute.
+    docs_reference: docs/workflows/lead_inbox.md
+    sends_message: false
+  lead.summarize:
+    capability_name: lead.summarize
+    tool_name: lead.summarize
+    connector_name: leads
+    risk_level: LOW
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Summarizes mock/local lead preview text only; full personal lead reads
+      require a future selected-scope adapter.
+    docs_reference: docs/workflows/lead_inbox.md
+    sends_message: false
+  lead.draft_response:
+    capability_name: lead.draft_response
+    tool_name: lead.draft_response
+    connector_name: leads
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    setup_hint: Creates a local workspace MessageDraft from mock/local lead context;
+      no send action is created and no provider is contacted.
+    docs_reference: docs/workflows/lead_inbox.md
+    workspace_only: true
+    sends_message: false
+  lead.create_follow_up_task:
+    capability_name: lead.create_follow_up_task
+    tool_name: lead.create_follow_up_task
+    connector_name: leads
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Creates a pending Action Center task draft only; it does not create
+      a real reminder/task.
+    docs_reference: docs/workflows/lead_inbox.md
+    sends_message: false
+  lead.suggest_meeting_times:
+    capability_name: lead.suggest_meeting_times
+    tool_name: lead.suggest_meeting_times
+    connector_name: leads
+    risk_level: LOW
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Guidance-only in v1; calendar availability requires a future approved
+      workflow.
+    docs_reference: docs/workflows/lead_inbox.md
+    sends_message: false
+  lead.create_send_action:
+    capability_name: lead.create_send_action
+    tool_name: lead.create_send_action
+    connector_name: leads
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    setup_hint: Creates a CRITICAL Action Center send proposal from a reviewed
+      lead response draft; it does not send and cannot approve itself.
+    docs_reference: docs/workflows/lead_response_send.md
+    workspace_only: true
+    creates_action_center_item: true
+    sends_message: false
+    bulk_send_allowed: false
+  lead.handoff:
+    capability_name: lead.handoff
+    tool_name: lead.handoff
+    connector_name: leads
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Creates save/copy Action Center handoff items for a lead response
+      draft; it does not send or write memory.
+    docs_reference: docs/workflows/lead_response_send.md
+    workspace_only: true
+    creates_action_center_item: true
+    sends_message: false
+    bulk_send_allowed: false
+  lead.mark_responded:
+    capability_name: lead.mark_responded
+    tool_name: lead.mark_responded
+    connector_name: leads
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    setup_hint: Records local lead status after a verified send or explicit user
+      handoff; it does not send or store content in memory.
+    docs_reference: docs/workflows/lead_response_send.md
+    workspace_only: true
+    sends_message: false
+  lead.send_approved:
+    capability_name: lead.send_approved
+    tool_name: lead.send_approved
+    connector_name: leads
+    risk_level: CRITICAL
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: false
+    approval_required: per_action
+    approval_reuse_allowed: false
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Approved lead response send remains disabled as a direct tool; use
+      leads create-send-action and leads send --from-action so existing channel
+      adapters enforce exact Action Center approval, fallback, and provider gates.
+    docs_reference: docs/workflows/lead_response_send.md
+    sends_message: true
+    bulk_send_allowed: false
+    direct_send_supported: false
   messages.read_selected_thread:
     capability_name: messages.read_selected_thread
     tool_name: messages.read_selected_thread
@@ -1388,6 +4627,67 @@ tools:
       Action Center draft before saving inside ./workspace.
     docs_reference: README.md#messages-safe-handoff
     workspace_only: true
+    sends_message: false
+  messages.draft_from_lead:
+    capability_name: messages.draft_from_lead
+    tool_name: messages.draft_from_lead
+    connector_name: messaging_handoff
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_written
+    setup_hint: Creates a local message draft from a selected/mock Lead Inbox record;
+      no provider send, no real Messages database read, and no memory write occurs.
+    docs_reference: README.md#messages-safe-handoff
+    workspace_only: true
+    sends_message: false
+  messages.open_handoff_instructions:
+    capability_name: messages.open_handoff_instructions
+    tool_name: messages.open_handoff_instructions
+    connector_name: messaging_handoff
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Creates pending Action Center save/copy handoff records for a local
+      message draft; no message is sent.
+    docs_reference: README.md#messages-safe-handoff
+    action_center_only: true
     sends_message: false
   messages.copy_draft:
     capability_name: messages.copy_draft
@@ -2204,6 +5504,566 @@ tools:
     setup_hint: Restore requires explicit approval, verifies hashes, previews changed
       files, and rejects policy-weakening manifests.
     docs_reference: README.md#backup--restore
+  news.providers.status:
+    capability_name: news.providers.status
+    tool_name: news.providers.status
+    connector_name: news
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: policy
+    status: planned
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Planned metadata-only news provider status; future implementation must make no provider calls from status.
+    docs_reference: docs/news/NEWS_PROVIDER_STRATEGY.md
+  news.search:
+    capability_name: news.search
+    tool_name: news.search
+    connector_name: news
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: auto
+    status: planned
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned public news search; future execution must use free-first provider policy and store no readable query history.
+    docs_reference: docs/news/NEWS_SOURCE_POLICY.md
+    requires_web_access: true
+  news.top:
+    capability_name: news.top
+    tool_name: news.top
+    connector_name: news
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: auto
+    status: planned
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned top-headlines workflow; future results must be source-grounded and freshness-labeled.
+    docs_reference: docs/news/NEWS_INTELLIGENCE_TRACK.md
+    requires_web_access: true
+  news.feed.fetch:
+    capability_name: news.feed.fetch
+    tool_name: news.feed.fetch
+    connector_name: news
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: rss_atom
+    status: planned
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned RSS/Atom headline acquisition; future fetches must be bounded and source-labeled.
+    docs_reference: docs/news/NEWS_PROVIDER_STRATEGY.md
+    requires_web_access: true
+  news.sitemap.fetch:
+    capability_name: news.sitemap.fetch
+    tool_name: news.sitemap.fetch
+    connector_name: news
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: sitemap
+    status: planned
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned news sitemap discovery; future fetches must enforce URL limits, timeouts, and blocked-source policy.
+    docs_reference: docs/news/NEWS_PROVIDER_STRATEGY.md
+    requires_web_access: true
+  news.gdelt.search:
+    capability_name: news.gdelt.search
+    tool_name: news.gdelt.search
+    connector_name: news
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: gdelt
+    status: planned
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned free GDELT search; no live GDELT calls are implemented yet.
+    docs_reference: docs/news/NEWS_PROVIDER_STRATEGY.md
+    requires_web_access: true
+  news.gdelt.timeline:
+    capability_name: news.gdelt.timeline
+    tool_name: news.gdelt.timeline
+    connector_name: news
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: gdelt
+    status: planned
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned GDELT timeline workflow; future output must not invent event or publication dates.
+    docs_reference: docs/news/NEWS_FRESHNESS_POLICY.md
+    requires_web_access: true
+  news.mediacloud.search:
+    capability_name: news.mediacloud.search
+    tool_name: news.mediacloud.search
+    connector_name: news
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: mediacloud
+    status: planned
+    rate_limit:
+      requests_per_minute: 5
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Optional Media Cloud search is planned only and must stay disabled unless configured and policy-allowed.
+    docs_reference: docs/news/NEWS_PROVIDER_STRATEGY.md
+    requires_web_access: true
+  news.newsapi.search:
+    capability_name: news.newsapi.search
+    tool_name: news.newsapi.search
+    connector_name: news
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: newsapi
+    status: planned
+    rate_limit:
+      requests_per_minute: 5
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Optional NewsAPI fallback is planned only and must not be selected by free_first defaults.
+    docs_reference: docs/news/NEWS_PROVIDER_STRATEGY.md
+    requires_web_access: true
+  news.article.fetch:
+    capability_name: news.article.fetch
+    tool_name: news.article.fetch
+    connector_name: news
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: selected_url
+    status: planned
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned selected article fetch; future fetches must obey safe web fetch, robots, blocked-source, and no-bypass policy.
+    docs_reference: docs/news/NEWS_SOURCE_POLICY.md
+    requires_web_access: true
+  news.article.extract:
+    capability_name: news.article.extract
+    tool_name: news.article.extract
+    connector_name: news
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: selected_url
+    status: planned
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned article extraction; future extraction must sanitize untrusted content and avoid full-body persistence by default.
+    docs_reference: docs/news/NEWS_RETENTION_POLICY.md
+    requires_web_access: true
+  news.brief:
+    capability_name: news.brief
+    tool_name: news.brief
+    connector_name: news
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: auto
+    status: planned
+    rate_limit:
+      requests_per_minute: 6
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned source-grounded brief; future answers must cite only returned sources and report limitations.
+    docs_reference: docs/news/NEWS_SOURCE_GROUNDING.md
+    requires_web_access: true
+  news.timeline:
+    capability_name: news.timeline
+    tool_name: news.timeline
+    connector_name: news
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: auto
+    status: planned
+    rate_limit:
+      requests_per_minute: 6
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned source-dated timeline; future output must distinguish source dates from inference.
+    docs_reference: docs/news/NEWS_FRESHNESS_POLICY.md
+    requires_web_access: true
+  news.compare:
+    capability_name: news.compare
+    tool_name: news.compare
+    connector_name: news
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: auto
+    status: planned
+    rate_limit:
+      requests_per_minute: 6
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned source comparison; future output must report conflicts, coverage gaps, and source limitations.
+    docs_reference: docs/news/NEWS_SOURCE_GROUNDING.md
+    requires_web_access: true
+  news.multilingual:
+    capability_name: news.multilingual
+    tool_name: news.multilingual
+    connector_name: news
+    risk_level: MEDIUM
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: auto
+    status: planned
+    rate_limit:
+      requests_per_minute: 6
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - rate_limit_status
+    - result_summary
+    setup_hint: Planned multilingual summary; future translations must be labeled model-generated and preserve source IDs.
+    docs_reference: docs/news/NEWS_SOURCE_GROUNDING.md
+    requires_web_access: true
+  news.cache.status:
+    capability_name: news.cache.status
+    tool_name: news.cache.status
+    connector_name: news
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: cache
+    status: planned
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Planned metadata-only news cache status; future output should report counts and TTL policy, not article bodies.
+    docs_reference: docs/news/NEWS_RETENTION_POLICY.md
+  news.cache.clear:
+    capability_name: news.cache.clear
+    tool_name: news.cache.clear
+    connector_name: news
+    risk_level: LOW
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: cache
+    status: planned
+    rate_limit: null
+    memory_behavior: cache_only
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Planned local news cache clear; future command must delete only news cache entries and audit counts.
+    docs_reference: docs/news/NEWS_RETENTION_POLICY.md
+  news.dogfood:
+    capability_name: news.dogfood
+    tool_name: news.dogfood
+    connector_name: news
+    risk_level: SAFE
+    trust_level: UNTRUSTED_WEB
+    default_enabled: false
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: fixtures
+    status: planned
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Planned mock-first News Intelligence dogfood; live checks must remain opt-in and provider-config gated.
+    docs_reference: docs/news/NEWS_INTELLIGENCE_TRACK.md
   secrets.read:
     capability_name: secrets.read
     tool_name: secrets.read

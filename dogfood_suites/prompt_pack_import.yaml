@@ -1,0 +1,21 @@
+suite_id: prompt_pack_import
+name: Prompt Pack Import Smoke
+description: Validates prompt pack tooling with repo-local prompt packs; import is not run by default.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: pt_pack_validate
+    description: Validate the prompt tracker maturity pack.
+    command: python smart_agent.py prompts validate-pack prompts/packs/prompt-tracker-maturity-v1.promptpack.md
+    expected_behavior: Pack validates without writing files.
+    failure_signals: Parser rejects embedded examples or writes prompt files during validation.
+    tags: [prompt_tracking, prompt_pack]
+  - id: pt_pack_format_doc
+    description: Show prompt pack format documentation through file read.
+    command: python smart_agent.py files read docs/PROMPT_PACK_FORMAT.md
+    expected_behavior: Documentation reads inside workspace only.
+    failure_signals: Path denial for a workspace doc or tool bypass.
+    tags: [prompt_tracking, docs]

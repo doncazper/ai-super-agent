@@ -3,15 +3,25 @@
 These rules are permanent for this repository.
 
 - Every Codex run must read `docs/PROJECT_STATE.md` before making changes.
+- Before architecture, rewrite, model migration, or platform-port work, read `docs/AGENT_DNA.md`, `docs/ARCHITECTURE_PRINCIPLES.md`, and `docs/CLONE_BLUEPRINT.md`.
+- If a requested change violates `docs/AGENT_DNA.md`, stop and ask instead of implementing.
+- Codex must use `./.venv/bin/python` when it is present.
+- Codex must not use Apple Python 3.9; use `./scripts/agent`, `./.venv/bin/python`, or another Python 3.11+ interpreter.
+- Codex final reports must include which Python interpreter was used for tests.
 - Before starting work, read `docs/PROMPT_QUEUE.md` and `docs/PROMPT_LEDGER.md`.
 - If importing a prompt pack, default to `import_only`.
 - Do not execute an entire prompt pack automatically.
+- Feature tracks with three or more related prompts should be stored as prompt packs under `prompts/packs/`.
+- Reconstructed prompt packs must be clearly marked `status: reconstructed`; do not claim reconstructed prompt text is exact without source evidence.
 - Use `python smart_agent.py work import` for pasted mega prompts or raw single prompts.
 - Use `python smart_agent.py work autopilot` only for safe categories and stop at approval gates.
 - Every Codex run must update `docs/PROJECT_STATE.md` before finishing.
 - Every run must update `docs/COMPLETION_REPORT.md`.
 - If a prompt is being run, mark it active in prompt tracking.
 - Before finishing, mark the prompt completed, failed, blocked, skipped, or superseded.
+- Mark failed prompts with a reason, and keep at most one prompt active.
+- Use prompt evidence classification before marking large prompt batches complete.
+- Use prompt recovery commands for missed, stale, superseded, orphaned, or ghost prompt state; do not auto-run recovered prompts.
 - Update `docs/PROMPT_AUDIT.md` after major prompt batches.
 - Do not run prompts out of order without updating `docs/PROMPT_QUEUE.md`.
 - If a prompt is superseded, mark it superseded and link the replacement.
@@ -32,6 +42,7 @@ These rules are permanent for this repository.
 - Do not bypass `PolicyEngine`.
 - Do not bypass `ApprovalManager` for high or critical actions.
 - Do not bypass `AuditLogger`.
+- Rewrites, model migrations, and platform ports must preserve CLI/manual operation, ToolBroker-only execution, PolicyEngine gates, ApprovalManager rules, AuditLogger evidence, command registry tracking, feature maturity tracking, prompt ledger tracking, and release gates.
 - Do not implement personal-data tools before the safety control plane.
 - Do not implement send/write actions before read-only and draft-only workflows.
 - Do not weaken policy.
@@ -48,5 +59,12 @@ These rules are permanent for this repository.
 - Prompt count is useful context but not proof of maturity.
 - A feature can be complete but still immature.
 - A feature can be mature but still have known limitations.
+- Trackers are source-of-truth records and should not be broadly rewritten without explicit approval.
+- Prefer small anchored edits when updating dense trackers.
+- Do not delete historical detail unless it is moved to an archive with evidence links.
+- Update `docs/TRACKER_DASHBOARD.md` after major batches.
+- Update `docs/TRACKER_CONSISTENCY_REPORT.md` during release gates.
+- If trackers disagree, report the disagreement instead of guessing.
+- Dense trackers are acceptable; missing indexes and summaries are not.
 - Be honest about failures.
 - Stop at approval gates.

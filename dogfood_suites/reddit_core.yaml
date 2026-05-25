@@ -1,0 +1,47 @@
+suite_id: reddit_core
+name: Reddit Core Dogfood
+description: Safe Reddit diagnostics and setup-gated read-only checks; live API reads occur only when Reddit is explicitly configured.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: true
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: reddit_core_doctor
+    description: Inspect Reddit OAuth/config readiness without fetching posts or comments.
+    command: python smart_agent.py reddit doctor
+    expected_behavior: Shows disabled/configured state, redacted credential presence, retention/rate-limit policy, and disabled write actions.
+    failure_signals: Secret leakage, post/comment fetch, write capability shown as enabled, or missing retention/rate-limit status.
+    tags: [forums, reddit, doctor, mock_safe]
+  - id: reddit_core_status
+    description: Show compact Reddit connector status without Reddit API content reads.
+    command: python smart_agent.py reddit status
+    expected_behavior: Reports OAuth readiness, disabled/default state, and no post/comment content fetched.
+    failure_signals: Raw token values, live content fetch, missing setup hint, or enabled write actions.
+    tags: [forums, reddit, status, mock_safe]
+  - id: reddit_core_search_setup_or_live
+    description: Run Reddit search with a bounded fixture query; returns setup guidance unless Reddit is explicitly configured.
+    command: python smart_agent.py reddit search "forum dogfood fixture source grounding" --limit 3
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Returns setup-required guidance when unconfigured, or normalized snippet-only Reddit API results with source IDs/permalinks when configured.
+    failure_signals: Reddit web scraping fallback, paid provider fallback, unredacted query/audit leak, missing source IDs, or stored search history.
+    tags: [forums, reddit, search, provider_optional]
+  - id: reddit_core_post_setup_or_live
+    description: Fetch a bounded fixture post id through the Reddit API only when configured.
+    command: python smart_agent.py reddit post "forumdogfoodpost"
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Returns setup guidance when unconfigured, or a normalized UNTRUSTED_WEB post with permalink/source ID when configured.
+    failure_signals: Web scraping, author metadata shown by default, removed content retained, or missing API setup error.
+    tags: [forums, reddit, post, provider_optional]
+  - id: reddit_core_cache_status
+    description: Inspect Reddit cache counts and policy metadata only.
+    command: python smart_agent.py reddit cache status
+    expected_behavior: Shows count-only TTL/cache metadata without raw Reddit post/comment bodies or authors.
+    failure_signals: Raw content, author metadata, query text, or non-Reddit cache deletion shown.
+    tags: [forums, reddit, cache, retention, mock_safe]
+  - id: reddit_core_retention_status
+    description: Inspect Reddit retention policy guarantee status.
+    command: python smart_agent.py reddit retention status
+    expected_behavior: Shows TTL, author-minimization, deleted/removed-content, and no-query-history policy status.
+    failure_signals: Raw cached content, missing policy guarantee status, or retention policy unable to disable unsafe cache writes.
+    tags: [forums, reddit, retention, mock_safe]

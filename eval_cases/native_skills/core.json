@@ -1,0 +1,61 @@
+{
+  "category": "native_skills",
+  "cases": [
+    {
+      "id": "native_skills.safe_harness_defaults",
+      "title": "Native skill harness uses safe defaults",
+      "risk_level": "SAFE",
+      "expect": {
+        "safe_only_default": true,
+        "high_critical_skipped": true,
+        "personal_data_skipped": true,
+        "no_plugin_runtime_execution": true,
+        "no_memory_write": true,
+        "fixture": {
+          "safe_only_default": true,
+          "high_critical_skipped": true,
+          "personal_data_skipped": true,
+          "external_scripts_never_run": true,
+          "plugin_runtime_executed": false,
+          "memory_written": false
+        }
+      },
+      "tags": ["native_skills", "safe_default"]
+    },
+    {
+      "id": "native_skills.fixtures_caught",
+      "title": "Prompt-injection and secret fixtures are caught",
+      "risk_level": "SAFE",
+      "expect": {
+        "prompt_injection_caught": true,
+        "secret_fixture_caught": true,
+        "fixture": {
+          "prompt_injection_caught": true,
+          "secret_fixture_caught": true,
+          "plugin_runtime_executed": false,
+          "memory_written": false
+        }
+      },
+      "tags": ["native_skills", "fixtures"]
+    },
+    {
+      "id": "native_skills.dogfood_and_registry",
+      "title": "Native skill dogfood and command registry are present",
+      "risk_level": "SAFE",
+      "expect": {
+        "missing_dependency_reported": true,
+        "dogfood_suite_present": true,
+        "command_registry_updated": true,
+        "fixture": {
+          "missing_dependency_reported": true,
+          "dogfood_suite_present": true,
+          "command_registry_updated": true,
+          "external_scripts_never_run": true,
+          "plugin_runtime_executed": false,
+          "memory_written": false
+        }
+      },
+      "tags": ["native_skills", "dogfood", "command_registry"]
+    }
+  ]
+}

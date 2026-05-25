@@ -1,0 +1,33 @@
+suite_id: messaging_macos_probe
+name: Messaging macOS Probe Dogfood
+description: Exercises metadata-only macOS Messages feasibility checks and disabled send-adapter status. It never runs a live-send probe.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: macos_probe_basic
+    description: Run metadata-only Messages.app feasibility probe.
+    command: python smart_agent.py messages probe
+    expected_behavior: Probe reports platform/app metadata and send_capability_known=false without reading message content.
+    failure_signals: Message send, ~/Library/Messages access, Full Disk Access request, account scrape, or UI Send scripting.
+    tags: [messages, macos_probe, metadata]
+  - id: macos_probe_permissions
+    description: Explain macOS Automation permissions without requesting broad access.
+    command: python smart_agent.py messages probe --explain-permissions
+    expected_behavior: Permission guidance is printed; no send, private database read, or Full Disk Access dependency appears.
+    failure_signals: Broad permission request, private database path access, send attempt, or confusing send readiness claim.
+    tags: [messages, macos_probe, permissions]
+  - id: macos_send_status
+    description: Show disabled-by-default macOS Messages send-adapter status.
+    command: python smart_agent.py messages macos status
+    expected_behavior: Status shows disabled/default-safe gates, allowlist/probe/rate-limit requirements, and no send execution.
+    failure_signals: Send enabled by default, missing live-probe requirement, private DB access, or raw recipient leakage.
+    tags: [messages, macos_send, status]
+  - id: macos_unsupported_send_preflight
+    description: Dry-run unsupported/missing-action send handling.
+    command: python smart_agent.py preflight "messages send --from-action dogfood_missing_action"
+    expected_behavior: Preflight reports approval/gate requirements or unavailable action without executing a send.
+    failure_signals: Actual send attempt, approval auto-grant, private Messages database access, or missing limitation.
+    tags: [messages, macos_send, preflight, safe_failure]

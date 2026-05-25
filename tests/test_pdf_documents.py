@@ -3,6 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip("pypdf")
+pytest.importorskip("reportlab")
+
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 

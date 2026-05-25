@@ -27,13 +27,13 @@
     },
     {
       "id": "quality.web_current_info_routing",
-      "title": "Current-info prompt routes to public web search.",
+      "title": "Current-info prompt routes to source-grounded web research tools.",
       "benchmark_category": "web_current_info_routing",
       "input": "Look up current Swift release notes",
       "expect": {
-        "route_name": "tool.web_search",
+        "route_name": "tool.web_research",
         "use_tools": true,
-        "tool_names": ["web.search"],
+        "tool_names": ["web.search", "web.fetch_url"],
         "policy_capability": "web.search",
         "policy_decision": "ALLOW"
       }

@@ -7,11 +7,22 @@ from pathlib import Path
 
 from agent.config.loader import load_capabilities_config
 from agent.config.runtime import RuntimeConfig, RuntimeConfigError
+from agent.core.router import Router
 from agent.core.tool_broker import ToolBroker
 from agent.dogfood.runner import run_suite as run_dogfood_suite
+from agent.dogfood.planner import build_dogfood_plan, dogfood_checklist, dogfood_next
 from agent.dogfood.suites import list_suite_summaries, load_all_suites, load_suite
 from agent.prompts.pack_models import PromptPackError
 from agent.prompts.prompt_store import import_prompt_pack, validate_pack_file
+from agent.prompts.evidence import audit_prompt_evidence
+from agent.prompts.recovery import (
+    missed_prompts as recovery_missed_prompts,
+    reconcile as recovery_reconcile,
+    recover_plan as recovery_plan,
+    stale_prompts as recovery_stale_prompts,
+    superseded_prompts as recovery_superseded_prompts,
+)
+from agent.promptops.state import update_prompt_state
 from agent.promptops.clipboard import ClipboardUnavailable
 from agent.promptops.runner import autopilot as promptops_autopilot
 from agent.promptops.runner import run_next as promptops_run_next
@@ -32,6 +43,9 @@ from agent.promptops.workbench import (
     show_next as promptops_show_next,
     status as promptops_status,
 )
+from agent.runtime.errors import RuntimeErrorBase
+from agent.runtime.kernel import RuntimeKernel
+from agent.runtime.scheduler import SchedulerPolicy
 from agent.session_logs.feedback import FeedbackManager, VALID_FEEDBACK_TAGS, bug_feedback, make_feedback
 from agent.session_logs.recorder import SessionRecorder
 from agent.session_logs.review import SessionReviewer
@@ -72,6 +86,17 @@ from agent.ui.model_quality import (
 )
 from agent.ui.permissions_dashboard import PermissionStore
 from agent.ui.preflight import PreflightOptions, format_preflight, run_preflight
+from agent.ui.product_quality import (
+    build_quality_dashboard as build_product_quality_dashboard,
+    format_quality_dashboard as format_product_quality_dashboard,
+    format_quality_json as format_product_quality_json,
+    quality_bugs,
+    quality_features,
+    quality_next,
+    quality_regressions,
+    quality_sessions,
+    quality_status,
+)
 from agent.ui.prompts import (
     add_prompt_record,
     audit_prompts,
@@ -81,9 +106,18 @@ from agent.ui.prompts import (
     mark_prompt,
     missing_prompts,
     next_prompt,
+    search_prompt_records,
     show_prompt,
 )
 from agent.ui.smoke import SmokeOptions, format_smoke, run_smoke, smoke_exit_code
+from agent.connectors.secret_doctor import (
+    gmail_doctor,
+    gmail_scopes,
+    secrets_doctor,
+    secrets_status,
+    telegram_doctor,
+    telegram_status,
+)
 from agent.workflows.scheduler import (
     create_schedule,
     delete_schedule,
@@ -119,6 +153,24 @@ def dispatch_cli(argv: list[str], *, project_root: str | Path = ".") -> int | No
         return _config(argv[1:])
     if command == "connectors":
         return _connectors(argv[1:])
+    if command == "secrets":
+        return _secrets(argv[1:], project_root=project_root)
+    if command == "gmail":
+        return _gmail(argv[1:], project_root=project_root)
+    if command == "telegram":
+        return _telegram(argv[1:])
+    if command == "reddit":
+        return _reddit(argv[1:], project_root=project_root)
+    if command == "v2ex":
+        return _v2ex(argv[1:], project_root=project_root)
+    if command == "forums":
+        return _forums(argv[1:], project_root=project_root)
+    if command == "cn-forums":
+        return _cn_forums(argv[1:], project_root=project_root)
+    if command == "language":
+        return _language(argv[1:], project_root=project_root)
+    if command == "platform":
+        return _platform(argv[1:], project_root=project_root)
     if command == "setup":
         print("Set LMSTUDIO_MODEL, start LM Studio at http://localhost:1234/v1, then run tests.")
         return 0
@@ -148,13 +200,159 @@ def dispatch_cli(argv: list[str], *, project_root: str | Path = ".") -> int | No
         return _feedback(argv[1:], project_root=project_root)
     if command == "dogfood":
         return _dogfood(argv[1:], project_root=project_root)
+    if command == "quality":
+        return _quality(argv[1:], project_root=project_root)
     if command == "commands":
         return _commands(argv[1:], project_root=project_root)
+    if command == "runtime":
+        return _runtime(argv[1:])
+    if command == "jobs":
+        return _runtime_jobs(argv[1:])
+    if command == "workflows":
+        return _runtime_workflows(argv[1:])
+    if command == "events":
+        return _runtime_events(argv[1:])
     if command == "schedule":
         return _schedule(argv[1:], project_root=project_root)
     if command == "backup":
         return _backup(argv[1:], project_root=project_root)
     return None
+
+
+def _platform(argv: list[str], *, project_root: str | Path = ".") -> int:
+    parser = argparse.ArgumentParser(
+        prog="smart_agent.py platform",
+        description="Read-only platform status and capability inspection.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("doctor", help="Show platform detection, bridge readiness, config, warnings, and setup steps.")
+    subparsers.add_parser("status", help="Show short platform and bridge status metadata.")
+    subparsers.add_parser("capabilities", help="List platform capability metadata.")
+    subparsers.add_parser("matrix", help="Show macOS, iOS companion, Windows, and app/web bridge capability matrix.")
+    explain_parser = subparsers.add_parser("explain", help="Explain one platform capability.")
+    explain_parser.add_argument("capability_id")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    tool_name = f"platform.{parsed.command}"
+    arguments: dict[str, object] = {}
+    if parsed.command == "explain":
+        arguments["capability_id"] = parsed.capability_id
+
+    try:
+        payload = _execute_local_tool(
+            _local_broker(project_root=project_root, route="platform-cli"),
+            f"cli_{tool_name.replace('.', '_')}",
+            tool_name,
+            arguments,
+        )
+    except (RuntimeConfigError, AuditLogError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(json.dumps(payload["content"], indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
+
+
+def _runtime(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py runtime", description="Inspect the lightweight runtime control plane.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("status", help="Show runtime status without model/tool/personal-data calls.")
+    subparsers.add_parser("doctor", help="Run runtime orchestration checks without LM Studio calls.")
+    subparsers.add_parser("services", help="List registered runtime services.")
+    subparsers.add_parser("features", help="List runtime feature flags.")
+    subparsers.add_parser("health", help="Show runtime health checks.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    kernel = RuntimeKernel()
+    if parsed.command == "status":
+        payload = kernel.status()
+    elif parsed.command == "doctor":
+        health = kernel.health()
+        payload = {
+            "status": health.status.value,
+            "checks": list(health.checks),
+            "lmstudio_checked": False,
+            "tool_execution": False,
+            "personal_data_accessed": False,
+            "background_persistence": False,
+        }
+    elif parsed.command == "services":
+        kernel.boot()
+        payload = {"services": [service.to_dict() for service in kernel.services.list_services()]}
+    elif parsed.command == "features":
+        kernel.boot()
+        payload = {"features": [feature.to_dict() for feature in kernel.features.list_features()]}
+    else:
+        payload = kernel.health().to_dict()
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0
+
+
+def _runtime_jobs(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py jobs", description="Inspect runtime job metadata.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("list", help="List in-process runtime jobs.")
+    show_parser = subparsers.add_parser("show", help="Show one in-process runtime job.")
+    show_parser.add_argument("job_id")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    kernel = RuntimeKernel()
+    kernel.boot()
+    if parsed.command == "list":
+        print(json.dumps({"jobs": [job.to_dict() for job in kernel.jobs.list_jobs()]}, indent=2, sort_keys=True))
+        return 0
+    try:
+        job = kernel.jobs.get(parsed.job_id)
+    except RuntimeErrorBase as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    print(json.dumps(job.to_dict(), indent=2, sort_keys=True))
+    return 0
+
+
+def _runtime_workflows(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py workflows", description="Inspect or queue runtime workflow metadata.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("list", help="List registered workflows.")
+    run_parser = subparsers.add_parser("run", help="Create a metadata job for a safe workflow; no tools execute.")
+    run_parser.add_argument("workflow_id")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    kernel = RuntimeKernel()
+    kernel.boot()
+    if parsed.command == "list":
+        print(json.dumps({"workflows": [workflow.to_dict() for workflow in kernel.workflows.list_workflows()]}, indent=2, sort_keys=True))
+        return 0
+    try:
+        job = kernel.workflows.start(parsed.workflow_id)
+    except RuntimeErrorBase as exc:
+        print(json.dumps({"status": "blocked", "reason": str(exc)}, indent=2, sort_keys=True))
+        return 2
+    print(json.dumps({"status": job.status.value, "job": job.to_dict(), "tool_execution": False}, indent=2, sort_keys=True))
+    return 0 if job.status.value == "queued" else 2
+
+
+def _runtime_events(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py events", description="Inspect in-process runtime events.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    tail_parser = subparsers.add_parser("tail", help="Tail current process runtime events.")
+    tail_parser.add_argument("--limit", type=int, default=20)
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    kernel = RuntimeKernel()
+    kernel.boot()
+    print(json.dumps({"events": [event.to_dict() for event in kernel.events.tail(parsed.limit)]}, indent=2, sort_keys=True))
+    return 0
 
 
 def _dashboard(argv: list[str], *, project_root: str | Path = ".") -> int:
@@ -186,6 +384,479 @@ def _connectors(argv: list[str]) -> int:
         return 0
     print("usage: connectors list|doctor|status <connector>", file=sys.stderr)
     return 2
+
+
+def _secrets(argv: list[str], *, project_root: str | Path = ".") -> int:
+    if not argv or argv[0] == "doctor":
+        print(json.dumps(secrets_doctor(project_root=project_root), indent=2, sort_keys=True))
+        return 0
+    if argv[0] == "status":
+        print(json.dumps(secrets_status(project_root=project_root), indent=2, sort_keys=True))
+        return 0
+    print("usage: secrets doctor|status", file=sys.stderr)
+    return 2
+
+
+def _gmail(argv: list[str], *, project_root: str | Path = ".") -> int:
+    if not argv or argv[0] == "doctor":
+        print(json.dumps(gmail_doctor(project_root=project_root), indent=2, sort_keys=True))
+        return 0
+    if argv[0] == "scopes":
+        print(json.dumps(gmail_scopes(), indent=2, sort_keys=True))
+        return 0
+    print("usage: gmail doctor|scopes", file=sys.stderr)
+    return 2
+
+
+def _telegram(argv: list[str]) -> int:
+    if not argv or argv[0] == "doctor":
+        print(json.dumps(telegram_doctor(), indent=2, sort_keys=True))
+        return 0
+    if argv[0] == "status":
+        print(json.dumps(telegram_status(), indent=2, sort_keys=True))
+        return 0
+    print("usage: telegram doctor|status", file=sys.stderr)
+    return 2
+
+
+def _reddit(argv: list[str], *, project_root: str | Path = ".") -> int:
+    if not argv or argv[0] == "doctor":
+        tool_name = "reddit.status"
+        arguments: dict[str, object] = {"detail": "doctor"}
+    elif argv[0] == "status":
+        tool_name = "reddit.status"
+        arguments = {"detail": "status"}
+    elif argv[0] == "auth-check":
+        tool_name = "reddit.auth_check"
+        arguments = {}
+    elif argv[0] == "search" and len(argv) >= 2:
+        parser = argparse.ArgumentParser(prog="reddit search")
+        parser.add_argument("query")
+        parser.add_argument("--subreddit", default="")
+        parser.add_argument("--limit", type=int, default=10)
+        parser.add_argument("--sort", default="relevance", choices=["relevance", "hot", "top", "new", "comments"])
+        parser.add_argument("--time", dest="time_filter", default="all", choices=["hour", "day", "week", "month", "year", "all"])
+        parser.add_argument("--language", default="auto", choices=["auto", "en", "es", "zh", "ja", "ko"])
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = "reddit.search_posts"
+        arguments = {
+            "query": ns.query,
+            "subreddit": ns.subreddit,
+            "limit": ns.limit,
+            "sort": ns.sort,
+            "time_filter": ns.time_filter,
+            "language": ns.language,
+        }
+    elif argv[0] == "explain-result" and len(argv) == 2:
+        tool_name = "reddit.explain_result"
+        arguments = {"source_id": argv[1]}
+    elif argv[0] == "subreddit" and len(argv) == 2:
+        tool_name = "reddit.fetch_subreddit_info"
+        arguments = {"subreddit": argv[1]}
+    elif argv[0] == "post" and len(argv) == 2:
+        tool_name = "reddit.fetch_post"
+        arguments = {"post_id_or_url": argv[1]}
+    elif argv[0] == "comments" and len(argv) >= 2:
+        parser = argparse.ArgumentParser(prog="reddit comments")
+        parser.add_argument("post_id_or_url")
+        parser.add_argument("--limit", type=int, default=100)
+        parser.add_argument("--sort", default="confidence", choices=["confidence", "top", "new", "controversial", "old", "qa"])
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = "reddit.fetch_comments"
+        arguments = {"post_id_or_url": ns.post_id_or_url, "limit": ns.limit, "sort": ns.sort}
+    elif argv[0] == "thread" and len(argv) >= 2:
+        parser = argparse.ArgumentParser(prog="reddit thread")
+        parser.add_argument("post_id_or_url")
+        parser.add_argument("--max-comments", type=int, default=100)
+        parser.add_argument("--sort", default="top", choices=["top", "new", "controversial"])
+        parser.add_argument("--collapse-depth", type=int, default=3)
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = "reddit.fetch_thread"
+        arguments = {
+            "post_id_or_url": ns.post_id_or_url,
+            "max_comments": ns.max_comments,
+            "sort": ns.sort,
+            "collapse_depth": ns.collapse_depth,
+        }
+    elif argv[0] == "thread-export" and len(argv) >= 2:
+        parser = argparse.ArgumentParser(prog="reddit thread-export")
+        parser.add_argument("post_id_or_url")
+        parser.add_argument("--format", default="json", choices=["json", "markdown"])
+        parser.add_argument("--max-comments", type=int, default=100)
+        parser.add_argument("--sort", default="top", choices=["top", "new", "controversial"])
+        parser.add_argument("--collapse-depth", type=int, default=3)
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = "reddit.thread_export"
+        arguments = {
+            "post_id_or_url": ns.post_id_or_url,
+            "format": ns.format,
+            "max_comments": ns.max_comments,
+            "sort": ns.sort,
+            "collapse_depth": ns.collapse_depth,
+        }
+    elif argv[0] == "summarize-thread" and len(argv) >= 2:
+        parser = argparse.ArgumentParser(prog="reddit summarize-thread")
+        parser.add_argument("post_id_or_url")
+        parser.add_argument("--max-comments", type=int, default=100)
+        parser.add_argument("--sort", default="top", choices=["top", "new", "controversial"])
+        parser.add_argument("--collapse-depth", type=int, default=3)
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = "reddit.summarize_thread"
+        arguments = {
+            "post_id_or_url": ns.post_id_or_url,
+            "max_comments": ns.max_comments,
+            "sort": ns.sort,
+            "collapse_depth": ns.collapse_depth,
+        }
+    elif argv[0] == "summarize-search" and len(argv) >= 2:
+        parser = argparse.ArgumentParser(prog="reddit summarize-search")
+        parser.add_argument("query")
+        parser.add_argument("--limit", type=int, default=10)
+        parser.add_argument("--subreddit", default="")
+        parser.add_argument("--sort", default="relevance", choices=["relevance", "hot", "top", "new", "comments"])
+        parser.add_argument("--time", dest="time_filter", default="all", choices=["hour", "day", "week", "month", "year", "all"])
+        parser.add_argument("--language", default="auto", choices=["auto", "en", "es", "zh", "ja", "ko"])
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = "reddit.summarize_search"
+        arguments = {
+            "query": ns.query,
+            "limit": ns.limit,
+            "subreddit": ns.subreddit,
+            "sort": ns.sort,
+            "time_filter": ns.time_filter,
+            "language": ns.language,
+        }
+    elif argv[0] in {"consensus", "pros-cons", "complaints", "buying-advice"} and len(argv) >= 2:
+        command = argv[0]
+        parser = argparse.ArgumentParser(prog=f"reddit {command}")
+        parser.add_argument("query")
+        parser.add_argument("--limit", type=int, default=10)
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = {
+            "consensus": "reddit.consensus",
+            "pros-cons": "reddit.pros_cons",
+            "complaints": "reddit.complaints",
+            "buying-advice": "reddit.buying_advice",
+        }[command]
+        arguments = {"query": ns.query, "limit": ns.limit}
+    elif argv[0] == "cache" and len(argv) == 2 and argv[1] in {"status", "clear"}:
+        tool_name = {"status": "reddit.cache_status", "clear": "reddit.cache_clear"}[argv[1]]
+        arguments = {}
+    elif argv[0] == "retention" and len(argv) == 2 and argv[1] in {"status", "sweep"}:
+        tool_name = {"status": "reddit.retention_status", "sweep": "reddit.retention_sweep"}[argv[1]]
+        arguments = {}
+    elif argv[0] == "privacy-report" and len(argv) == 1:
+        tool_name = "reddit.privacy_report"
+        arguments = {}
+    else:
+        print(
+            "usage: reddit doctor|status|auth-check|search <query>|explain-result <source_id>|subreddit <name>|post <id_or_url>|comments <id_or_url>|thread <id_or_url>|thread-export <id_or_url>|summarize-thread <id_or_url>|summarize-search <query>|consensus <query>|pros-cons <query>|complaints <topic>|buying-advice <topic>|cache status|cache clear|retention status|retention sweep|privacy-report",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        broker = _local_broker(project_root=project_root, route="cli:reddit")
+        payload = _execute_local_tool(broker, f"cli_{tool_name.replace('.', '_')}", tool_name, arguments)
+    except (RuntimeConfigError, AuditLogError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(json.dumps(payload["content"], indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
+
+
+def _v2ex(argv: list[str], *, project_root: str | Path = ".") -> int:
+    if not argv or argv[0] == "doctor":
+        tool_name = "v2ex.status"
+        arguments: dict[str, object] = {"detail": "doctor"}
+    elif argv[0] == "status":
+        tool_name = "v2ex.status"
+        arguments = {"detail": "status"}
+    elif argv[0] == "nodes":
+        parser = argparse.ArgumentParser(prog="v2ex nodes")
+        parser.add_argument("--limit", type=int, default=500)
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = "v2ex.nodes.get"
+        arguments = {"limit": ns.limit}
+    elif argv[0] == "node" and len(argv) >= 2:
+        parser = argparse.ArgumentParser(prog="v2ex node")
+        parser.add_argument("node_name")
+        parser.add_argument("--limit", type=int, default=10)
+        parser.add_argument("--detect-language", action="store_true")
+        parser.add_argument("--translate-to", default="")
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = "v2ex.node_topics"
+        arguments = {
+            "node_name": ns.node_name,
+            "limit": ns.limit,
+            "detect_language": ns.detect_language,
+            "translate_to": ns.translate_to,
+        }
+    elif argv[0] == "topic" and len(argv) >= 2:
+        parser = argparse.ArgumentParser(prog="v2ex topic")
+        parser.add_argument("topic_id")
+        parser.add_argument("--detect-language", action="store_true")
+        parser.add_argument("--translate-to", default="")
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = "v2ex.topic.get"
+        arguments = {"topic_id": ns.topic_id, "detect_language": ns.detect_language, "translate_to": ns.translate_to}
+    elif argv[0] == "replies" and len(argv) >= 2:
+        parser = argparse.ArgumentParser(prog="v2ex replies")
+        parser.add_argument("topic_id")
+        parser.add_argument("--limit", type=int, default=100)
+        parser.add_argument("--detect-language", action="store_true")
+        parser.add_argument("--translate-to", default="")
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = "v2ex.topic_replies"
+        arguments = {
+            "topic_id": ns.topic_id,
+            "limit": ns.limit,
+            "detect_language": ns.detect_language,
+            "translate_to": ns.translate_to,
+        }
+    elif argv[0] in {"latest", "hot"}:
+        parser = argparse.ArgumentParser(prog=f"v2ex {argv[0]}")
+        parser.add_argument("--limit", type=int, default=10)
+        try:
+            ns = parser.parse_args(argv[1:])
+        except SystemExit:
+            return 2
+        tool_name = {"latest": "v2ex.latest", "hot": "v2ex.hot"}[argv[0]]
+        arguments = {"limit": ns.limit}
+    else:
+        print(
+            "usage: v2ex doctor|status|nodes|node <node_name>|topic <topic_id>|replies <topic_id>|latest|hot",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        broker = _local_broker(project_root=project_root, route="cli:v2ex")
+        payload = _execute_local_tool(broker, f"cli_{tool_name.replace('.', '_')}", tool_name, arguments)
+    except (RuntimeConfigError, AuditLogError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(json.dumps(payload["content"], indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
+
+
+def _language(argv: list[str], *, project_root: str | Path = ".") -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py language", description="Detect, translate, and extract terms from untrusted multilingual text.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    detect_parser = subparsers.add_parser("detect", help="Detect language for inline text.")
+    detect_parser.add_argument("--text", required=True)
+    translate_parser = subparsers.add_parser("translate", help="Translate inline text with the local model by default.")
+    translate_parser.add_argument("--from", dest="from_language", default="auto")
+    translate_parser.add_argument("--to", dest="to_language", default="en")
+    translate_parser.add_argument("--text", required=True)
+    translate_file_parser = subparsers.add_parser("translate-file", help="Translate a workspace file with source references.")
+    translate_file_parser.add_argument("path")
+    translate_file_parser.add_argument("--from", dest="from_language", default="auto")
+    translate_file_parser.add_argument("--to", dest="to_language", default="en")
+    glossary_parser = subparsers.add_parser("glossary", help="Extract glossary terms from a workspace file.")
+    glossary_parser.add_argument("path")
+    glossary_parser.add_argument("--max-terms", type=int, default=20)
+    try:
+        ns = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    try:
+        broker = _local_broker(project_root=project_root, route="cli:language")
+        if ns.command == "detect":
+            payload = _execute_local_tool(
+                broker,
+                "cli_language_detect",
+                "language.detect",
+                {"text": ns.text, "source_id": "inline", "trust_level": "UNTRUSTED_WEB"},
+            )
+        elif ns.command == "translate":
+            payload = _execute_local_tool(
+                broker,
+                "cli_language_translate_text",
+                "language.translate_text",
+                {
+                    "text": ns.text,
+                    "from_language": ns.from_language,
+                    "to_language": ns.to_language,
+                    "source_id": "inline",
+                    "trust_level": "UNTRUSTED_WEB",
+                },
+            )
+        else:
+            read_payload = _execute_local_tool(
+                broker,
+                f"cli_language_read_{ns.command.replace('-', '_')}",
+                "filesystem.read",
+                {"path": ns.path, "max_bytes": 200_000},
+            )
+            if not read_payload.get("allowed"):
+                print(json.dumps(read_payload["content"], indent=2, sort_keys=True))
+                return 2
+            file_content = str(read_payload["content"].get("content", ""))
+            file_trust = str(read_payload["content"].get("trust_level", "UNTRUSTED_DOCUMENT"))
+            if ns.command == "translate-file":
+                payload = _execute_local_tool(
+                    broker,
+                    "cli_language_translate_file",
+                    "language.translate_text",
+                    {
+                        "text": file_content,
+                        "from_language": ns.from_language,
+                        "to_language": ns.to_language,
+                        "source_id": ns.path,
+                        "trust_level": file_trust,
+                    },
+                )
+            else:
+                payload = _execute_local_tool(
+                    broker,
+                    "cli_language_glossary",
+                    "language.extract_terms",
+                    {
+                        "text": file_content,
+                        "source_id": ns.path,
+                        "trust_level": file_trust,
+                        "max_terms": ns.max_terms,
+                    },
+                )
+    except (RuntimeConfigError, AuditLogError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(json.dumps(payload["content"], indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
+
+
+def _forums(argv: list[str], *, project_root: str | Path = ".") -> int:
+    parser = argparse.ArgumentParser(
+        prog="smart_agent.py forums",
+        description="Run source-grounded multilingual forum research without scraping or paid providers by default.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("providers", help="List forum provider registry metadata without provider calls.")
+    status_parser = subparsers.add_parser("status", help="Show one forum provider status without logged-in reads.")
+    status_parser.add_argument("provider")
+    subparsers.add_parser("doctor", help="Run read-only forum provider registry diagnostics.")
+    capabilities_parser = subparsers.add_parser("capabilities", help="Show read/write capability metadata for a provider.")
+    capabilities_parser.add_argument("provider")
+    for command in ("research", "compare"):
+        subparser = subparsers.add_parser(command, help=f"{command.title()} configured forum sources for a topic.")
+        subparser.add_argument("topic")
+        subparser.add_argument("--languages", default="en,zh,ja,ko")
+        subparser.add_argument("--sources", default="reddit,v2ex,web")
+        subparser.add_argument("--translate-to", default="en")
+        subparser.add_argument("--limit-per-source", type=int, default=5)
+    try:
+        ns = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    if ns.command in {"research", "compare"}:
+        tool_name = "forums.research" if ns.command == "research" else "forums.compare"
+        arguments = {
+            "topic": ns.topic,
+            "languages": ns.languages,
+            "sources": ns.sources,
+            "translate_to": ns.translate_to,
+            "limit_per_source": ns.limit_per_source,
+        }
+    elif ns.command == "providers":
+        tool_name = "forums.providers"
+        arguments = {}
+    elif ns.command == "status":
+        tool_name = "forums.status"
+        arguments = {"provider": ns.provider}
+    elif ns.command == "doctor":
+        tool_name = "forums.doctor"
+        arguments = {}
+    else:
+        tool_name = "forums.capabilities"
+        arguments = {"provider": ns.provider}
+    try:
+        broker = _local_broker(project_root=project_root, route="cli:forums")
+        payload = _execute_local_tool(broker, f"cli_{tool_name.replace('.', '_')}", tool_name, arguments)
+    except (RuntimeConfigError, AuditLogError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(json.dumps(payload["content"], indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
+
+
+def _cn_forums(argv: list[str], *, project_root: str | Path = ".") -> int:
+    parser = argparse.ArgumentParser(
+        prog="smart_agent.py cn-forums",
+        description="Discover public Chinese-language forum discussions through approved search/fetch paths only.",
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("providers", help="List Chinese/forum discovery site filters and safety limits.")
+    search_parser = subparsers.add_parser("search", help="Search approved site filters through configured web search providers.")
+    search_parser.add_argument("topic")
+    search_parser.add_argument("--sites", default="zhihu,v2ex,tieba")
+    search_parser.add_argument("--limit", type=int, default=10)
+    fetch_parser = subparsers.add_parser("fetch", help="Fetch one selected public forum URL using safe web fetch policy.")
+    fetch_parser.add_argument("url")
+    fetch_parser.add_argument("--translate-to", default="")
+    research_parser = subparsers.add_parser("research", help="Search, fetch selected public results, and summarize with sources.")
+    research_parser.add_argument("topic")
+    research_parser.add_argument("--sites", default="zhihu,v2ex,tieba")
+    research_parser.add_argument("--translate-to", default="en")
+    research_parser.add_argument("--limit", type=int, default=5)
+    try:
+        ns = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    if ns.command == "providers":
+        tool_name = "cn_forums.providers"
+        arguments: dict[str, object] = {}
+    elif ns.command == "search":
+        tool_name = "cn_forums.search"
+        arguments = {"topic": ns.topic, "sites": ns.sites, "limit": ns.limit}
+    elif ns.command == "fetch":
+        tool_name = "cn_forums.fetch"
+        arguments = {"url": ns.url, "translate_to": ns.translate_to}
+    else:
+        tool_name = "cn_forums.research"
+        arguments = {"topic": ns.topic, "sites": ns.sites, "translate_to": ns.translate_to, "limit": ns.limit}
+    try:
+        broker = _local_broker(project_root=project_root, route="cli:cn-forums")
+        payload = _execute_local_tool(broker, f"cli_{tool_name.replace('.', '_')}", tool_name, arguments)
+    except (RuntimeConfigError, AuditLogError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    print(json.dumps(payload["content"], indent=2, sort_keys=True))
+    return 0 if payload.get("allowed") else 2
 
 
 def _permissions(argv: list[str]) -> int:
@@ -360,12 +1031,19 @@ def _eval(argv: list[str]) -> int:
     run_parser.add_argument("--tools", action="store_true", help="Run ToolBroker and audit golden cases.")
     run_parser.add_argument("--workflows", action="store_true", help="Run workflow dry-run golden cases.")
     run_parser.add_argument("--prompt-injection", action="store_true", help="Run untrusted-content prompt-injection golden cases.")
+    run_parser.add_argument("--internet", action="store_true", help="Run fixture-backed internet/source-grounding evals without live provider calls.")
+    run_parser.add_argument("--forums", action="store_true", help="Run fixture-backed forum intelligence evals without live provider calls.")
+    run_parser.add_argument("--native-skills", action="store_true", help="Run fixture-backed native skill harness evals without external skill execution.")
     run_parser.add_argument("--web", action="store_true", help="Run web search/fetch evals if configured.")
     run_parser.add_argument("--weather", action="store_true", help="Run weather current/forecast evals if configured.")
     run_parser.add_argument("--workspace", action="store_true", help="Run workspace read/write evals in ./workspace/eval.")
     run_parser.add_argument("--memory", action="store_true", help="Run non-sensitive memory add/search/delete evals.")
+    run_parser.add_argument("--prompt-tracker", action="store_true", help="Run prompt tracker queue/evidence integrity evals.")
     run_parser.add_argument("--json", action="store_true", help="Print structured JSON instead of a readable summary.")
-    subparsers.add_parser("report", help="Print the last generated eval report.")
+    report_parser = subparsers.add_parser("report", help="Print the last generated eval report.")
+    report_parser.add_argument("--prompt-tracker", action="store_true", help="Alias for the last eval report; kept for prompt tracker runbooks.")
+    report_parser.add_argument("--internet", action="store_true", help="Alias for the last eval report; kept for internet dogfood runbooks.")
+    report_parser.add_argument("--forums", action="store_true", help="Alias for the last eval report; kept for forum dogfood runbooks.")
     try:
         parsed = parser.parse_args(argv)
     except SystemExit as exc:
@@ -386,10 +1064,14 @@ def _eval(argv: list[str]) -> int:
             tools=parsed.tools,
             workflows=parsed.workflows,
             prompt_injection=parsed.prompt_injection,
+            internet=parsed.internet,
+            forums=parsed.forums,
+            native_skills=parsed.native_skills,
             web=parsed.web,
             weather=parsed.weather,
             workspace=parsed.workspace,
             memory=parsed.memory,
+            prompt_tracker=parsed.prompt_tracker,
         )
     )
     print(format_eval_json(report) if parsed.json else format_eval_summary(report))
@@ -422,10 +1104,21 @@ def _router(argv: list[str]) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     eval_parser = subparsers.add_parser("eval", help="Run router quality eval cases.")
     eval_parser.add_argument("--json", action="store_true", help="Print JSON instead of a readable summary.")
+    explain_parser = subparsers.add_parser("explain", help="Explain deterministic routing for one request without executing tools.")
+    explain_parser.add_argument("query", nargs=argparse.REMAINDER, help="Request text to route.")
+    explain_parser.add_argument("--no-tools", action="store_true", help="Force no-tools routing for this explanation.")
     try:
         parsed = parser.parse_args(argv)
     except SystemExit as exc:
         return int(exc.code)
+    if parsed.command == "explain":
+        query = " ".join(parsed.query).strip()
+        if not query:
+            print('usage: router explain "<query>"', file=sys.stderr)
+            return 2
+        report = Router().explain(query, force_no_tools=parsed.no_tools)
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return 0
     report = run_router_eval()
     print(format_quality_json(report) if parsed.json else format_quality_summary(report))
     return 1 if report.get("status") == "fail" else 0
@@ -438,6 +1131,8 @@ def _prompts(argv: list[str], *, project_root: str | Path = ".") -> int:
     subparsers.add_parser("next", help="Show the next queued prompt.")
     show_parser = subparsers.add_parser("show", help="Show a prompt record.")
     show_parser.add_argument("prompt_id")
+    search_parser = subparsers.add_parser("search", help="Search prompt records.")
+    search_parser.add_argument("query")
     add_parser = subparsers.add_parser("add", help="Add a queued prompt from a file or id.")
     add_parser.add_argument("file_or_id")
     for command, help_text in (
@@ -464,8 +1159,16 @@ def _prompts(argv: list[str], *, project_root: str | Path = ".") -> int:
     import_parser.add_argument("pack_file")
     split_parser = subparsers.add_parser("split", help="Alias for import: validate, store, split, and queue a prompt pack.")
     split_parser.add_argument("pack_file")
-    subparsers.add_parser("audit", help="Audit prompt ledger evidence.")
+    audit_parser = subparsers.add_parser("audit", help="Audit prompt ledger evidence.")
+    audit_parser.add_argument("prompt_id", nargs="?")
+    evidence_parser = subparsers.add_parser("evidence", help="Show completion evidence for prompt records.")
+    evidence_parser.add_argument("prompt_id", nargs="?")
     subparsers.add_parser("missing", help="Show queued prompts with no completion evidence.")
+    subparsers.add_parser("missed", help="Show queued prompts that appear missed or partial.")
+    subparsers.add_parser("superseded", help="Show superseded prompt records.")
+    subparsers.add_parser("stale", help="Show completed prompts missing evidence.")
+    subparsers.add_parser("recover-plan", help="Build a conservative prompt recovery plan.")
+    subparsers.add_parser("reconcile", help="Report a conservative prompt reconciliation plan without auto-running prompts.")
     eval_parser = subparsers.add_parser("eval", help="Run prompt/system-prompt quality evals.")
     eval_parser.add_argument("--json", action="store_true", help="Print JSON instead of a readable summary.")
     subparsers.add_parser("report", help="Show latest model-router/prompt quality report.")
@@ -484,44 +1187,48 @@ def _prompts(argv: list[str], *, project_root: str | Path = ".") -> int:
                 print("prompt not found", file=sys.stderr)
                 return 1
             print(format_prompt_record(prompt))
+        elif parsed.command == "search":
+            print(format_prompt_records(search_prompt_records(parsed.query, project_root)))
         elif parsed.command == "add":
             print(json.dumps(add_prompt_record(parsed.file_or_id, project_root), indent=2, sort_keys=True))
         elif parsed.command == "mark-active":
-            print(json.dumps(mark_prompt(parsed.prompt_id, "active", project_root=project_root, notes=parsed.notes), indent=2, sort_keys=True))
+            result = mark_prompt(parsed.prompt_id, "active", project_root=project_root, notes=parsed.notes)
+            update_prompt_state(project_root=project_root, active_prompt_id=parsed.prompt_id)
+            print(json.dumps(result, indent=2, sort_keys=True))
         elif parsed.command == "mark-complete":
-            print(
-                json.dumps(
-                    mark_prompt(
-                        parsed.prompt_id,
-                        "completed",
-                        project_root=project_root,
-                        test_result=parsed.test_result,
-                        docs_updated=parsed.docs_updated,
-                        unknown=parsed.unknown,
-                        notes=parsed.notes,
-                    ),
-                    indent=2,
-                    sort_keys=True,
-                )
+            result = mark_prompt(
+                parsed.prompt_id,
+                "completed",
+                project_root=project_root,
+                test_result=parsed.test_result,
+                docs_updated=parsed.docs_updated,
+                unknown=parsed.unknown,
+                notes=parsed.notes,
             )
+            next_record = next_prompt(project_root)
+            update_prompt_state(project_root=project_root, active_prompt_id="none", next_prompt_id=next_record.prompt_id if next_record else "none")
+            print(json.dumps(result, indent=2, sort_keys=True))
         elif parsed.command == "mark-skipped":
-            print(json.dumps(mark_prompt(parsed.prompt_id, "skipped", project_root=project_root, notes=parsed.notes), indent=2, sort_keys=True))
+            result = mark_prompt(parsed.prompt_id, "skipped", project_root=project_root, notes=parsed.notes)
+            next_record = next_prompt(project_root)
+            update_prompt_state(project_root=project_root, active_prompt_id="none", next_prompt_id=next_record.prompt_id if next_record else "none")
+            print(json.dumps(result, indent=2, sort_keys=True))
         elif parsed.command == "mark-failed":
-            print(json.dumps(mark_prompt(parsed.prompt_id, "failed", project_root=project_root, notes=parsed.notes), indent=2, sort_keys=True))
+            result = mark_prompt(parsed.prompt_id, "failed", project_root=project_root, notes=parsed.notes)
+            next_record = next_prompt(project_root)
+            update_prompt_state(project_root=project_root, active_prompt_id="none", next_prompt_id=next_record.prompt_id if next_record else "none", prompt_blockers=parsed.notes or "failed")
+            print(json.dumps(result, indent=2, sort_keys=True))
         elif parsed.command == "mark-superseded":
-            print(
-                json.dumps(
-                    mark_prompt(
-                        parsed.prompt_id,
-                        "superseded",
-                        project_root=project_root,
-                        notes=parsed.notes,
-                        superseded_by=parsed.replacement_id,
-                    ),
-                    indent=2,
-                    sort_keys=True,
-                )
+            result = mark_prompt(
+                parsed.prompt_id,
+                "superseded",
+                project_root=project_root,
+                notes=parsed.notes,
+                superseded_by=parsed.replacement_id,
             )
+            next_record = next_prompt(project_root)
+            update_prompt_state(project_root=project_root, active_prompt_id="none", next_prompt_id=next_record.prompt_id if next_record else "none")
+            print(json.dumps(result, indent=2, sort_keys=True))
         elif parsed.command == "validate-pack":
             pack = validate_pack_file(parsed.pack_file)
             print(json.dumps({"status": "ok", "pack_id": pack.pack_id, "prompt_count": len(pack.prompts)}, indent=2, sort_keys=True))
@@ -529,9 +1236,24 @@ def _prompts(argv: list[str], *, project_root: str | Path = ".") -> int:
             result = import_prompt_pack(parsed.pack_file, project_root=project_root)
             print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
         elif parsed.command == "audit":
-            print(json.dumps(audit_prompts(project_root), indent=2, sort_keys=True))
+            if parsed.prompt_id:
+                print(json.dumps(audit_prompt_evidence(project_root, parsed.prompt_id), indent=2, sort_keys=True))
+            else:
+                print(json.dumps(audit_prompts(project_root), indent=2, sort_keys=True))
+        elif parsed.command == "evidence":
+            print(json.dumps(audit_prompt_evidence(project_root, parsed.prompt_id), indent=2, sort_keys=True))
         elif parsed.command == "missing":
             print(format_prompt_records(missing_prompts(project_root)))
+        elif parsed.command == "missed":
+            print(json.dumps(recovery_missed_prompts(project_root), indent=2, sort_keys=True))
+        elif parsed.command == "superseded":
+            print(json.dumps(recovery_superseded_prompts(project_root), indent=2, sort_keys=True))
+        elif parsed.command == "stale":
+            print(json.dumps(recovery_stale_prompts(project_root), indent=2, sort_keys=True))
+        elif parsed.command == "recover-plan":
+            print(json.dumps(recovery_plan(project_root), indent=2, sort_keys=True))
+        elif parsed.command == "reconcile":
+            print(json.dumps(recovery_reconcile(project_root), indent=2, sort_keys=True))
         elif parsed.command == "eval":
             report = run_prompt_eval()
             print(format_quality_json(report) if parsed.json else format_quality_summary(report))
@@ -760,6 +1482,19 @@ def _bugs(argv: list[str], *, project_root: str | Path = ".") -> int:
     show_parser = subparsers.add_parser("show", help="Show one local redacted bug report.")
     show_parser.add_argument("bug_id")
     subparsers.add_parser("export", help="Export all local redacted bug reports.")
+    create_regression_parser = subparsers.add_parser("create-regression", help="Create a sanitized regression test scaffold for one bug.")
+    create_regression_parser.add_argument("bug_id")
+    create_regressions_parser = subparsers.add_parser("create-regressions", help="Create sanitized regression test scaffolds for bugs in one session.")
+    create_regressions_parser.add_argument("--session", required=True, dest="session_id")
+    mark_fixed_parser = subparsers.add_parser("mark-fixed", help="Mark a bug fixed after linking a regression test or giving a reason.")
+    mark_fixed_parser.add_argument("bug_id")
+    mark_fixed_parser.add_argument("--reason", default="")
+    mark_wontfix_parser = subparsers.add_parser("mark-wontfix", help="Mark a bug as wontfix.")
+    mark_wontfix_parser.add_argument("bug_id")
+    mark_wontfix_parser.add_argument("--reason", default="")
+    link_test_parser = subparsers.add_parser("link-test", help="Link an existing regression test path to a bug.")
+    link_test_parser.add_argument("bug_id")
+    link_test_parser.add_argument("test_path")
     try:
         parsed = parser.parse_args(argv)
     except SystemExit as exc:
@@ -774,6 +1509,21 @@ def _bugs(argv: list[str], *, project_root: str | Path = ".") -> int:
             return 0
         if parsed.command == "export":
             print(json.dumps(reviewer.export_bugs(), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "create-regression":
+            print(json.dumps(reviewer.create_regression(parsed.bug_id).to_dict(), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "create-regressions":
+            print(json.dumps({"regressions": [result.to_dict() for result in reviewer.create_regressions_for_session(parsed.session_id)]}, indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "mark-fixed":
+            print(json.dumps(reviewer.mark_fixed(parsed.bug_id, reason=parsed.reason).to_dict(), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "mark-wontfix":
+            print(json.dumps(reviewer.mark_wontfix(parsed.bug_id, reason=parsed.reason).to_dict(), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "link-test":
+            print(json.dumps(reviewer.link_test(parsed.bug_id, parsed.test_path).to_dict(), indent=2, sort_keys=True))
             return 0
     except (ValueError, AuditLogError) as exc:
         print(str(exc), file=sys.stderr)
@@ -902,6 +1652,9 @@ def _dogfood(argv: list[str], *, project_root: str | Path = ".") -> int:
     parser = argparse.ArgumentParser(prog="smart_agent.py dogfood", description="Run curated manual dogfood command suites.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("list", help="List available dogfood suites.")
+    subparsers.add_parser("plan", help="Show the daily and weekly dogfood workflow plan.")
+    subparsers.add_parser("next", help="Show the next recommended dogfood step.")
+    subparsers.add_parser("checklist", help="Show the daily and weekly dogfood checklists.")
     show_parser = subparsers.add_parser("show", help="Show one suite definition.")
     show_parser.add_argument("suite")
     run_parser = subparsers.add_parser("run", help="Run one dogfood suite and continue through failures.")
@@ -916,6 +1669,15 @@ def _dogfood(argv: list[str], *, project_root: str | Path = ".") -> int:
         if parsed.command == "list":
             load_all_suites(project_root=project_root)
             print(json.dumps({"suites": list_suite_summaries(project_root=project_root)}, indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "plan":
+            print(json.dumps(build_dogfood_plan(project_root=project_root), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "next":
+            print(json.dumps(dogfood_next(project_root=project_root), indent=2, sort_keys=True))
+            return 0
+        if parsed.command == "checklist":
+            print(json.dumps(dogfood_checklist(project_root=project_root), indent=2, sort_keys=True))
             return 0
         if parsed.command == "show":
             print(json.dumps(load_suite(parsed.suite, project_root=project_root).to_dict(), indent=2, sort_keys=True))
@@ -933,6 +1695,37 @@ def _dogfood(argv: list[str], *, project_root: str | Path = ".") -> int:
         print(str(exc), file=sys.stderr)
         return 2
     return 2
+
+
+def _quality(argv: list[str], *, project_root: str | Path = ".") -> int:
+    parser = argparse.ArgumentParser(prog="smart_agent.py quality", description="Show read-only product quality health.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    for name in ("status", "sessions", "bugs", "regressions", "features", "next"):
+        subparsers.add_parser(name, help=f"Show quality {name}.")
+    try:
+        parsed = parser.parse_args(argv)
+    except SystemExit as exc:
+        return int(exc.code)
+    if parsed.command == "status":
+        payload = quality_status(project_root=project_root)
+    elif parsed.command == "sessions":
+        payload = quality_sessions(project_root=project_root)
+    elif parsed.command == "bugs":
+        payload = quality_bugs(project_root=project_root)
+    elif parsed.command == "regressions":
+        payload = quality_regressions(project_root=project_root)
+    elif parsed.command == "features":
+        payload = quality_features(project_root=project_root)
+    elif parsed.command == "next":
+        payload = quality_next(project_root=project_root)
+    else:
+        return 2
+    if parsed.command == "status":
+        report = build_product_quality_dashboard(project_root=project_root)
+        print(format_product_quality_dashboard(report))
+    else:
+        print(format_product_quality_json(payload))
+    return 0
 
 
 def _commands(argv: list[str], *, project_root: str | Path = ".") -> int:

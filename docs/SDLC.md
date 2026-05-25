@@ -47,3 +47,11 @@ The gate must fail if a capability is missing required fields, contains bypass f
 8. Update docs.
 9. Update completion report.
 10. Stop at approval gates.
+
+## Build Provenance And Cloneability
+
+Major feature tracks should preserve their original prompt packs under `prompts/packs/`. If original prompts are unavailable, reconstructed packs must be labeled reconstructed, include confidence and caveats, and must not be claimed exact without evidence.
+
+Every rewrite, model migration, or platform port must start from `docs/AGENT_DNA.md`, `docs/ARCHITECTURE_PRINCIPLES.md`, `docs/CLONE_BLUEPRINT.md`, `docs/MODEL_MIGRATION_GUIDE.md`, and `docs/PLATFORM_MIGRATION_GUIDE.md`.
+
+Release gates for cloneability must verify prompt provenance, command registry state, feature maturity, project state, changelog, completion report, startup policy validation, capability manifest validation, and preservation of ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, and AuditLogger invariants.

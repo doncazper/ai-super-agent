@@ -12,7 +12,14 @@ from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
 from agent.tools.weather.formatter import format_weather_answer
 from agent.tools.weather.models import convert_temperature
-from agent.tools.weather.provider import NWSProvider, OpenMeteoProvider, WeatherKitProvider, provider_from_env
+from agent.tools.weather.provider import (
+    NWSProvider,
+    OpenMeteoProvider,
+    WeatherAPIProvider,
+    WeatherKitProvider,
+    WeatherProviderSelector,
+    provider_from_env,
+)
 from smart_agent import _run_weather_command
 
 
@@ -92,6 +99,11 @@ class CountingWeatherProvider(StaticWeatherProvider):
         return super().forecast(location, days, units, locale, include_hourly)
 
 
+class NamedStaticWeatherProvider(StaticWeatherProvider):
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
 @pytest.fixture(autouse=True)
 def isolate_weather_cache(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("WEATHER_CACHE_PATH", str(tmp_path / "weather_cache.json"))
@@ -106,6 +118,12 @@ def isolate_weather_cache(tmp_path, monkeypatch) -> None:
     monkeypatch.delenv("WEATHER_UNITS", raising=False)
     monkeypatch.delenv("WEATHER_DEFAULT_UNITS", raising=False)
     monkeypatch.delenv("WEATHER_PROVIDER", raising=False)
+    monkeypatch.delenv("WEATHER_DEFAULT_PROVIDER", raising=False)
+    monkeypatch.delenv("WEATHER_API_KEY", raising=False)
+    monkeypatch.delenv("WEATHERAPI_API_KEY", raising=False)
+    monkeypatch.delenv("PROVIDER_COST_MODE", raising=False)
+    monkeypatch.delenv("ALLOW_PAID_APIS", raising=False)
+    monkeypatch.delenv("MAX_PAID_API_CALLS_PER_DAY", raising=False)
     monkeypatch.delenv("WEATHERKIT_TEAM_ID", raising=False)
     monkeypatch.delenv("WEATHERKIT_SERVICE_ID", raising=False)
     monkeypatch.delenv("WEATHERKIT_KEY_ID", raising=False)
@@ -221,7 +239,7 @@ def test_weatherkit_provider_not_used_unless_selected(tmp_path, monkeypatch) -> 
     monkeypatch.setenv("WEATHERKIT_KEY_ID", "KEY123456")
     monkeypatch.setenv("WEATHERKIT_PRIVATE_KEY_PATH", str(tmp_path / "AuthKey_KEY123456.p8"))
 
-    assert provider_from_env().name == "open_meteo"
+    assert provider_from_env().name == "auto"
     monkeypatch.setenv("WEATHER_PROVIDER", "weatherkit")
     assert provider_from_env().name == "weatherkit"
 
@@ -335,10 +353,63 @@ def test_open_meteo_is_default_no_key_provider(monkeypatch) -> None:
     env_provider = provider_from_env()
     status = weather_provider_status(provider)
 
-    assert env_provider.name == "open_meteo"
+    assert env_provider.name == "auto"
     assert status["provider"] == "open_meteo"
     assert status["configured"] is True
     assert status["requires_api_key"] is False
+
+
+def test_weather_auto_selects_open_meteo_for_global_current_weather(tmp_path) -> None:
+    selector = WeatherProviderSelector(
+        open_meteo=NamedStaticWeatherProvider("open_meteo"),
+        nws=NamedStaticWeatherProvider("nws"),
+        weatherapi=NamedStaticWeatherProvider("weatherapi"),
+    )
+    broker = make_broker(tmp_path, weather_provider=selector)
+
+    result = broker.execute(call("weather.current", {"location": "Paris, France", "provider": "auto"}))
+
+    payload = json.loads(result.content)
+    assert payload["status"] == "ok"
+    assert payload["provider"] == "open_meteo"
+    assert payload["provider_decision"]["selected_provider"] == "open_meteo"
+    assert "free_first selected open_meteo" in payload["provider_decision"]["reason"]
+    with sqlite3.connect(tmp_path / "memory.sqlite3") as conn:
+        assert conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0] == 0
+
+
+def test_weather_auto_selects_nws_for_us_alerts(tmp_path) -> None:
+    selector = WeatherProviderSelector(
+        open_meteo=NamedStaticWeatherProvider("open_meteo"),
+        nws=NamedStaticWeatherProvider("nws"),
+        weatherapi=NamedStaticWeatherProvider("weatherapi"),
+    )
+    broker = make_broker(tmp_path, weather_provider=selector)
+
+    result = broker.execute(call("weather.alerts", {"location": "Phoenix, AZ", "provider": "auto"}))
+
+    payload = json.loads(result.content)
+    assert payload["status"] == "ok"
+    assert payload["provider"] == "nws"
+    assert payload["provider_decision"]["selected_provider"] == "nws"
+    skipped = payload["provider_decision"]["skipped_providers"]
+    assert any(item["provider"] == "open_meteo" and "does not support" in item["reason"] for item in skipped)
+
+
+def test_weatherapi_configured_default_skipped_when_paid_not_allowed(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHER_PROVIDER", "weatherapi")
+    monkeypatch.setenv("WEATHERAPI_API_KEY", "weatherapi-secret-key")
+    monkeypatch.setenv("ALLOW_PAID_APIS", "false")
+    monkeypatch.setenv("MAX_PAID_API_CALLS_PER_DAY", "0")
+    broker = make_broker(tmp_path)
+
+    result = broker.execute(call("weather.current", {"location": "Phoenix, AZ"}))
+
+    payload = json.loads(result.content)
+    assert payload["status"] == "error"
+    assert payload["provider"] == "weatherapi"
+    assert payload["provider_decision"]["selected_provider"] is None
+    assert "ALLOW_PAID_APIS=false" in payload["provider_decision"]["reason"]
 
 
 def test_configured_provider_returns_normalized_current_weather(tmp_path) -> None:
@@ -570,6 +641,11 @@ def nws_provider(handler) -> NWSProvider:
     return NWSProvider(client_factory=lambda timeout: httpx.Client(transport=transport, timeout=timeout))
 
 
+def weatherapi_provider(handler, api_key: str = "weatherapi-secret-key") -> WeatherAPIProvider:
+    transport = httpx.MockTransport(handler)
+    return WeatherAPIProvider(api_key=api_key, client_factory=lambda timeout: httpx.Client(transport=transport, timeout=timeout))
+
+
 def geocoding_payload() -> dict[str, object]:
     return {
         "results": [
@@ -677,6 +753,84 @@ def nws_alerts_payload() -> dict[str, object]:
                 }
             }
         ]
+    }
+
+
+def weatherapi_forecast_payload() -> dict[str, object]:
+    return {
+        "location": {
+            "name": "Phoenix",
+            "region": "Arizona",
+            "country": "United States of America",
+            "lat": 33.45,
+            "lon": -112.07,
+            "tz_id": "America/Phoenix",
+        },
+        "current": {
+            "last_updated": "2026-05-23 10:00",
+            "temp_c": 30,
+            "temp_f": 86,
+            "feelslike_c": 29,
+            "feelslike_f": 84.2,
+            "precip_mm": 0,
+            "precip_in": 0,
+            "wind_kph": 11,
+            "wind_mph": 6.8,
+            "wind_degree": 240,
+            "humidity": 18,
+            "pressure_mb": 1008,
+            "pressure_in": 29.77,
+            "uv": 7,
+            "condition": {"text": "Sunny", "code": 1000},
+        },
+        "forecast": {
+            "forecastday": [
+                {
+                    "date": "2026-05-23",
+                    "day": {
+                        "maxtemp_c": 34,
+                        "maxtemp_f": 93.2,
+                        "mintemp_c": 22,
+                        "mintemp_f": 71.6,
+                        "totalprecip_mm": 0,
+                        "totalprecip_in": 0,
+                        "daily_chance_of_rain": 0,
+                        "maxwind_kph": 20,
+                        "maxwind_mph": 12.4,
+                        "uv": 8,
+                        "condition": {"text": "Sunny", "code": 1000},
+                    },
+                    "hour": [
+                        {
+                            "time": "2026-05-23 10:00",
+                            "temp_c": 30,
+                            "temp_f": 86,
+                            "chance_of_rain": 0,
+                            "precip_mm": 0,
+                            "precip_in": 0,
+                            "wind_kph": 11,
+                            "wind_mph": 6.8,
+                            "wind_degree": 240,
+                            "humidity": 18,
+                            "uv": 7,
+                            "condition": {"text": "Sunny", "code": 1000},
+                        }
+                    ],
+                }
+            ]
+        },
+        "alerts": {
+            "alert": [
+                {
+                    "headline": "Heat advisory",
+                    "severity": "Moderate",
+                    "effective": "2026-05-23T10:00:00-07:00",
+                    "expires": "2026-05-23T20:00:00-07:00",
+                    "source": "WeatherAPI",
+                    "desc": "Hot conditions expected.",
+                }
+            ]
+        },
     }
 
 
@@ -1146,6 +1300,76 @@ def test_nws_alerts_normalized_and_cli(tmp_path, capsys) -> None:
     assert events[0]["network_domains"] == ["geocoding-api.open-meteo.com", "api.weather.gov"]
 
 
+def test_explicit_weatherapi_works_with_mocked_key(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEATHERAPI_API_KEY", "weatherapi-secret-key")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.host == "api.weatherapi.com"
+        assert request.url.params.get("key") == "weatherapi-secret-key"
+        return httpx.Response(200, json=weatherapi_forecast_payload())
+
+    selector = WeatherProviderSelector(
+        open_meteo=NamedStaticWeatherProvider("open_meteo"),
+        nws=NamedStaticWeatherProvider("nws"),
+        weatherapi=weatherapi_provider(handler),
+    )
+    broker = make_broker(tmp_path, weather_provider=selector)
+
+    result = broker.execute(call("weather.current", {"location": "Phoenix, AZ", "provider": "weatherapi", "units": "imperial"}))
+
+    payload = json.loads(result.content)
+    assert payload["status"] == "ok"
+    assert payload["provider"] == "weatherapi"
+    assert payload["current"]["temperature"] == 86
+    assert payload["current"]["temperature_unit"] == "F"
+    assert payload["provider_decision"]["selected_provider"] == "weatherapi"
+    assert payload["provider_decision"]["reason"] == "explicit provider selected"
+
+
+def test_weatherapi_missing_key_returns_setup_hint(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("WEATHERAPI_API_KEY", raising=False)
+    monkeypatch.delenv("WEATHER_API_KEY", raising=False)
+    broker = make_broker(tmp_path, weather_provider=WeatherProviderSelector())
+
+    result = broker.execute(call("weather.current", {"location": "Phoenix, AZ", "provider": "weatherapi"}))
+
+    payload = json.loads(result.content)
+    assert payload["status"] == "error"
+    assert payload["provider"] == "weatherapi"
+    assert "WEATHER_API_KEY" in payload["setup_hint"]
+    assert payload["provider_decision"]["selected_provider"] is None
+
+
+def test_weather_provider_decision_is_audited(tmp_path) -> None:
+    selector = WeatherProviderSelector(open_meteo=NamedStaticWeatherProvider("open_meteo"))
+    broker = make_broker(tmp_path, weather_provider=selector)
+
+    result = broker.execute(call("weather.current", {"location": "Phoenix, AZ", "provider": "auto"}))
+
+    assert json.loads(result.content)["provider_decision"]["selected_provider"] == "open_meteo"
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert "weather provider selected: open_meteo" in events[0]["result_summary"]
+    assert events[0]["network_domains"] == ["geocoding-api.open-meteo.com", "api.open-meteo.com"]
+
+
+def test_weatherapi_secret_redacted_from_results_and_audit(tmp_path, monkeypatch) -> None:
+    secret = "weatherapi-secret-key"
+    monkeypatch.setenv("WEATHERAPI_API_KEY", secret)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=weatherapi_forecast_payload())
+
+    selector = WeatherProviderSelector(weatherapi=weatherapi_provider(handler, api_key=secret))
+    broker = make_broker(tmp_path, weather_provider=selector)
+
+    result = broker.execute(call("weather.current", {"location": "Phoenix, AZ", "provider": "weatherapi"}))
+
+    assert result.allowed is True
+    audit_text = (tmp_path / "audit.jsonl").read_text(encoding="utf-8")
+    assert secret not in result.content
+    assert secret not in audit_text
+
+
 def test_nws_timeout_returns_retryable_structured_error(tmp_path) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.host == "geocoding-api.open-meteo.com":
@@ -1189,9 +1413,10 @@ def test_weather_doctor_defaults_to_open_meteo_when_no_provider_configured(tmp_p
 
     assert exit_code == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["provider"] == "open_meteo"
+    assert payload["provider"] == "auto"
     assert payload["configured"] is True
     assert payload["error"] is None
+    assert payload["decisions"]["current"]["selected_provider"] == "open_meteo"
     assert payload["capabilities"]["weather.current"]["decision"] == "ALLOW"
     events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
     assert events[0]["tool_name"] == "weather.status"
@@ -1212,16 +1437,16 @@ def test_weather_doctor_with_mocked_provider_configured(tmp_path, capsys) -> Non
 def test_weather_doctor_reports_unsupported_provider_and_missing_api_key(tmp_path, monkeypatch, capsys) -> None:
     monkeypatch.setenv("WEATHER_PROVIDER", "weatherapi")
     monkeypatch.delenv("WEATHER_API_KEY", raising=False)
+    monkeypatch.delenv("WEATHERAPI_API_KEY", raising=False)
     broker = make_broker(tmp_path)
 
     exit_code = _run_weather_command(["doctor"], broker)
 
     assert exit_code == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["provider"] == "unsupported:weatherapi"
+    assert payload["provider"] == "weatherapi"
     assert payload["configured"] is False
-    assert "not supported" in payload["error"]
-    assert "WEATHER_API_KEY is not set" in payload["error"]
+    assert "WEATHERAPI_API_KEY" in payload["error"]
 
 
 def test_weather_smoke_success_using_mocked_provider(tmp_path, capsys) -> None:
@@ -1251,6 +1476,29 @@ def test_weather_current_cli_success_using_mocked_provider(tmp_path, capsys) -> 
     assert "Weather for Resolved Phoenix, AZ" in output
     assert "Current: 72C, clear:metric:None" in output
     assert "Source: static-weather; retrieved_at" in output
+
+
+def test_weather_provider_auto_cli_reports_selection(tmp_path, capsys) -> None:
+    selector = WeatherProviderSelector(open_meteo=NamedStaticWeatherProvider("open_meteo"))
+    broker = make_broker(tmp_path, weather_provider=selector)
+
+    exit_code = _run_weather_command(["provider", "auto", "Phoenix, AZ"], broker)
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["selected_provider"] == "open_meteo"
+    assert payload["provider_decision"]["selected_provider"] == "open_meteo"
+
+
+def test_weather_providers_cli_lists_cost_policy(tmp_path, capsys) -> None:
+    broker = make_broker(tmp_path, weather_provider=StaticWeatherProvider())
+
+    exit_code = _run_weather_command(["providers"], broker)
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert [provider["name"] for provider in payload["providers"]] == ["open_meteo", "nws", "weatherapi"]
+    assert payload["cost_policy"]["provider_order"] == ["open_meteo", "nws", "weatherapi"]
 
 
 def test_weather_forecast_cli_success_using_mocked_provider(tmp_path, capsys) -> None:

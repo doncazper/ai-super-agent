@@ -1,0 +1,39 @@
+suite_id: messaging_core
+name: Messaging Core Dogfood
+description: Exercises channel-neutral messaging metadata, draft creation, draft validation, send-action proposal creation, and approval preview without sending.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: messaging_channels_list
+    description: List channel-neutral messaging adapters.
+    command: python smart_agent.py messaging channels
+    expected_behavior: Channel metadata is shown without reading Messages databases, providers, browser profiles, or personal data.
+    failure_signals: Any private app read, send attempt, missing channel safety metadata, or secret leakage.
+    tags: [messaging, channels, metadata]
+  - id: messaging_draft_create
+    description: Create a fixed-id local manual handoff draft.
+    command: python smart_agent.py messaging draft-create --channel manual_handoff --to "Dogfood Recipient" --body "Dogfood draft only. Do not send." --draft-id dogfood_core_manual --source trusted_user
+    expected_behavior: A local MessageDraft is written under ./workspace/messaging/drafts with send_executed=false.
+    failure_signals: Message send, private Messages database access, memory write, or missing draft path.
+    tags: [messaging, draft, fixture]
+  - id: messaging_draft_validate
+    description: Validate the fixed-id local draft.
+    command: python smart_agent.py messaging draft validate dogfood_core_manual
+    expected_behavior: Draft validation succeeds and rejects no-safe-channel violations.
+    failure_signals: Missing draft validation, group/bulk recipient acceptance, or send adapter execution.
+    tags: [messaging, draft, validation]
+  - id: messaging_create_send_action
+    description: Create a CRITICAL Action Center send proposal from the fixed-id draft.
+    command: python smart_agent.py messaging create-send-action dogfood_core_manual
+    expected_behavior: A pending exact-preview Action Center item is created; no send executes and approval reuse is false.
+    failure_signals: Message send, approval auto-grant, missing exact preview, approval reuse allowed, or missing audit.
+    tags: [messaging, action_center, dry_run]
+  - id: messaging_approval_preview
+    description: Show pending Action Center records for manual approval-preview review.
+    command: python smart_agent.py actions list
+    expected_behavior: Pending messaging send proposal is visible with risk CRITICAL and exact local preview data, redacted where appropriate.
+    failure_signals: Missing pending action, raw secret exposure, action execution, or confusing rollback/approval wording.
+    tags: [messaging, action_center, preview]

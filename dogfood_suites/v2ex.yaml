@@ -1,0 +1,36 @@
+suite_id: v2ex
+name: V2EX Dogfood
+description: Read-only V2EX documented API checks with disabled-by-default setup guidance and optional live validation when configured.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: true
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: v2ex_doctor
+    description: Inspect V2EX read-only connector configuration without fetching topics.
+    command: python smart_agent.py v2ex doctor
+    expected_behavior: Shows disabled/configured state, optional token presence redacted, cache/rate-limit status, and absent write/member/notification actions.
+    failure_signals: Token printed, member/profile/notification access enabled, write endpoint exposed, or network call during doctor.
+    tags: [forums, v2ex, doctor, mock_safe]
+  - id: v2ex_latest_setup_or_live
+    description: Fetch latest public V2EX topics only when explicitly configured.
+    command: python smart_agent.py v2ex latest --limit 5
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Returns setup guidance when disabled, or normalized UNTRUSTED_WEB ForumThread records when configured.
+    failure_signals: Web scraping fallback, token leakage, member profile read, missing source IDs, or absent rate-limit audit.
+    tags: [forums, v2ex, latest, provider_optional]
+  - id: v2ex_topic_fixture
+    description: Fetch one fixture V2EX topic id only when configured.
+    command: python smart_agent.py v2ex topic 12345 --detect-language
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Returns setup guidance when disabled, or a normalized ForumThread/ForumPost with language detection metadata when configured.
+    failure_signals: Write/member/notification endpoint use, missing UNTRUSTED_WEB label, token printed, or author metadata unredacted.
+    tags: [forums, v2ex, topic, language, provider_optional]
+  - id: v2ex_replies_fixture
+    description: Fetch fixture V2EX replies only when configured.
+    command: python smart_agent.py v2ex replies 12345 --limit 20
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Returns setup guidance when disabled, or normalized ForumComment replies with source IDs and untrusted labels when configured.
+    failure_signals: Scraping fallback, raw token exposure, missing source references, or forum content memory write.
+    tags: [forums, v2ex, replies, provider_optional]

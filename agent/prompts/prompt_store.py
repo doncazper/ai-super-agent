@@ -75,6 +75,8 @@ def _format_split_prompt(pack: PromptPack, prompt: PackedPrompt, source_pack: st
         "commit_hash:\n"
         "related_feature_ids: []\n"
         "expected_outputs:\n"
+        "files_expected:\n"
+        "files_changed:\n"
         "tests_expected:\n"
         "tests_run:\n"
         "test_result:\n"
@@ -82,7 +84,9 @@ def _format_split_prompt(pack: PromptPack, prompt: PackedPrompt, source_pack: st
         "changelog_updated:\n"
         "feature_registry_updated:\n"
         "feature_maturity_updated:\n"
+        "command_registry_updated:\n"
         "completion_report_updated:\n"
+        "evidence_links:\n"
         "blockers:\n"
         "next_prompt_id:\n"
         "supersedes:\n"
@@ -95,7 +99,7 @@ def _format_split_prompt(pack: PromptPack, prompt: PackedPrompt, source_pack: st
 
 
 def _ensure_prompt_dirs(root: Path) -> None:
-    for directory in ("packs", "queued", "active", "completed", "skipped", "failed", "superseded"):
+    for directory in ("packs", "queued", "active", "completed", "skipped", "failed", "superseded", "blocked", "approval_required", "needs_review"):
         (root / "prompts" / directory).mkdir(parents=True, exist_ok=True)
 
 

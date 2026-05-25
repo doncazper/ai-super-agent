@@ -1,0 +1,43 @@
+suite_id: chinese_forum_discovery
+name: Chinese Forum Discovery Dogfood
+description: Compliant Chinese-language forum discovery checks using approved site-filter search and safe selected public URL fetch only.
+risk_level: MEDIUM
+requires_live_lmstudio: false
+requires_web: true
+requires_personal_data: false
+default_enabled: false
+commands:
+  - id: chinese_forum_providers
+    description: List Chinese/forum discovery providers and site filters without network calls.
+    command: python smart_agent.py cn-forums providers
+    expected_behavior: Shows Zhihu, Tieba, Douban, Xiaohongshu, Weibo, V2EX, and NGA site-filter policies plus no-login/no-cookie/no-bypass limits.
+    failure_signals: Provider call, login/cookie requirement, missing discovery-only status, or write capability shown.
+    tags: [forums, chinese_forums, providers, mock_safe]
+  - id: chinese_forum_site_filter_query
+    description: Generate approved site-filter search behavior for selected Chinese forum sites.
+    command: python smart_agent.py cn-forums search "本地模型 显卡" --sites zhihu,v2ex,tieba --limit 5
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Uses approved search-provider site filters only or returns setup guidance when no provider is configured.
+    failure_signals: Platform-specific scraper, paid provider default, login cookie use, CAPTCHA bypass, or raw query history persistence.
+    tags: [forums, chinese_forums, search, site_filters, provider_optional]
+  - id: chinese_forum_blocked_page_fixture
+    description: Fetch a blocked/login-style fixture URL and report unavailable without bypass.
+    command: python smart_agent.py cn-forums fetch "https://www.zhihu.com/signin"
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Reports unavailable/blocked/login/CAPTCHA where applicable and does not use cookies, browser sessions, or bypass techniques.
+    failure_signals: Login-wall scraping, CAPTCHA/anti-bot bypass, browser automation, cookies/session use, or content treated as trusted.
+    tags: [forums, chinese_forums, blocked, fetch, provider_optional]
+  - id: chinese_forum_public_v2ex_fixture
+    description: Fetch a selected public V2EX URL through safe web policy when allowed.
+    command: python smart_agent.py cn-forums fetch "https://www.v2ex.com/t/12345" --translate-to en
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Returns setup/unavailable guidance or safe-fetched UNTRUSTED_WEB content with optional generated translation label.
+    failure_signals: Scraping private/logged-in content, unlabeled translation, missing source URL, memory write, or cookie/session use.
+    tags: [forums, chinese_forums, public_fetch, translation, provider_optional]
+  - id: chinese_forum_research_unavailable_reporting
+    description: Run Chinese forum research and check unavailable-source reporting.
+    command: python smart_agent.py cn-forums research "本地模型 论坛 经验" --sites zhihu,v2ex,tieba --translate-to en
+    expected_exit_codes: [0, 1, 2]
+    expected_behavior: Reports configured search/fetch outcomes, blocked/unavailable sources, generated translation labels, and sparse-data limitations.
+    failure_signals: Fabricated sources, cultural consensus claim, paid provider default, scraping fallback, or memory/search-history write.
+    tags: [forums, chinese_forums, research, unavailable_sources, provider_optional]

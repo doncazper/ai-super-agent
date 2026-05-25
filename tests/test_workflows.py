@@ -19,6 +19,13 @@ from agent.tools.personal.email import EmailThread
 from agent.tools.personal.tasks import MockTasksConnector, TaskItem
 from agent.tools.registry import default_registry
 from agent.tools.web.fetch import DomainRules, WebResponse
+from agent.web_acquisition.citations import source_reference_from_mapping, stable_source_id
+from agent.web_acquisition.source_attribution import (
+    ResearchSourceBundle,
+    build_research_source_bundle,
+    load_last_source_bundle,
+    verify_source_bundle,
+)
 from agent.workflows.daily_briefing import daily_briefing
 from agent.workflows.daily_briefing import briefing_config_load
 from agent.workflows.daily_briefing import briefing_config_set
@@ -32,6 +39,7 @@ from agent.workflows.research import multilingual_web_research, source_grounded_
 from agent.workflows.task_extraction import extract_personal_tasks
 from smart_agent import _run_briefing_command
 from smart_agent import _run_meeting_command
+from smart_agent import _run_research_command
 from smart_agent import _run_tasks_command
 
 
@@ -84,6 +92,24 @@ class EmptySearchProvider:
         return []
 
 
+class StaticSerpApiProvider:
+    name = "serpapi"
+
+    def is_configured(self) -> bool:
+        return True
+
+    def search(self, query: str, max_results: int, locale: str | None = None, safe_search: bool = True):
+        return [
+            {
+                "title": "SerpAPI Result",
+                "url": "https://example.com/serp",
+                "snippet": f"{locale}:{safe_search}:{query}",
+                "source": "example.com",
+                "trust_level": "UNTRUSTED_WEB",
+            }
+        ][:max_results]
+
+
 class BlockedSearchProvider:
     name = "blocked-search"
 
@@ -99,6 +125,31 @@ class BlockedSearchProvider:
                 "source": "blocked.example",
                 "trust_level": "UNTRUSTED_WEB",
             }
+        ][:max_results]
+
+
+class ConflictingSearchProvider:
+    name = "conflict-search"
+
+    def is_configured(self) -> bool:
+        return True
+
+    def search(self, query: str, max_results: int, locale: str | None = None, safe_search: bool = True):
+        return [
+            {
+                "title": "Availability statement",
+                "url": "https://example.com/available",
+                "snippet": "The service is available in the pilot region.",
+                "source": "example.com",
+                "trust_level": "UNTRUSTED_WEB",
+            },
+            {
+                "title": "Availability dispute",
+                "url": "https://example.org/not-available",
+                "snippet": "The service is not available in the pilot region according to local reporting.",
+                "source": "example.org",
+                "trust_level": "UNTRUSTED_WEB",
+            },
         ][:max_results]
 
 
@@ -260,6 +311,7 @@ def workflow_capabilities() -> dict[str, Capability]:
         ),
         "email.draft_reply": Capability("email.draft_reply", RiskLevel.MEDIUM),
         "web.search": Capability("web.search", RiskLevel.LOW, metadata={"requires_web_access": True}),
+        "web.search.serpapi": Capability("web.search.serpapi", RiskLevel.LOW, metadata={"requires_web_access": True}),
         "web.fetch_url": Capability("web.fetch_url", RiskLevel.MEDIUM, metadata={"requires_web_access": True}),
         "weather.current": Capability("weather.current", RiskLevel.LOW, metadata={"requires_web_access": True}),
         "weather.forecast": Capability("weather.forecast", RiskLevel.LOW, metadata={"requires_web_access": True}),
@@ -303,6 +355,7 @@ def make_broker(
     tmp_path,
     approval_manager: ApprovalManager | None = None,
     search_provider=None,
+    serpapi_search_provider=None,
     fetcher=None,
     domain_rules: DomainRules | None = None,
     weather_provider=None,
@@ -316,6 +369,7 @@ def make_broker(
             project_root=tmp_path,
             memory_path=tmp_path / "memory.sqlite3",
             web_search_provider=search_provider or FakeSearchProvider(),
+            serpapi_search_provider=serpapi_search_provider,
             web_fetcher=fetcher,
             web_domain_rules=domain_rules,
             weather_provider=weather_provider,
@@ -1181,6 +1235,29 @@ def test_source_grounded_research_provider_missing_returns_clear_error(tmp_path,
     assert report["error"] == "web search provider is not configured"
     assert report["sources"] == []
     assert "search did not return sources" in report["summary"]
+    assert report["sections"]["Sources"] == []
+    assert report["provider_policy"]["query_history_persisted"] is False
+
+
+def test_source_grounded_research_uses_explicit_serpapi_provider(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("ALLOW_PAID_APIS", "true")
+    monkeypatch.setenv("MAX_PAID_API_CALLS_PER_DAY", "5")
+    broker = make_broker(tmp_path, serpapi_search_provider=StaticSerpApiProvider())
+
+    report = source_grounded_research(
+        broker,
+        query="local ai news",
+        fetch_pages=False,
+        max_results=1,
+        provider="serpapi",
+    )
+
+    assert report["status"] == "ok"
+    assert report["provider"] == "serpapi"
+    assert report["sources"][0]["title"] == "SerpAPI Result"
+    assert report["sections"]["Sources"][0]["url"] == "https://example.com/serp"
+    events = [json.loads(line) for line in (tmp_path / "audit.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [event["tool_name"] for event in events] == ["web.search.serpapi"]
 
 
 def test_source_grounded_research_reports_fetch_failures(tmp_path) -> None:
@@ -1213,6 +1290,25 @@ def test_source_grounded_research_reports_blocked_domain_as_fetch_failure(tmp_pa
     assert report["sources"][0]["fetched"] is False
     assert report["sources"][0]["fetch_error"] == "blocked domain denied"
     assert report["fetch_failures"][0]["url"] == "https://blocked.example/page"
+
+
+def test_source_grounded_research_reports_unavailable_fetch_as_failure(tmp_path) -> None:
+    def blocked_page_fetcher(url: str, timeout_seconds: int) -> WebResponse:
+        return WebResponse(
+            url=url,
+            status_code=200,
+            headers={"content-type": "text/html"},
+            text="<html><title>Just a moment</title><body>Checking your browser before access.</body></html>",
+        )
+
+    broker = make_broker(tmp_path, fetcher=blocked_page_fetcher)
+
+    report = source_grounded_research(broker, query="blocked page", fetch_pages=True, max_results=1)
+
+    assert report["sources"][0]["fetched"] is False
+    assert report["sources"][0]["fetch_error"] == "captcha_or_block_page"
+    assert report["fetch_failures"][0]["error"] == "captcha_or_block_page"
+    assert "source fetch failed" in report["coverage_note"]
 
 
 def test_source_grounded_research_filters_webpage_instruction_injection(tmp_path) -> None:
@@ -1302,6 +1398,148 @@ def test_source_grounded_research_foreign_language_passes_through(tmp_path) -> N
     assert "Últimas noticias de IA" in report["summary"]
     assert report["sources"][0]["language_hint"] == "likely Spanish"
     assert report["summary_language"] == "en"
+    assert "non-English or multilingual" in report["coverage_note"] or "One or more sources" in report["coverage_note"]
+
+
+def test_source_grounded_research_handles_conflicting_sources(tmp_path) -> None:
+    broker = make_broker(tmp_path, search_provider=ConflictingSearchProvider())
+
+    report = source_grounded_research(broker, query="availability", fetch_pages=False, max_results=2)
+
+    assert report["status"] == "ok"
+    assert len(report["sources"]) == 2
+    assert "Potentially conflicting source evidence" in report["coverage_note"]
+    assert report["sections"]["Coverage / limitations"]
+    assert all(source["evidence_type"] == "search_snippet" for source in report["sources"])
+
+
+def test_source_grounded_research_cli_accepts_max_sources_freshness_and_no_fetch(tmp_path, capsys, monkeypatch) -> None:
+    monkeypatch.setenv("RESEARCH_SOURCE_BUNDLE_PATH", str(tmp_path / "last_sources.json"))
+    broker = make_broker(tmp_path)
+
+    exit_code = _run_research_command(
+        ["--provider", "auto", "--max-sources", "1", "--freshness", "recent", "--no-fetch", "local ai news"],
+        broker,
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert payload["status"] == "ok"
+    assert len(payload["sources"]) == 1
+    assert payload["sources"][0]["evidence_type"] == "search_snippet"
+    assert payload["query_history_persisted"] is False
+    assert payload["source_bundle"]["sources"][0]["source_id"].startswith("src_")
+    assert load_last_source_bundle().sources[0].source_id == payload["source_bundle"]["sources"][0]["source_id"]
+
+
+def test_source_ids_are_stable() -> None:
+    assert stable_source_id("https://Example.com/path#frag", "fake") == stable_source_id("https://example.com/path", "fake")
+
+
+def test_fetched_source_is_cited_with_retrieved_at(tmp_path) -> None:
+    def fetcher(url: str, timeout_seconds: int) -> WebResponse:
+        return WebResponse(
+            url=url,
+            status_code=200,
+            headers={"content-type": "text/plain"},
+            text="The source-backed claim appears in fetched text.",
+        )
+
+    broker = make_broker(tmp_path, fetcher=fetcher)
+    report = source_grounded_research(broker, query="citation test", fetch_pages=True, max_results=1)
+    bundle = ResearchSourceBundle.from_dict(report["source_bundle"])
+
+    assert bundle.sources[0].retrieved_at
+    assert bundle.sources[0].source_id in bundle.citations[0].source_ids
+    assert bundle.citations[0].snippet_only is False
+    assert verify_source_bundle(bundle)["status"] == "ok"
+
+
+def test_failed_source_is_not_cited_as_support(tmp_path) -> None:
+    def failing_fetcher(url: str, timeout_seconds: int) -> WebResponse:
+        raise ToolError("web fetch timed out")
+
+    broker = make_broker(tmp_path, fetcher=failing_fetcher)
+    report = source_grounded_research(broker, query="failed citation", fetch_pages=True, max_results=1)
+    bundle = ResearchSourceBundle.from_dict(report["source_bundle"])
+
+    assert bundle.failed_sources[0]["source_id"] == bundle.sources[0].source_id
+    assert bundle.citations == ()
+    assert verify_source_bundle(bundle)["status"] == "ok"
+
+
+def test_snippet_only_source_is_labeled() -> None:
+    source = {
+        "title": "Snippet only",
+        "url": "https://example.com/snippet",
+        "snippet": "Only the search snippet is available.",
+        "provider": "fake",
+        "retrieved_at": "2026-05-24T12:00:00+00:00",
+        "fetched": False,
+        "trust_level": "UNTRUSTED_WEB",
+    }
+
+    reference = source_reference_from_mapping(source)
+    assert reference is not None
+    assert reference.reliability_signals["snippet_only"] is True
+    assert reference.reliability_signals["evidence_type"] == "snippet_only"
+
+
+def test_source_bundle_rejects_fabricated_citation_url() -> None:
+    bundle = build_research_source_bundle(
+        {
+            "status": "ok",
+            "query": "fabrication check",
+            "provider": "fake",
+            "sources": [
+                {
+                    "title": "Known",
+                    "url": "https://example.com/known",
+                    "snippet": "Known source.",
+                    "provider": "fake",
+                    "retrieved_at": "2026-05-24T12:00:00+00:00",
+                    "fetched": False,
+                }
+            ],
+            "fetch_failures": [],
+            "limitations": [],
+        }
+    )
+    payload = bundle.to_dict()
+    payload["citations"][0]["source_ids"] = ["src_fabricated"]
+
+    result = verify_source_bundle(payload)
+
+    assert result["status"] == "error"
+    assert "unknown source" in result["errors"][0]
+
+
+def test_conflicting_sources_are_represented_in_claims(tmp_path) -> None:
+    broker = make_broker(tmp_path, search_provider=ConflictingSearchProvider())
+    report = source_grounded_research(broker, query="availability", fetch_pages=False, max_results=2)
+    bundle = ResearchSourceBundle.from_dict(report["source_bundle"])
+
+    assert any(claim.support_level == "conflicting" for claim in bundle.claims)
+
+
+def test_research_last_source_commands(tmp_path, capsys, monkeypatch) -> None:
+    monkeypatch.setenv("RESEARCH_SOURCE_BUNDLE_PATH", str(tmp_path / "last_sources.json"))
+    broker = make_broker(tmp_path)
+
+    assert _run_research_command(["--no-fetch", "--max-sources", "1", "last sources"], broker) == 0
+    capsys.readouterr()
+
+    assert _run_research_command(["sources", "--last"], broker) == 0
+    sources_payload = json.loads(capsys.readouterr().out)
+    assert sources_payload["sources"][0]["source_id"].startswith("src_")
+
+    assert _run_research_command(["verify-sources", "--last"], broker) == 0
+    verify_payload = json.loads(capsys.readouterr().out)
+    assert verify_payload["status"] == "ok"
+
+    assert _run_research_command(["export-sources", "--last"], broker) == 0
+    export_payload = json.loads(capsys.readouterr().out)
+    assert export_payload["sources"][0]["source_id"] == sources_payload["sources"][0]["source_id"]
 
 
 def test_source_grounded_research_audits_search_and_fetch(tmp_path) -> None:

@@ -237,6 +237,23 @@ class ActionPreviewFormatter:
                 sanitized,
                 exact_args_required=exact_required,
             )
+        if tool_name in {"messaging.send_approved", "messages.macos.send_approved"}:
+            return ActionPreview(
+                tool_name,
+                risk_level,
+                "Message send approval",
+                (
+                    f"channel={sanitized.get('channel', '')}; recipient={sanitized.get('to', '')}; "
+                    f"body={sanitized.get('body', '')}; attachments={sanitized.get('attachments', [])}; "
+                    f"rollback=impossible; approval=explicit_per_action; "
+                    f"allowlist={sanitized.get('allowlist_status', 'not_configured')}; "
+                    f"rate_limit={sanitized.get('rate_limit_status', 'not_configured')}; "
+                    f"send={bool(sanitized.get('send_supported', False))}"
+                ),
+                sanitized,
+                exact_args_required=exact_required,
+                rollback_available=False,
+            )
         if tool_name.startswith("tasks."):
             return ActionPreview(
                 tool_name,
@@ -271,6 +288,8 @@ class ActionPreviewFormatter:
             "email.send_approved": ("to", "subject", "body"),
             "messages.send": ("to", "body"),
             "messages.send_approved": ("to", "body"),
+            "messaging.send_approved": ("draft_id", "channel", "to", "body"),
+            "messages.macos.send_approved": ("draft_id", "channel", "to", "body"),
             "messages.save_draft": ("to", "draft"),
             "messages.copy_draft": ("to", "draft"),
             "tasks.create": ("title",),

@@ -3,6 +3,10 @@
 prompt_id: <prompt_id>
 title: <title>
 category: <category>
+pack_id:
+risk_level: LOW
+approval_gate: false
+depends_on: []
 status: queued
 source: user
 created_at: <timestamp>
@@ -13,6 +17,8 @@ branch:
 commit_hash:
 related_feature_ids:
 related_files:
+files_expected:
+files_changed:
 expected_outputs:
 commands_expected:
 commands_run:
@@ -23,7 +29,9 @@ docs_updated:
 changelog_updated:
 feature_registry_updated:
 feature_maturity_updated:
+command_registry_updated:
 completion_report_updated:
+evidence_links:
 blockers:
 next_prompt_id:
 supersedes:

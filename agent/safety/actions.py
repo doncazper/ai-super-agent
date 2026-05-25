@@ -120,6 +120,30 @@ ACTION_SPECS: dict[str, ActionSpec] = {
         required_args=("to", "body"),
         irreversible=True,
     ),
+    "messaging.send_approved": ActionSpec(
+        "messaging.send_approved",
+        "messaging.send_approved",
+        "messaging.send_approved",
+        RiskLevel.CRITICAL,
+        TrustLevel.UNTRUSTED_MESSAGE,
+        rollback_availability=False,
+        approval_required="per_action",
+        approval_reuse_allowed=False,
+        required_args=("draft_id", "channel", "to", "body"),
+        irreversible=True,
+    ),
+    "messages.macos.send_approved": ActionSpec(
+        "messages.macos.send_approved",
+        "messages.macos.send_approved",
+        "messages.macos.send_approved",
+        RiskLevel.CRITICAL,
+        TrustLevel.UNTRUSTED_MESSAGE,
+        rollback_availability=False,
+        approval_required="per_action",
+        approval_reuse_allowed=False,
+        required_args=("draft_id", "channel", "to", "body"),
+        irreversible=True,
+    ),
     "messages.save_draft": ActionSpec(
         "messages.save_draft",
         "messages.save_draft",
@@ -418,6 +442,8 @@ class ActionCenter:
         if spec.irreversible:
             preview["irreversible"] = True
             preview["rollback_note"] = "Rollback is not available for this action."
+        if spec.action_type in {"messaging.send_approved", "messages.macos.send_approved"}:
+            preview["exact_preview"] = _messaging_exact_preview(args)
         record = ActionRecord(
             action_id=action_id or f"act_{uuid4()}",
             created_at=datetime.now(UTC).isoformat(),
@@ -510,6 +536,18 @@ class ActionCenter:
             self.approval_store.add(approval)
             record.approval_request_id = approval.request_id
         self._audit(record, "edited", "action edited; previous approval invalidated", PolicyDecision.ASK)
+        self.store.update(record)
+        return record
+
+    def invalidate(self, action_id: str, summary: str) -> ActionRecord | None:
+        record = self.get_action(action_id)
+        if record is None:
+            return None
+        record.status = ActionStatus.DENIED
+        record.approval_result = "invalidated"
+        if record.approval_request_id:
+            self._sync_approval(record, ApprovalStatus.DENIED)
+        self._audit(record, "invalidated", summary, PolicyDecision.DENY)
         self.store.update(record)
         return record
 
@@ -661,16 +699,24 @@ def _load_capability_entries() -> dict[str, dict[str, Any]]:
 
 
 _SENSITIVE_ACTION_KEYS = {
+    "channel_address",
     "body",
     "content",
     "draft",
     "message_text",
     "notes",
+    "recipient_display",
+    "recipient_exact",
+    "recipient_id",
     "reply_context",
+    "source_context",
     "thread_body",
+    "to",
 }
 _SENSITIVE_SUMMARY_ACTIONS = {
     "email.send_approved",
+    "messaging.send_approved",
+    "messages.macos.send_approved",
     "messages.send_approved",
     "messages.save_draft",
     "messages.copy_draft",
@@ -696,3 +742,23 @@ def _minimize_preview_summary(action_type: str, summary: str) -> str:
     if action_type not in _SENSITIVE_SUMMARY_ACTIONS:
         return summary
     return "sensitive preview details redacted from audit; review Action Center record for exact approval text"
+
+
+def _messaging_exact_preview(args: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "channel": args.get("channel", ""),
+        "recipient_exact": args.get("to", ""),
+        "recipient_display": args.get("recipient_display", ""),
+        "body": args.get("body", ""),
+        "attachments": args.get("attachments", []),
+        "source_context": args.get("source_context", {}),
+        "risk_level": RiskLevel.CRITICAL.value,
+        "rollback": "impossible_after_send",
+        "approval_type": "explicit_per_action",
+        "approval_reuse_allowed": False,
+        "allowlist_status": args.get("allowlist_status", "not_configured_extra_review_required"),
+        "rate_limit_status": args.get("rate_limit_status", "not_configured"),
+        "send_supported": bool(args.get("send_supported", False)),
+        "execution_supported": bool(args.get("execution_supported", False)),
+        "live_probe_status": args.get("macos_send_status", ""),
+    }

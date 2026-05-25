@@ -233,6 +233,17 @@ def _connector_overview(runtime: RuntimeConfig) -> dict[str, Any]:
         for item in personal_capabilities
         if item.get("connector_name") in PERSONAL_CONNECTORS or item.get("capability") in PERSONAL_BROWSER_CAPABILITIES
     ]
+    approval_sensitive_capabilities = [
+        item
+        for item in personal_capabilities
+        if (
+            item.get("connector_name") in PERSONAL_CONNECTORS
+            or item.get("capability") in PERSONAL_BROWSER_CAPABILITIES
+            or item.get("capability") in PERSONAL_MEMORY_CAPABILITIES
+            or item.get("risk_level") in {RiskLevel.HIGH.value, RiskLevel.CRITICAL.value}
+            or item.get("default_enabled") is False
+        )
+    ]
     return {
         "enabled": sorted(str(item.get("name")) for item in statuses if item.get("enabled")),
         "disabled": sorted(str(item.get("name")) for item in statuses if not item.get("enabled")),
@@ -241,7 +252,7 @@ def _connector_overview(runtime: RuntimeConfig) -> dict[str, Any]:
         ),
         "personal_data_capabilities_requiring_approval": all(
             item.get("approval_required") is True or item.get("approval_required") == "per_action"
-            for item in personal_capabilities
+            for item in approval_sensitive_capabilities
         ),
     }
 
@@ -255,7 +266,7 @@ def _personal_capabilities(capabilities: Mapping[str, Any]) -> list[dict[str, An
         connector = str(entry.get("connector_name", ""))
         trust = str(entry.get("trust_level", ""))
         risk = str(entry.get("risk_level", ""))
-        is_personal = _is_personal_data_capability(str(name), connector, trust)
+        is_personal = _is_personal_data_capability(str(name), connector, trust, entry)
         if not is_personal:
             continue
         rows.append(
@@ -275,12 +286,22 @@ def _personal_capabilities(capabilities: Mapping[str, Any]) -> list[dict[str, An
     return rows
 
 
-def _is_personal_data_capability(capability: str, connector: str, trust: str) -> bool:
+def _is_personal_data_capability(capability: str, connector: str, trust: str, entry: Mapping[str, Any] | None = None) -> bool:
+    if capability.startswith("lead.") and not _is_personal_lead_capability(capability, entry or {}):
+        return False
+    if connector in {"messaging_handoff", "messaging_inbound"}:
+        return False
     if capability in PERSONAL_BROWSER_CAPABILITIES or capability in PERSONAL_MEMORY_CAPABILITIES:
         return True
     if connector in PERSONAL_CONNECTORS:
         return True
     return trust in {TrustLevel.UNTRUSTED_EMAIL.value, TrustLevel.UNTRUSTED_MESSAGE.value}
+
+
+def _is_personal_lead_capability(capability: str, entry: Mapping[str, Any]) -> bool:
+    if capability in {"lead.inbox.read_selected", "lead.send_approved"}:
+        return True
+    return bool(entry.get("personal_data_provider", False))
 
 
 def _capabilities_by_risk(capabilities: Mapping[str, Any], risk_level: str) -> list[dict[str, Any]]:

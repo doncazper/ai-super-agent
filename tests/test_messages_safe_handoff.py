@@ -15,6 +15,7 @@ from agent.workflows.message_handoff import (
     draft_message_handoff_actions,
     execute_message_handoff_action,
 )
+from smart_agent import _run_messages_command
 
 
 def _center(tmp_path) -> ActionCenter:
@@ -46,6 +47,21 @@ def _broker(tmp_path, *, enabled: bool = True, center: ActionCenter | None = Non
             RiskLevel.HIGH,
             default_enabled=enabled,
             approval_required=True,
+        ),
+        "messaging.draft.create": Capability(
+            "messaging.draft.create",
+            RiskLevel.MEDIUM,
+            default_enabled=enabled,
+        ),
+        "messages.draft_from_lead": Capability(
+            "messages.draft_from_lead",
+            RiskLevel.MEDIUM,
+            default_enabled=enabled,
+        ),
+        "messages.open_handoff_instructions": Capability(
+            "messages.open_handoff_instructions",
+            RiskLevel.MEDIUM,
+            default_enabled=enabled,
         ),
     }
     return ToolBroker(
@@ -288,3 +304,86 @@ def test_message_handoff_arguments_must_match_approved_preview(tmp_path) -> None
     payload = json.loads(result.content)
     assert result.allowed is False
     assert "arguments must match" in payload["error"]
+
+
+def test_message_open_handoff_instructions_creates_pending_actions_for_local_draft(tmp_path) -> None:
+    center = _center(tmp_path)
+    broker = _broker(tmp_path, center=center)
+    draft_result = broker.execute(
+        _call(
+            "messaging.draft.create",
+            {
+                "channel": "manual_handoff",
+                "to": "+15555555555",
+                "body": "Reviewed reply for handoff.",
+                "source_context": {"source": "trusted_user"},
+            },
+        )
+    )
+    draft_id = json.loads(draft_result.content)["draft_id"]
+
+    result = broker.execute(_call("messages.open_handoff_instructions", {"draft_id": draft_id}))
+
+    payload = json.loads(result.content)
+    assert result.allowed is True
+    assert payload["status"] == "ok"
+    assert payload["sent"] is False
+    assert payload["stored_in_memory"] is False
+    assert payload["copy_requires_approval"] is True
+    assert payload["personal_data_detected"] is True
+    assert payload["handoff_actions"]["save"]["status"] == "pending"
+    assert payload["handoff_actions"]["copy"]["status"] == "pending"
+    assert payload["handoff_actions"]["copy"]["sanitized_args"]["draft_id"] == draft_id
+
+
+def test_messages_draft_from_lead_creates_local_draft_without_send_or_memory(tmp_path) -> None:
+    center = _center(tmp_path)
+    result = _broker(tmp_path, center=center).execute(
+        _call("messages.draft_from_lead", {"lead_id": "mock-lead-001"})
+    )
+
+    payload = json.loads(result.content)
+    assert result.allowed is True
+    assert payload["status"] == "ok"
+    assert payload["send_executed"] is False
+    assert payload["send_action_created"] is False
+    assert payload["stored_in_memory"] is False
+    assert payload["message_draft"]["channel"] == "manual_handoff"
+    assert (tmp_path / "workspace" / "messaging" / "drafts" / f"{payload['message_draft']['draft_id']}.json").exists()
+
+
+def test_messages_draft_command_creates_local_draft_without_send(tmp_path, capsys) -> None:
+    exit_code = _run_messages_command(
+        ["draft", "--to", "+15555555555", "--body", "Manual draft only."],
+        _broker(tmp_path, center=_center(tmp_path)),
+    )
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert payload["status"] == "ok"
+    assert payload["sent"] is False
+    assert payload["stored_in_memory"] is False
+    assert payload["draft_id"].startswith("msgdraft_")
+    assert (tmp_path / "workspace" / "messaging" / "drafts" / f"{payload['draft_id']}.json").exists()
+
+
+def test_messages_handoff_command_creates_actions_and_never_sends(tmp_path, capsys) -> None:
+    center = _center(tmp_path)
+    broker = _broker(tmp_path, center=center)
+    draft_result = broker.execute(
+        _call(
+            "messaging.draft.create",
+            {"channel": "manual_handoff", "to": "Sam", "body": "Ready for handoff."},
+        )
+    )
+    draft_id = json.loads(draft_result.content)["draft_id"]
+
+    exit_code = _run_messages_command(["handoff", draft_id], broker)
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)
+    assert exit_code == 0
+    assert payload["sent"] is False
+    assert payload["stored_in_memory"] is False
+    assert payload["handoff_actions"]["save"]["status"] == "pending"

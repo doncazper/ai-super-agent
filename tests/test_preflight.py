@@ -95,8 +95,41 @@ def test_preflight_non_tool_request_attaches_no_tools(tmp_path) -> None:
     )
 
     assert report["route"]["use_tools"] is False
+    assert report["route"]["needs_internet"] is False
     assert report["tools"] == []
     assert report["notes"] == ["No tools would be attached for this request."]
+
+
+def test_preflight_reports_internet_routing_fields(tmp_path) -> None:
+    report = run_preflight(
+        PreflightOptions("Give me citations for the latest SearXNG setup.", project_root=tmp_path),
+        registry=default_registry(project_root=tmp_path),
+        policy_engine=PolicyEngine(
+            {
+                "web.search": Capability("web.search", RiskLevel.LOW, default_enabled=True),
+                "web.fetch_url": Capability("web.fetch_url", RiskLevel.MEDIUM, default_enabled=True),
+            }
+        ),
+        audit_logger=AuditLogger(tmp_path / "audit.jsonl"),
+    )
+
+    assert report["route"]["needs_internet"] is True
+    assert report["route"]["name"] == "tool.web_research"
+    assert report["route"]["provider_policy"]["paid_apis_default"] is False
+    assert report["route"]["tools"] == ["web.fetch_url", "web.search"]
+
+
+def test_preflight_no_tools_disables_internet(tmp_path) -> None:
+    report = run_preflight(
+        PreflightOptions("What is the latest local AI news?", project_root=tmp_path, no_tools=True),
+        registry=default_registry(project_root=tmp_path),
+        policy_engine=PolicyEngine(),
+        audit_logger=AuditLogger(tmp_path / "audit.jsonl"),
+    )
+
+    assert report["route"]["needs_internet"] is False
+    assert report["route"]["name"] == "chat.no_tools"
+    assert report["tools"] == []
 
 
 def test_preflight_command_dispatches(monkeypatch, capsys) -> None:

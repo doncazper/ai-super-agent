@@ -1,0 +1,17 @@
+generated_at: "YYYY-MM-DDTHH:MM:SSZ"
+records:
+  - skill_id: example_skill
+    version: "0.1.0"
+    source_type: native
+    source_path: native_skills/example_skill.yaml
+    source_url: ""
+    hash: sha256-placeholder
+    pinned: true
+    reviewed_at: "YYYY-MM-DD"
+    trust_status: trusted_native
+    manifest_hash: sha256-placeholder
+    dependencies_hash: sha256-placeholder
+    effective_root: project_skills
+    winning_precedence: project_skills
+    shadowed_by: ""
+    generated_at: "YYYY-MM-DDTHH:MM:SSZ"

@@ -9,7 +9,7 @@ Prompt packs let the user paste or save one large prompt file that contains mult
 - Imported prompts are run one at a time only.
 - Prompt text is stored as data, not executed instructions.
 - Imported prompts may be HIGH, CRITICAL, or FORBIDDEN risk, but they are not selected by `prompts next` when their approval gate blocks execution.
-- Imported prompt bodies are preserved exactly in split files.
+- Imported prompt bodies are preserved exactly in split files, including delimiter examples inside the prompt body.
 
 ## Commands
 
@@ -59,7 +59,7 @@ PROMPT:
 
 The importer rejects packs when:
 
-- There is not exactly one pack start and pack end marker.
+- The outer pack start or pack end marker is missing or malformed.
 - A prompt start/end pair is missing or mismatched.
 - Prompt ids or order values are duplicated.
 - Required metadata is missing.
@@ -69,6 +69,8 @@ The importer rejects packs when:
 - A prompt is marked complete on import.
 - Pack mode is anything other than `import_only`.
 - Default execution is anything other than `one_prompt_at_a_time`.
+
+Delimiter examples are allowed inside a prompt body. The parser treats them as untrusted prompt text once it has entered the body for a real `PROMPT_START` block.
 
 ## Split Prompt File Format
 
@@ -86,6 +88,10 @@ created_at: ...
 imported_at: ...
 source_pack: prompts/packs/example-pack-v1.md
 trust_level: UNTRUSTED_DOCUMENT
+files_expected:
+files_changed:
+command_registry_updated:
+evidence_links:
 ---
 
 # Prompt

@@ -16,7 +16,7 @@ depends_on: []
 status: queued
 
 PROMPT:
-Paste the first prompt here.
+Paste the first prompt here. Delimiter examples inside this body should be preserved as data, not treated as real prompt boundaries.
 <<<PROMPT_END id="EXAMPLE-01">>
 
 <<<PROMPT_START id="EXAMPLE-02" order="2">>

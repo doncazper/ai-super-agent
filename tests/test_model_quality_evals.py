@@ -39,7 +39,7 @@ def test_router_eval_works(tmp_path) -> None:
     by_name = {check["name"]: check for check in report["checks"]}
     assert report["status"] == "ok"
     assert by_name["quality.weather_routing"]["status"] == "pass"
-    assert by_name["quality.web_current_info_routing"]["actual_tools"] == ["web.search"]
+    assert by_name["quality.web_current_info_routing"]["actual_tools"] == ["web.fetch_url", "web.search"]
 
 
 def test_prompt_eval_works_and_handles_injection(tmp_path) -> None:

@@ -30,6 +30,7 @@ M0-M11 are complete:
 - Contacts read-only selected-scope connector support is present but disabled by default.
 - Email metadata, selected-thread read, summary, and draft-only connector support is present but disabled by default.
 - Email/message reply drafting is draft-only and never sends.
+- Lead Inbox v1 supports mock-only lead listing, classification, local response drafts, and pending follow-up task actions without reading real providers or sending.
 - Assistant workflows compose existing tools only through `ToolBroker`.
 - Workflow action reports show each step and result.
 - Approved write/send action tools are present but disabled by default.
@@ -45,13 +46,25 @@ M0-M11 are complete:
 
 Higher-risk capabilities are documented but locked until their prerequisites pass.
 
+## Agent DNA And Cloneability
+
+The long-lived architecture is captured in [docs/AGENT_DNA.md](</Users/sambehdjou/Documents/AI Super Agent/docs/AGENT_DNA.md>) and [docs/ARCHITECTURE_PRINCIPLES.md](</Users/sambehdjou/Documents/AI Super Agent/docs/ARCHITECTURE_PRINCIPLES.md>). Rewrites, model migrations, and platform ports must start from [docs/CLONE_BLUEPRINT.md](</Users/sambehdjou/Documents/AI Super Agent/docs/CLONE_BLUEPRINT.md>), [docs/MODEL_MIGRATION_GUIDE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/MODEL_MIGRATION_GUIDE.md>), and [docs/PLATFORM_MIGRATION_GUIDE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/PLATFORM_MIGRATION_GUIDE.md>).
+
+Historical prompt provenance is tracked in [docs/BUILD_HISTORY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/BUILD_HISTORY.md>), [docs/BUILD_PROVENANCE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/BUILD_PROVENANCE.md>), [docs/DECISION_INDEX.md](</Users/sambehdjou/Documents/AI Super Agent/docs/DECISION_INDEX.md>), and [docs/RECONSTRUCTED_PROMPT_PACKS.md](</Users/sambehdjou/Documents/AI Super Agent/docs/RECONSTRUCTED_PROMPT_PACKS.md>). Reconstructed prompt packs are labeled as reconstructed and are not exact originals unless the source evidence says so.
+
+## Tracking System
+
+Start with the short tracker dashboard at [docs/TRACKER_DASHBOARD.md](</Users/sambehdjou/Documents/AI Super Agent/docs/TRACKER_DASHBOARD.md>) and the source-of-truth map at [docs/TRACKER_INDEX.md](</Users/sambehdjou/Documents/AI Super Agent/docs/TRACKER_INDEX.md>). Command metadata lives in [docs/COMMAND_REGISTRY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/COMMAND_REGISTRY.md>), feature readiness lives in [docs/FEATURE_MATURITY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/FEATURE_MATURITY.md>), and the current resumable state lives in [docs/PROJECT_STATE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/PROJECT_STATE.md>).
+
 ## Setup
 
-1. Install Python 3.11+.
+1. Install Python 3.11+ (Python 3.12 is recommended for local development).
 2. Create a virtual environment.
 3. Install test dependencies:
 
 ```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
@@ -82,6 +95,36 @@ Tool-enabled chat:
 python smart_agent.py --debug "What time is it?"
 ```
 
+Runtime control plane:
+
+```bash
+./scripts/agent runtime status
+./scripts/agent runtime doctor
+./scripts/agent runtime services
+./scripts/agent runtime features
+./scripts/agent runtime health
+./scripts/agent workflows list
+./scripts/agent workflows run connector_doctor
+./scripts/agent jobs list
+./scripts/agent events tail
+```
+
+Runtime orchestration is metadata-only in v1. These commands do not call LM Studio, read personal connectors, start background jobs, or execute tools. Real tool execution remains behind `ToolBroker`, `PolicyEngine`, approvals, and audit logging.
+
+Cross-platform scaffolding is metadata-only and disabled/lazy by default. `agent.platforms` can detect `macos`, `windows`, `linux`, or `unknown`, infer an explicit runtime mode such as `cli` or `test`, and compute project-local platform paths without scanning personal files, creating directories, importing native frameworks, requesting permissions, starting app bridge servers, or enabling platform actions. Future bridges still require manifest entries, ToolBroker routing, PolicyEngine/PermissionManager checks, ApprovalManager gates, and AuditLogger evidence.
+
+Read-only platform inspection commands:
+
+```bash
+python smart_agent.py platform doctor
+python smart_agent.py platform status
+python smart_agent.py platform capabilities
+python smart_agent.py platform matrix
+python smart_agent.py platform explain macos.calendar.read
+```
+
+These commands execute through `ToolBroker`, `PolicyEngine`, and `AuditLogger`, but they only inspect static metadata, safe config flags, and `sys.platform` detection. They do not execute bridge actions, request OS permissions, import native frameworks, access personal data, start an app bridge server, or enable planned platform capabilities.
+
 Dry-run mode:
 
 ```bash
@@ -89,9 +132,12 @@ python smart_agent.py --dry-run --debug "What time is it?"
 python smart_agent.py --dry-run web "local AI news"
 python smart_agent.py preflight "email.read_selected_thread"
 python smart_agent.py preflight "What's the weather in Phoenix?"
+python smart_agent.py router explain "What is the latest OpenAI API pricing?"
 ```
 
-Dry-run mode routes normally and evaluates policy, approval requirements, sanitized args, and action previews, but does not execute tools. Dry-run evaluations are audited with `dry_run=true`. The `preflight` command is a prompt-free preview path: it uses the deterministic router or an exact tool/capability name, evaluates likely tool calls through `ToolBroker.dry_run()`, and shows risk, policy, approval, sanitized arguments, and whether exact action details are still missing.
+Dry-run mode routes normally and evaluates policy, approval requirements, sanitized args, and action previews, but does not execute tools. Dry-run evaluations are audited with `dry_run=true`. The `preflight` command is a prompt-free preview path: it uses the deterministic router or an exact tool/capability name, evaluates likely tool calls through `ToolBroker.dry_run()`, and shows risk, policy, approval, sanitized arguments, internet-routing metadata, and whether exact action details are still missing.
+
+The router only attaches internet-capable tools for current/live/external/source-required requests, explicit URLs, explicit lookup/search/verify/source requests, citations, or likely-stale niche facts. Stable explanations, creative writing, local-repo coding questions, personal advice without current facts, math, user-provided-text summaries, and `--no-tools` stay tool-clean. `router explain` shows `needs_internet`, `reason`, `suggested_sources`, `provider_policy`, `tools`, `risk_hint`, and `ask_clarification` without calling providers, rewriting the user message, or storing query history. See [docs/web/INTERNET_ROUTING_POLICY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/INTERNET_ROUTING_POLICY.md>).
 
 Web tools:
 
@@ -102,16 +148,293 @@ python smart_agent.py web "local AI news"
 python smart_agent.py research "local AI news"
 ```
 
-`web.search` returns a clear error until a supported provider is configured. With Brave Search:
+`web.search` returns a clear error until a supported provider is configured. Brave Search is optional and quota-limited, so it is not selected just because a key exists:
+
+```bash
+export WEB_ACCESS_ENABLED=true
+export PROVIDER_COST_MODE=free_first
+export WEB_SEARCH_PROVIDER=brave
+export BRAVE_SEARCH_API_KEY="..."
+export BRAVE_SEARCH_ENABLED=true
+export BRAVE_SEARCH_TIMEOUT_SECONDS=10
+export BRAVE_SEARCH_MAX_RESULTS=10
+export BRAVE_SEARCH_SAFE_SEARCH=true
+export ALLOW_PAID_APIS=true
+export MAX_PAID_API_CALLS_PER_DAY=5
+python smart_agent.py web brave doctor
+python smart_agent.py connectors status brave
+python smart_agent.py web "local AI news"
+python smart_agent.py web search "local AI news" --provider brave
+```
+
+The direct `web` command executes `web.search` through `ToolBroker`, `PolicyEngine`, rate limits, and audit logging. It returns search-result metadata only; it does not fetch full pages. Search results are labeled `UNTRUSTED_WEB`, and search queries are redacted from audit logs by default unless `WEB_SEARCH_AUDIT_QUERIES=true` is explicitly set.
+
+Provider selection follows the cost-aware policy in [docs/connectors/PROVIDER_SELECTION.md](</Users/sambehdjou/Documents/AI Super Agent/docs/connectors/PROVIDER_SELECTION.md>) and [docs/connectors/COST_POLICY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/connectors/COST_POLICY.md>). Defaults prefer local/cache/no-key/official/user-configured sources before paid or quota-limited APIs. Brave, SerpAPI, and WeatherAPI are not used as defaults unless explicitly configured and allowed.
+
+Provider policy inspection:
+
+```bash
+python smart_agent.py web providers
+python smart_agent.py web provider-policy
+python smart_agent.py web provider-decision "https://example.com/source"
+python smart_agent.py web search-providers
+python smart_agent.py web official-apis
+python smart_agent.py web api-status github
+python smart_agent.py web api-search github "openai"
+```
+
+These commands are read-only, execute through `ToolBroker`, make no provider API calls, and write no search history. Provider decisions include selected/skipped providers, skip reasons, cost mode, paid API use, cache use, and a redacted audit summary. Query text is redacted from audit logs by default. Search provider registry behavior is documented in [docs/web/SEARCH_PROVIDER_REGISTRY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/SEARCH_PROVIDER_REGISTRY.md>).
+
+News Intelligence is currently a planned/scaffolded track, not an active runtime command set. The repo declares disabled/planned `news.*` capability manifest entries and safe `NEWS_*` defaults so future news commands must be implemented deliberately through ToolBroker, PolicyEngine, and AuditLogger. Provider policy is free-first/cache-first; paid providers stay skipped by default, readable search/news history is off, full article-body storage is off, and no news provider calls or article fetches exist yet. See [docs/news/NEWS_INTELLIGENCE_TRACK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/news/NEWS_INTELLIGENCE_TRACK.md>) and [docs/news/NEWS_PROVIDER_STRATEGY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/news/NEWS_PROVIDER_STRATEGY.md>).
+
+Official API connector framework:
+
+```bash
+python smart_agent.py web official-apis
+python smart_agent.py web api-status wikipedia
+python smart_agent.py web api-status reddit
+python smart_agent.py web api-search github "openai"
+```
+
+Official API providers are preferred over scraping when a site has a documented API, but v1 is framework/stubbed and performs no live API calls by default. GitHub, Wikipedia/Wikidata, arXiv, and Reddit provider metadata are available; Reddit is read-only/setup-gated and explicitly has no web-scraping fallback. All official API command paths are brokered, audited, query-redacted by default, and return `UNTRUSTED_WEB` result metadata. See [docs/web/OFFICIAL_API_CONNECTORS.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/OFFICIAL_API_CONNECTORS.md>).
+
+Internet dogfood and eval release gate:
+
+```bash
+python smart_agent.py dogfood run internet_core --dry-run
+python smart_agent.py dogfood run web_research --dry-run
+python smart_agent.py eval run --internet
+python smart_agent.py eval report --internet
+```
+
+The internet eval category is fixture-backed and does not call live providers. It checks source lists, citations, `retrieved_at`, failed fetch reporting, prompt-injection handling, free-first provider policy, no paid provider default, no query/web-content memory persistence, and network-domain audit fixtures. Live web dogfood suites such as `web_fetch`, `web_research`, and `web_blocked_sources` are opt-in and should be run only when public network checks are acceptable. See [docs/web/INTERNET_DOGFOOD_RUNBOOK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/INTERNET_DOGFOOD_RUNBOOK.md>).
+
+Public web cache and local index commands:
+
+```bash
+python smart_agent.py web cache status
+python smart_agent.py web cache show <source_id>
+python smart_agent.py web cache clear
+python smart_agent.py web index search "local cache policy"
+python smart_agent.py web index rebuild
+```
+
+The web cache stores public unauthenticated source metadata only by default. It uses URL/provider/query-hash cache keys, avoids raw query history, keeps full content storage disabled unless explicitly configured, and labels cached/indexed sources as untrusted. See [docs/web/WEB_CACHE_POLICY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/WEB_CACHE_POLICY.md>) and [docs/web/LOCAL_WEB_INDEX.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/LOCAL_WEB_INDEX.md>).
+
+The Internet Access graduation track is documented in [docs/decisions/internet_access_graduation_track.md](</Users/sambehdjou/Documents/AI Super Agent/docs/decisions/internet_access_graduation_track.md>) with companion policy docs in [docs/web/WEB_ACCESS_POLICY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/WEB_ACCESS_POLICY.md>), [docs/web/INTERNET_PROVIDER_STRATEGY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/INTERNET_PROVIDER_STRATEGY.md>), [docs/web/SOURCE_GROUNDING_REQUIREMENTS.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/SOURCE_GROUNDING_REQUIREMENTS.md>), and [docs/web/BLOCKED_SOURCE_POLICY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/BLOCKED_SOURCE_POLICY.md>). The track is free-first and cache-first, treats all web content as untrusted data, forbids CAPTCHA/anti-bot/login-wall bypass, and does not store web history or fetched content in memory by default.
+
+SearXNG is available as the free/self-hosted search provider. It is never pointed at a public instance by default and only runs when explicitly configured:
+
+```bash
+export WEB_ACCESS_ENABLED=true
+export WEB_SEARCH_PROVIDER=searxng
+export SEARXNG_BASE_URL="https://search.example"
+export SEARXNG_ENABLED=true
+export SEARXNG_TIMEOUT_SECONDS=10
+export SEARXNG_MAX_RESULTS=10
+export SEARXNG_SAFE_SEARCH=1
+export SEARXNG_CATEGORIES=general
+python smart_agent.py web searxng doctor
+python smart_agent.py connectors status searxng
+python smart_agent.py web search "local AI news" --provider searxng
+```
+
+The configured SearXNG instance must support JSON output for search. If the instance returns HTML, HTTP 403/429, malformed JSON, or times out, the command returns a structured setup/error response instead of scraping HTML or falling back silently. SearXNG results are normalized as `UNTRUSTED_WEB`, provider domains are audited, and search history is not stored by default. See `docs/web/providers/searxng.md`.
+
+Brave Search is available as an optional quota-limited provider. It requires an API key, `BRAVE_SEARCH_ENABLED=true`, and paid/quota policy opt-in:
 
 ```bash
 export WEB_ACCESS_ENABLED=true
 export WEB_SEARCH_PROVIDER=brave
 export BRAVE_SEARCH_API_KEY="..."
-python smart_agent.py web "local AI news"
+export BRAVE_SEARCH_ENABLED=true
+export ALLOW_PAID_APIS=true
+export MAX_PAID_API_CALLS_PER_DAY=5
+python smart_agent.py web brave doctor
+python smart_agent.py connectors status brave
+python smart_agent.py web search "local AI news" --provider brave
 ```
 
-The direct `web` command executes `web.search` through `ToolBroker`, `PolicyEngine`, rate limits, and audit logging. It returns search-result metadata only; it does not fetch full pages. Search results are labeled `UNTRUSTED_WEB`, and search queries are redacted from audit logs by default unless `WEB_SEARCH_AUDIT_QUERIES=true` is explicitly set.
+The Brave path executes through the brokered `web.search` tool, audits the provider decision and `api.search.brave.com` domain when called, labels results `UNTRUSTED_WEB`, and stores no search history by default. If the key, enablement flag, or paid/quota policy is missing, the command returns setup guidance instead of falling back silently. See `docs/web/providers/brave.md`.
+
+SerpAPI is available only as an optional paid/quota-limited fallback. It is never selected by `web "query"` or `research "query"` under `free_first` just because `SERPAPI_API_KEY` exists. To use it, explicitly opt in:
+
+```bash
+export WEB_ACCESS_ENABLED=true
+export PROVIDER_COST_MODE=free_first
+export ALLOW_PAID_APIS=true
+export MAX_PAID_API_CALLS_PER_DAY=5
+export SERPAPI_API_KEY="..."
+export SERPAPI_ENABLED=true
+export SERPAPI_TIMEOUT_SECONDS=10
+export SERPAPI_MAX_RESULTS=10
+python smart_agent.py web serpapi doctor
+python smart_agent.py connectors status serpapi
+python smart_agent.py web search "local AI news" --provider serpapi
+python smart_agent.py research "local AI news" --provider serpapi
+```
+
+The SerpAPI path executes as `web.search.serpapi` through `ToolBroker`, uses the same query redaction behavior as `web.search`, audits the provider decision and `serpapi.com` domain when called, labels results `UNTRUSTED_WEB`, and stores no search history by default. If the key, `SERPAPI_ENABLED=true`, or paid/quota policy is missing, the command returns setup guidance instead of falling back silently. SerpAPI is not used for CAPTCHA, login, paywall, or anti-bot bypass behavior. Explicit provider selections return setup hints unless the matching provider is implemented, configured, enabled, and allowed by policy. See `docs/web/providers/serpapi.md`.
+
+Free-first web acquisition:
+
+```bash
+python smart_agent.py web robots "example.com"
+python smart_agent.py web sitemap "example.com"
+python smart_agent.py web feed "https://example.com/feed.xml"
+python smart_agent.py web acquire-url "https://example.com"
+python smart_agent.py web acquire "example.com"
+python smart_agent.py web source-status "https://example.com"
+python smart_agent.py web fetch "https://example.com/article"
+python smart_agent.py web extract "https://example.com/article"
+python smart_agent.py web metadata "https://example.com/article"
+```
+
+Robots, sitemap, and feed acquisition uses bounded public fetches, TTL cache metadata, domain audit logging, and `UNTRUSTED_WEB`/`UNTRUSTED_DOCUMENT` labels. Feed parsing accepts common RSS/Atom MIME types and does not fetch article bodies; binary payloads, blocked domains, CAPTCHA/login/paywall/anti-bot pages, and paid-provider defaults remain denied or unavailable.
+
+These commands execute through `ToolBroker` as `web.robots`, `web.sitemap`, `web.feed`, `web.acquire_url`, `web.acquire`, `web.source_status`, `web.fetch_url`, `web.extract_readable_text`, and `web.extract_metadata`. They prefer local cache, explicit feeds/sitemaps, robots-aware direct public URL fetch, and no-key sources before paid or quota-limited providers. `source-status` is a no-fetch inspection path for URL handling, blocked-domain checks, trust labels, and provider-decision metadata. `fetch`, `extract`, and `metadata` are selected-URL workflows with URL validation, tracking-parameter stripping, timeout/redirect/content-type/size bounds, sanitized HTML, readable text extraction, source metadata extraction, and untrusted-content wrapping. Webpage content is `UNTRUSTED_WEB`; fetched feed/sitemap documents are `UNTRUSTED_DOCUMENT`. CAPTCHA, anti-bot, login, browser profile, cookie, session, and paywall barriers return an unavailable result rather than a bypass attempt. Query acquisition does not store raw search history by default and returns a limitation when no free configured source can satisfy the query.
+
+Robots and crawler limits are documented in [docs/web/ROBOTS_AND_RATE_LIMITS.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/ROBOTS_AND_RATE_LIMITS.md>). Feed and sitemap behavior is documented in [docs/web/FEEDS_AND_SITEMAPS.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/FEEDS_AND_SITEMAPS.md>); default limits are 500 sitemap URLs and 50 feed items, and article bodies are not fetched by the feed command. Direct selected-URL fetch and extraction behavior is documented in [docs/web/SAFE_FETCH_AND_EXTRACTION.md](</Users/sambehdjou/Documents/AI Super Agent/docs/web/SAFE_FETCH_AND_EXTRACTION.md>).
+
+Secret/config doctor:
+
+```bash
+python smart_agent.py secrets doctor
+python smart_agent.py secrets status
+python smart_agent.py connectors status searxng
+python smart_agent.py connectors status brave
+python smart_agent.py connectors status serpapi
+python smart_agent.py connectors status weatherapi
+python smart_agent.py connectors status gmail
+python smart_agent.py connectors status telegram
+python smart_agent.py connectors status reddit
+python smart_agent.py gmail doctor
+python smart_agent.py gmail scopes
+python smart_agent.py telegram doctor
+python smart_agent.py telegram status
+python smart_agent.py reddit doctor
+python smart_agent.py reddit status
+python smart_agent.py reddit auth-check
+```
+
+These checks report whether optional Brave, SerpAPI, WeatherAPI, Gmail, Telegram, and Reddit credentials appear configured, whether cost policy allows them, whether they are defaults, and which setup hints apply. Status and doctor commands do not call provider APIs, read Gmail, send Telegram messages, fetch Reddit posts/comments, or print raw secret values. Existing keys do not promote Brave, SerpAPI, or WeatherAPI into the default path; paid/quota-limited providers remain disabled unless the cost-policy config explicitly allows them.
+
+The focused Gmail and Telegram doctors are config-only. Gmail checks `GMAIL_USER`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_TOKEN_PATH`, and `GMAIL_SCOPES`, warns on broad or send-capable scopes, and warns if the token path points inside the repo. Telegram checks `TELEGRAM_BOT_TOKEN`, `TELEGRAM_DEFAULT_CHAT_ID`, and `TELEGRAM_ALLOWED_CHAT_IDS`, warns when default or allowed chat IDs are missing, and never prints the bot token. Gmail and Telegram connectors remain disabled by default; future sends remain CRITICAL, per-action approval-only, and not enabled by these doctor commands.
+
+### Reddit Setup
+
+Reddit access is disabled by default. The read-only connector is implemented for the official Reddit Data API, but live content calls require explicit OAuth configuration and `REDDIT_ENABLED=true`:
+
+```bash
+REDDIT_ENABLED=false
+REDDIT_CLIENT_ID=
+REDDIT_CLIENT_SECRET=
+REDDIT_USER_AGENT=
+REDDIT_REFRESH_TOKEN=
+REDDIT_ACCESS_TOKEN=
+python smart_agent.py reddit doctor
+python smart_agent.py reddit status
+python smart_agent.py connectors status reddit
+python smart_agent.py reddit search "local llm"
+python smart_agent.py reddit search "gpu advice" --subreddit LocalLLaMA --sort comments --time week --limit 10 --language en
+python smart_agent.py reddit explain-result <source_id>
+python smart_agent.py reddit subreddit LocalLLaMA
+python smart_agent.py reddit post "<post_id_or_url>"
+python smart_agent.py reddit comments "<post_id_or_url>"
+python smart_agent.py reddit thread "<post_id_or_url>" --max-comments 100 --sort top --collapse-depth 3
+python smart_agent.py reddit thread-export "<post_id_or_url>" --format json
+python smart_agent.py reddit summarize-thread "<post_id_or_url>"
+python smart_agent.py reddit summarize-search "gpu advice"
+python smart_agent.py reddit consensus "best local LLM UI"
+python smart_agent.py reddit pros-cons "laptop model"
+python smart_agent.py reddit complaints "laptop model"
+python smart_agent.py reddit buying-advice "laptop model"
+python smart_agent.py reddit cache status
+python smart_agent.py reddit cache clear
+python smart_agent.py reddit retention status
+python smart_agent.py reddit retention sweep
+python smart_agent.py reddit privacy-report
+```
+
+`reddit doctor` and `reddit status` execute through `ToolBroker` as `reddit.status`, audit the diagnostic call, and perform no Reddit network calls. They report missing OAuth fields, generic user-agent warnings, tracked `.env` warnings, repo-local token-file warnings, rate-limit config, retention config, disabled write actions, denied web fallback, and hard-false training use.
+
+`reddit auth-check` is the only doctor command that may call Reddit, and only when explicitly invoked. It uses Reddit OAuth/token-status endpoints, audits the Reddit OAuth domain, redacts tokens and client secrets, fetches no posts/comments/threads, stores no user content, and returns setup guidance when OAuth config is incomplete. Reddit web scraping fallback, posting, commenting, voting, DMs, moderation, CAPTCHA/anti-bot bypass, and unauthenticated traffic are not enabled.
+
+The read-only commands run through `ToolBroker` as `reddit.search_posts`, `reddit.explain_result`, `reddit.fetch_subreddit_info`, `reddit.fetch_post`, `reddit.fetch_comments`, `reddit.fetch_thread`, `reddit.thread_export`, `reddit.summarize_thread`, `reddit.summarize_search`, `reddit.consensus`, `reddit.pros_cons`, `reddit.complaints`, `reddit.buying_advice`, `reddit.cache_status`, `reddit.cache_clear`, `reddit.retention_status`, `reddit.retention_sweep`, and `reddit.privacy_report`. Search supports optional subreddit, sort, time, limit, and advisory language parameters. Thread fetch returns a bounded normalized post, comment tree, flattened comments, source references, warnings, and truncation metadata. Thread export writes only under `workspace/reddit_threads/` and labels the exported file `UNTRUSTED_DOCUMENT`. Summaries include short answer, consensus, viewpoints, disagreements, repeated complaints/praise, caveats, source list, and fetch limitations; search summaries are snippet-only until a thread is fetched. Results are labeled `UNTRUSTED_WEB`, include source IDs and permalinks, distinguish snippet-only search results from fetched thread data, redact author metadata by default, store no query history or summary memory, and return setup guidance instead of network calls when Reddit is disabled or OAuth config is incomplete. `reddit explain-result` reads cached metadata only and does not call Reddit or scrape pages. `reddit cache status`, `reddit retention status`, and `reddit privacy-report` return counts and policy flags only, never raw post/comment bodies, authors, or query text. Deleted or removed Reddit content and prompt-injection-like comments are not summarized as evidence.
+
+### Multilingual Forum Language Tools
+
+The language layer is local-first and designed for Reddit/forum/web text. Detection uses local heuristics; translation uses the local LM Studio/Qwopus model by default and returns setup guidance instead of falling back to cloud or paid translation APIs.
+
+```bash
+python smart_agent.py language detect --text "hola mundo"
+python smart_agent.py language translate --from auto --to en --text "你好，世界"
+python smart_agent.py language translate-file ./workspace/input.txt --to en
+python smart_agent.py language glossary ./workspace/input.txt
+```
+
+These commands execute through `ToolBroker` as `language.detect`, `language.translate_text`, and `language.extract_terms`; file commands first read approved workspace files through `filesystem.read`. Source text remains `UNTRUSTED_WEB` or `UNTRUSTED_DOCUMENT`, translations are labeled `MODEL_GENERATED_TRANSLATION`, source IDs/chunk IDs are preserved, prompt-injection-like source text is treated as data, and no translation, summary, glossary, or source text is written to memory by default. See [docs/language/MULTILINGUAL_SUPPORT.md](</Users/sambehdjou/Documents/AI Super Agent/docs/language/MULTILINGUAL_SUPPORT.md>).
+
+### Cross-Language Forum Research
+
+The forum research workflow is brokered, source-labeled, and setup-gated by default. Reddit uses the official API connector when configured; V2EX now has a disabled-by-default documented read-only API connector; web discovery and Chinese discovery-only platforms report setup or unavailable status until approved search-provider paths exist.
+
+```bash
+python smart_agent.py forums research "local LLM experiences"
+python smart_agent.py forums research "local LLM experiences" --languages en,zh,ja,ko --sources reddit,v2ex,web --translate-to en
+python smart_agent.py forums compare "local LLM experiences" --sources reddit,v2ex
+```
+
+Forum provider registry diagnostics are metadata-only and perform no provider calls, logged-in reads, personal-data access, or scraping:
+
+```bash
+python smart_agent.py forums providers
+python smart_agent.py forums status reddit
+python smart_agent.py forums doctor
+python smart_agent.py forums capabilities zhihu
+```
+
+See [docs/forums/FORUM_PROVIDER_REGISTRY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/forums/FORUM_PROVIDER_REGISTRY.md>).
+
+V2EX read-only commands are available once `V2EX_ENABLED=true` is configured. They use documented API endpoints only, redact optional `V2EX_TOKEN`, normalize topics/replies as untrusted forum records, enforce local rate limits, and write no memory:
+
+```bash
+python smart_agent.py v2ex doctor
+python smart_agent.py v2ex nodes
+python smart_agent.py v2ex node python --limit 10 --detect-language
+python smart_agent.py v2ex topic 12345
+python smart_agent.py v2ex replies 12345 --limit 100
+python smart_agent.py v2ex latest
+python smart_agent.py v2ex hot
+python smart_agent.py connectors status v2ex
+```
+
+See [docs/forums/providers/v2ex.md](</Users/sambehdjou/Documents/AI Super Agent/docs/forums/providers/v2ex.md>).
+
+Chinese forum discovery commands use approved web search providers with site filters, and selected public URL fetches only where safe fetch policy allows. They do not use platform login cookies, browser sessions, CAPTCHA bypasses, or platform-specific scrapers:
+
+```bash
+python smart_agent.py cn-forums providers
+python smart_agent.py cn-forums search "local LLM" --sites zhihu,v2ex,tieba
+python smart_agent.py cn-forums fetch "https://www.v2ex.com/t/12345"
+python smart_agent.py cn-forums research "local LLM" --translate-to en
+```
+
+Results are labeled `UNTRUSTED_WEB`, search results remain snippet-only until fetched, blocked/login/CAPTCHA pages return unavailable, language detection runs on fetched public text, optional translation uses the local model path by default, and no forum search history, fetched content, translations, summaries, cookies, or browser session state are written to memory. See [docs/forums/CHINESE_FORUM_DISCOVERY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/forums/CHINESE_FORUM_DISCOVERY.md>).
+
+Outputs preserve source IDs/permalinks, label translations as `MODEL_GENERATED_TRANSLATION`, keep original-language snippets where useful, report unavailable sources, and avoid cultural or statistical consensus claims from sparse forum data. The workflow performs no scraping behind login/CAPTCHA/anti-bot barriers, uses no paid providers by default, and writes no forum content, translations, summaries, or search history to memory. See [docs/forums/CROSS_LANGUAGE_RESEARCH.md](</Users/sambehdjou/Documents/AI Super Agent/docs/forums/CROSS_LANGUAGE_RESEARCH.md>).
+
+Forum dogfood and eval checks are available for mock-first validation:
+
+```bash
+python smart_agent.py dogfood run reddit_core --session
+python smart_agent.py dogfood run reddit_research --session
+python smart_agent.py dogfood run forum_multilingual --session
+python smart_agent.py eval run --forums
+python smart_agent.py eval report --forums
+```
+
+The forum eval category is fixture-backed and makes no live provider calls. It checks source grounding, generated translation labels, preserved source IDs/original snippets, prompt-injection resistance, deleted/removed-content exclusion, blocked-source unavailable reporting, no scraping bypass, no paid provider default, no memory write, retention/cache policy evidence, and provider-call audit fixtures. Live Reddit, V2EX, and Chinese forum checks remain opt-in and configuration-dependent. See [docs/forums/FORUM_DOGFOOD_RUNBOOK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/forums/FORUM_DOGFOOD_RUNBOOK.md>).
 
 `web.fetch_url` treats fetched pages as untrusted data and refuses binary downloads by default. It validates public HTTP(S) URLs, validates redirect targets before following them, strips common tracking parameters, enforces content-type and size limits, extracts readable text, strips scripts/styles, and wraps page text with the untrusted-web warning.
 
@@ -119,11 +442,16 @@ Source-grounded research:
 
 ```bash
 python smart_agent.py research "local AI news"
-python smart_agent.py research --max-results 2 --no-fetch "local AI news"
+python smart_agent.py research "local AI news" --provider auto --max-sources 5 --freshness recent
+python smart_agent.py research --max-sources 2 --no-fetch "local AI news"
 python smart_agent.py research --locale es --summary-language en "últimas noticias de IA"
+python smart_agent.py research "local AI news" --provider serpapi
+python smart_agent.py research sources --last
+python smart_agent.py research export-sources --last
+python smart_agent.py research verify-sources --last
 ```
 
-The research command runs `web.search` and optional `web.fetch_url` calls through `ToolBroker`, then returns a source-aware JSON report. It does not fabricate citations; if search or fetch fails, the report says so in `summary` and `fetch_failures`. Foreign-language titles, snippets, and excerpts are preserved, with a simple language hint when available. Fetched page text is treated as `UNTRUSTED_WEB` data; page instructions are filtered from excerpts and cannot request tools or change policy.
+The research command runs `web.search` and optional `web.fetch_url` calls through `ToolBroker`, then returns a source-aware JSON report with `Answer`, `Sources`, `Coverage / limitations`, `Fetch failures`, and a metadata-only `source_bundle`. It does not fabricate citations; if search or fetch fails, the report says so in `answer`, `coverage_note`, and `fetch_failures`. The source bundle gives each source a stable `source_id`, labels fetched versus snippet-only evidence, and keeps failed fetches out of citation support. Foreign-language titles, snippets, and excerpts are preserved, with a simple language hint when available. Fetched page text is treated as `UNTRUSTED_WEB` data; page instructions are filtered from excerpts and cannot request tools, alter policy, reveal secrets, or become model instructions. The `research sources/export-sources/verify-sources --last` commands inspect the last metadata-only bundle without provider calls or article-body storage.
 
 Browser selected URL and clipping:
 
@@ -199,12 +527,18 @@ python smart_agent.py prompts mark-active NATIVE-SKILLS-FOUNDATION
 python smart_agent.py prompts mark-complete NATIVE-SKILLS-FOUNDATION --test-result "passed" --docs-updated yes
 python smart_agent.py prompts mark-superseded OLD-PROMPT --by NEW-PROMPT
 python smart_agent.py prompts audit
+python smart_agent.py prompts evidence PTM-10
 python smart_agent.py prompts missing
+python smart_agent.py prompts missed
+python smart_agent.py prompts stale
+python smart_agent.py prompts recover-plan
 ```
 
-Prompt tracking is SDLC metadata only. It reads `docs/PROMPT_LEDGER.md`, `docs/PROMPT_QUEUE.md`, prompt record files under `prompts/<status>/`, and project tracking docs. It does not execute agent tools, add connectors, access personal data, send messages, or weaken policy. `mark-complete` requires test/docs status fields unless `--unknown` is used, so future runs cannot quietly mark prompts complete without evidence.
+Prompt tracking is SDLC metadata only. It reads `docs/PROMPT_LEDGER.md`, `docs/PROMPT_QUEUE.md`, prompt record files under `prompts/<status>/`, and project tracking docs. It does not execute agent tools, add connectors, access personal data, send messages, or weaken policy. `mark-complete` requires test/docs status fields unless `--unknown` is used, `mark-failed` requires a reason, and the tracker enforces at most one active prompt.
 
-Prompt packs are documented in `docs/PROMPT_PACK_FORMAT.md`. `validate-pack` checks delimiters, metadata, unique ids/orders, dependencies, cycles, risk levels, and import-only mode without writing files. `import` and `split` are intentionally conservative: they copy the original pack into `prompts/packs/`, split individual prompts into `prompts/queued/`, append prompt ledger and queue rows, and add a prompt audit summary. Imported prompts are not executed automatically; `prompts next` returns only the next queued prompt whose dependencies are complete and whose approval gate is not blocking.
+Prompt evidence and recovery are documented in `docs/prompt_tracker/PROMPT_EVIDENCE_POLICY.md` and `docs/prompt_tracker/PROMPT_RECOVERY_PLAN.md`. Evidence classifications include `complete_verified`, `likely_complete`, `partial`, `no_evidence`, `failed`, `blocked`, `superseded`, and `stale`. Recovery commands report missed/stale/orphaned/ghost state and never auto-run prompts.
+
+Prompt packs are documented in `docs/PROMPT_PACK_FORMAT.md`. `validate-pack` checks delimiters, metadata, unique ids/orders, dependencies, cycles, risk levels, and import-only mode without writing files. `import` and `split` are intentionally conservative: they copy the original pack into `prompts/packs/`, split individual prompts into `prompts/queued/`, append prompt ledger and queue rows, and add a prompt audit summary. Imported prompts are not executed automatically; delimiter examples inside prompt bodies are preserved as untrusted prompt text; `prompts next` returns only the next queued prompt whose dependencies are complete and whose approval gate is not blocking.
 
 One-command PromptOps workflow:
 
@@ -260,19 +594,67 @@ Native skill vetting:
 python smart_agent.py skills list
 python smart_agent.py skills show native_skill_vetter
 python smart_agent.py skills validate
+python smart_agent.py skills validate native_skill_vetter
 python smart_agent.py skills doctor
+python smart_agent.py skills doctor native_skill_vetter
+python smart_agent.py skills roots
+python smart_agent.py skills precedence
+python smart_agent.py skills registry
+python smart_agent.py skills explain-root experimental_skills
+python smart_agent.py skills provenance native_skill_vetter
+python smart_agent.py skills trust native_skill_vetter
+python smart_agent.py skills lock status
+python smart_agent.py skills lock verify
+python smart_agent.py skills profiles
+python smart_agent.py skills profile show default
+python smart_agent.py skills profile allowed default
+python smart_agent.py skills profile validate default
+python smart_agent.py skills compatibility
+python smart_agent.py skills compatibility native_skill_vetter
+python smart_agent.py skills platform matrix
+python smart_agent.py skills conflicts
+python smart_agent.py skills conflicts --json
+python smart_agent.py skills explain-conflict <conflict_id>
+python smart_agent.py skills test native_skill_vetter
+python smart_agent.py skills test --all-safe
+python smart_agent.py skills dogfood native_skill_vetter
+python smart_agent.py skills docs-generate --dry-run
+python smart_agent.py skills docs-generate --write
+python smart_agent.py skills catalog
+python smart_agent.py skills docs-check
 python smart_agent.py skills find "I need to work with PDFs"
 python smart_agent.py skills find "Can you help with meeting follow-up?"
+python smart_agent.py skills inspect ./workspace/skills/example/SKILL.md
+python smart_agent.py skills inspect native_skill_vetter
 python smart_agent.py skills vet ./workspace/skills/example/SKILL.md
 python smart_agent.py skills vet-folder ./workspace/skills/example
 python smart_agent.py skills score ./workspace/skills/example/SKILL.md
+python smart_agent.py skills report --last
 ```
 
 Native skill manifests are metadata-only workflow definitions under `native_skills/` or `docs/native_skills/manifests/`. The loader reads and validates manifest fields, required capabilities, risk/trust levels, memory behavior, audit requirements, personal-data defaults, and CRITICAL approval rules. It does not execute scripts, import external code, install marketplace skills, grant permissions, or let manifests bypass `ToolBroker`.
 
+Manifest dependency gates are detection-only. They check env var presence with redacted values, config key presence, local binary presence, workspace/project file presence, current platform, ToolBroker capability IDs, Python version, and setup hints for model features. They do not install packages, execute scripts, call providers, call connectors, or scan personal files.
+
+Provenance and lockfile diagnostics track source type, review status, trust status, file hashes, manifest hashes, dependency hashes, and pin metadata. `skills lock status` is read-only and does not write `native_skills.lock`; `skills lock verify` reports `requires_setup` when no reviewed lockfile exists. There is no auto-update behavior.
+
+Native skill roots and precedence are metadata-only diagnostics. Workspace, personal, reconstructed, and experimental skill roots are treated as untrusted candidate sources and cannot silently shadow trusted project or bundled native skills by default. Use `skills roots`, `skills precedence`, and `skills explain-root` to inspect setup hints and shadowing behavior.
+
+Native skill profiles are advisory visibility rules for modes such as `default`, `research`, `coding`, `personal_assistant`, `lead_response`, `locked_down`, and `experimental`. Profiles can hide skills by allowlist, blocklist, category, risk ceiling, network/write/personal-data flags, and CRITICAL-action rules, but they do not enable skills or grant capabilities. `ToolBroker`, `PolicyEngine`, `PermissionManager`, `ApprovalManager`, and `AuditLogger` remain the final authority for execution.
+
+Native skill compatibility commands report platform/runtime/setup metadata across macOS, iOS companion, Windows, Linux, CLI-only, app bridge, and local web dashboard dimensions. They compute from manifests only and do not import native platform modules, execute skills, call providers, install dependencies, or enable platform-specific behavior.
+
+Native skill conflict commands report duplicate skill IDs, command/capability overlaps, unsafe shadowing, missing dependencies, disabled providers, platform incompatibility, approval/memory policy mismatches, and missing docs/tests. They are metadata-only diagnostics and never auto-resolve, enable, disable, install, import, or execute skills; use `skills explain-conflict <conflict_id>` for one finding before human review.
+
+Native skill test and dogfood commands validate reviewed skill metadata, dependency/setup status, provenance, lockfile status, conflicts, profile visibility, compatibility, prompt-injection fixtures, secret fixtures, docs, and command registry evidence. `skills test --all-safe` skips HIGH/CRITICAL/FORBIDDEN and personal-data skills by default. `skills dogfood <skill_id>` prints a plan only. These commands do not run external skill scripts, install dependencies, execute plugin runtimes, call providers, enable skills, grant permissions, or write memory.
+
+Native skill docs generation creates `docs/native_skills/SKILL_CATALOG.md` from reviewed manifests, command registry metadata, compatibility/profile/provenance/lock status, tests, dogfood declarations, docs paths, and known limitations. `skills docs-generate` defaults to dry-run behavior; use `--write` only after reviewing the output. The generator preserves manual notes outside marked generated sections, reports missing docs, includes deprecated/blocked skills, and never executes skills, installs dependencies, calls providers, or invents maturity.
+
+The native skill system release gate is recorded in `docs/native_skills/NATIVE_SKILL_SYSTEM_RELEASE_GATE.md` and `docs/native_skills/NATIVE_SKILL_SYSTEM_MATURITY_REVIEW.md`. It validates the metadata-only control plane and does not approve external skill installation, marketplace enablement, plugin runtime execution, or personal-data skill execution.
+
 `skills find` searches only local reviewed metadata: native skill manifests, the native candidate matrix, feature registry, and maturity tracker. It returns implemented matches, planned candidates, maturity/readiness, required approvals, and next work needed. It does not browse external marketplaces, install skills, execute external code, or write memory.
 
-Native skill vetting is static analysis only. It reads candidate skill files only from approved workspace paths, treats them as `UNTRUSTED_DOCUMENT`, parses `SKILL.md` frontmatter when present, and flags scripts, shell commands, package installs, network calls, secret references, filesystem escapes, personal-data access, browser cookie/session access, prompt-injection language, approval-bypass language, opaque binaries, and missing license information. The vetter never executes scripts, installs dependencies, grants permissions, or stores skill content in memory by default. All vetting commands execute through `ToolBroker`, `PolicyEngine`, and `AuditLogger`.
+Native skill inspection and vetting are static analysis only. They read candidate skill files only from approved workspace/project skill paths or known native skill ids, treat them as `UNTRUSTED_DOCUMENT`, parse `SKILL.md` frontmatter when present, and flag scripts, shell commands, package installs, network calls, secret references, filesystem escapes, personal-data access, browser cookie/session access, prompt-injection language, approval-bypass language, opaque binaries, and missing license/tests/docs/risk metadata. The vetter never executes scripts, installs dependencies, grants permissions, accesses network, or stores skill content in memory by default. Vetting reports are saved under `reports/native_skills/`; all inspection/vetting commands execute through `ToolBroker`, `PolicyEngine`, and `AuditLogger`.
 
 PDF workspace native skill:
 
@@ -307,8 +689,12 @@ Weather provider abstraction:
 
 ```bash
 python smart_agent.py weather doctor
+python smart_agent.py weather providers
+python smart_agent.py weather provider auto "Phoenix, AZ"
 python smart_agent.py weather smoke "Phoenix, AZ"
 python smart_agent.py weather current "San Francisco"
+python smart_agent.py weather current "Phoenix, AZ" --provider auto
+python smart_agent.py weather current "Phoenix, AZ" --provider weatherapi
 python smart_agent.py weather current "Phoenix, AZ" --no-cache
 python smart_agent.py weather forecast "San Francisco" --days 3
 python smart_agent.py weather alerts "Los Angeles, CA" --provider nws
@@ -318,7 +704,7 @@ python smart_agent.py weather config clear-default
 python smart_agent.py weather cache clear
 ```
 
-`weather.status`, `weather.current`, `weather.forecast`, `weather.alerts`, and `weather.cache_clear` are LOW-risk, audited, rate-limited, ToolBroker-only capabilities for user-provided locations. The `doctor` command checks provider configuration and capability policy without fetching weather data. The `smoke` command runs `weather.status`, `weather.current`, and `weather.forecast` through the broker for a user-provided location. Open-Meteo is used when `WEATHER_PROVIDER` is unset; `WEATHER_PROVIDER=disabled` returns structured `weather provider is not configured` JSON.
+`weather.status`, `weather.current`, `weather.forecast`, `weather.alerts`, and `weather.cache_clear` are LOW-risk, audited, rate-limited, ToolBroker-only capabilities for user-provided locations. The `doctor` command checks provider configuration and capability policy without fetching weather data. `weather providers` shows cost-policy availability for Open-Meteo, NOAA/NWS, and WeatherAPI. `weather provider auto "<location>"` shows the selected free-first provider by executing the brokered current-weather path. The `smoke` command runs `weather.status`, `weather.current`, and `weather.forecast` through the broker for a user-provided location. Auto mode prefers Open-Meteo for current/forecast weather and NOAA/NWS for U.S. alerts; `WEATHER_PROVIDER=disabled` returns structured `weather provider is not configured` JSON.
 
 Open-Meteo is the default no-key provider:
 
@@ -338,6 +724,13 @@ NOAA/National Weather Service is available as a U.S.-only no-key provider. It us
 python smart_agent.py weather current "Los Angeles, CA" --provider nws
 python smart_agent.py weather forecast "Los Angeles, CA" --provider nws --days 3 --hourly
 python smart_agent.py weather alerts "Los Angeles, CA" --provider nws
+```
+
+WeatherAPI is available only as an optional paid/quota-limited fallback. A configured key does not make it the default under `free_first`. Explicit provider use requires `WEATHERAPI_API_KEY` or `WEATHER_API_KEY`; configured-default use also requires paid-API allowance through the cost policy.
+
+```bash
+export WEATHERAPI_API_KEY="..."
+python smart_agent.py weather current "Phoenix, AZ" --provider weatherapi
 ```
 
 WeatherKit is documented as an optional planning stub only. `WEATHER_PROVIDER=weatherkit` checks whether Apple Developer credential env vars are present, but it does not sign JWTs or call Apple yet. Review [docs/decisions/weatherkit_provider.md](</Users/sambehdjou/Documents/AI Super Agent/docs/decisions/weatherkit_provider.md>) before implementing full WeatherKit support.
@@ -536,16 +929,99 @@ python smart_agent.py messages read "<thread_id>"
 python smart_agent.py messages summarize "<thread_id>"
 python smart_agent.py messages draft-reply "<thread_id>"
 python smart_agent.py messages draft-from-text --to "Name" --context-file ./workspace/thread.txt
+python smart_agent.py messages draft --to "+15555555555" --body "Reviewed reply text"
+python smart_agent.py messages handoff <draft_id>
 python smart_agent.py actions approve <action_id>
+python smart_agent.py messages save-draft <draft_id>
+python smart_agent.py messages copy-draft <draft_id>
 python smart_agent.py messages save-draft --from-action <action_id>
 python smart_agent.py messages copy-draft --from-action <action_id>
+python smart_agent.py messages macos status
+python smart_agent.py messages macos allow-recipient "+15555555555"
+python smart_agent.py messages macos live-send-probe --to "+15555555555"
+python smart_agent.py messages send --from-action <action_id>
 ```
 
-Messages tools are disabled by default and approval-gated. There is intentionally no live macOS Messages connector yet: the project does not scrape `~/Library/Messages`, does not request broad Full Disk Access, and does not bulk-read history. The safe fallback is the brokered `messages.draft_from_text` capability using a manually provided UTF-8 text file inside `./workspace`; its content is treated as `UNTRUSTED_MESSAGE`, audited as a file read, labeled as data rather than instructions, not stored in long-term memory, and used only to create a draft. Draft replies are marked draft-only and never send, delete, move, archive, harvest contacts, or modify messages.
+Messages read/draft tools are disabled by default and approval-gated where personal data is involved. The project does not scrape `~/Library/Messages`, does not request broad Full Disk Access, and does not bulk-read history. The safe fallback is the brokered `messages.draft_from_text` capability using a manually provided UTF-8 text file inside `./workspace`; its content is treated as `UNTRUSTED_MESSAGE`, audited as a file read, labeled as data rather than instructions, not stored in long-term memory, and used only to create a draft. Draft replies are marked draft-only and never delete, move, archive, harvest contacts, or modify messages.
 
 Messages safe handoff:
 
-`messages draft-from-text` now queues reviewed Action Center handoff records for saving the draft to `./workspace` or copying it to the clipboard. `messages.save_draft` and `messages.copy_draft` are disabled by default, HIGH risk, approval-required, and never send a message. Low-level save/copy tool execution requires the verified Action Center action id, and submitted recipient/draft/path arguments must match the approved preview. Saved drafts must remain inside approved workspace paths. Clipboard copy requires an approved Action Center item because clipboard contents may be personal data and can be read by other local apps. Automatic Messages/iMessage/SMS sending is deferred; see `docs/decisions/messages_send_path.md`.
+`messages draft-from-text` now queues reviewed Action Center handoff records for saving the draft to `./workspace` or copying it to the clipboard. `messages.save_draft` and `messages.copy_draft` are disabled by default, HIGH risk, approval-required, and never send a message. Low-level save/copy tool execution requires the verified Action Center action id, and submitted recipient/draft/path arguments must match the approved preview. Saved drafts must remain inside approved workspace paths. Clipboard copy requires an approved Action Center item because clipboard contents may be personal data and can be read by other local apps.
+
+macOS approved iMessage sending is experimental and disabled by default. It requires `MACOS_MESSAGES_ENABLED=true`, `MACOS_MESSAGES_ALLOW_SEND=true`, one allowlisted recipient, a recent passing `messages macos live-send-probe`, a `channel=macos_messages` local draft, an exact `messages.macos.send_approved` Action Center item, CRITICAL per-action approval with no reuse, and the daily send rate limit. Unsupported machines return a clear error and should use iOS compose, manual handoff, or Apple Messages for Business planning instead.
+
+The draft-id handoff workflow stores reviewed local drafts in `./workspace/messaging/drafts/` and lets the user inspect or edit them before any handoff. `messages draft` creates a manual-handoff draft from user-provided text. `messages draft-from-text` reads only an approved workspace context file, labels it `UNTRUSTED_MESSAGE`, creates a local draft record, and creates pending save/copy Action Center items. `messages handoff <draft_id>` recreates reviewed save/copy handoff actions for an existing draft. `messages save-draft <draft_id>` and `messages copy-draft <draft_id>` execute only after a matching approved Action Center action exists; otherwise they return the pending approval instructions. `messages.draft_from_lead` is available for mock/selected Lead Inbox draft creation only and does not create send actions.
+
+Incoming message manual/mock inbox:
+
+```bash
+python smart_agent.py messages import --from-file ./workspace/incoming_message.md
+python smart_agent.py messages inbox list
+python smart_agent.py messages inbox show <message_id>
+python smart_agent.py messages inbox draft-reply <message_id>
+```
+
+Incoming message v1 is manual/mock only. Manual imports must be user-selected files inside `./workspace`, are labeled `UNTRUSTED_MESSAGE`, and are stored under `./workspace/messaging/inbound/`. The inbox can list/show manual and mock messages, expose Lead Inbox candidate metadata, and create a local draft reply under `./workspace/messaging/drafts/`. It does not read `~/Library/Messages`, does not request Full Disk Access, does not run a background watcher, does not auto-reply, does not send, and does not write message bodies to memory by default. See `docs/decisions/incoming_message_strategy.md`.
+
+macOS Messages feasibility probe:
+
+```bash
+python smart_agent.py messages probe
+python smart_agent.py messages probe --explain-permissions
+```
+
+The probe is metadata-only. It checks macOS, standard Messages.app locations, AppleScript availability, and harmless application identity/version lookup where possible. It records a redacted connector-status artifact and audit event, but it does not read `~/Library/Messages`, request Full Disk Access, read message content, inspect account status, or press Send. This metadata probe does not prove send support; the separate `messages macos live-send-probe` is CRITICAL and disabled by default.
+
+Messaging architecture:
+
+```bash
+python smart_agent.py messaging channels
+python smart_agent.py messaging draft-create --channel manual_handoff --to "Name" --body "Reviewed reply"
+python smart_agent.py messaging draft show <draft_id>
+python smart_agent.py messaging draft validate <draft_id>
+python smart_agent.py messaging create-send-action <draft_id>
+python smart_agent.py messaging ios-compose-payload <draft_id>
+python smart_agent.py messaging ios-compose-status <draft_id>
+```
+
+The channel-neutral messaging layer defines one internal schema for future `ios_compose`, `macos_messages`, `apple_messages_for_business`, `telegram`, `email`, `manual_handoff`, and `mock` adapters. It can create local workspace drafts and create a CRITICAL Action Center send proposal with an exact local preview showing channel, recipient, full body, attachments, source context, rollback impossibility, explicit per-action approval, allowlist status, and rate-limit status. Creating or editing a draft invalidates older pending/approved send actions for that draft.
+
+The channel layer itself still does not send. Unknown channels are denied, group/bulk recipients are rejected, attachments are denied for send actions, and send approval reuse is forbidden. The only executable message-send adapter in this build is `messages.macos.send_approved`, and it is disabled by default plus probe/allowlist/Action Center gated. Local draft files live under `./workspace/messaging/drafts/`; broker audit logs and action exports redact bodies/recipients while the local Action Center preview remains exact for user review. The layer does not read private app data, access Messages databases, request Full Disk Access, or store message content in memory.
+
+iOS user-confirmed compose bridge:
+
+`messaging ios-compose-payload` creates a local handoff payload under `./workspace/messaging/ios_compose/payloads/` for a future iOS companion app or deep-link bridge. The payload contains the exact draft recipient and body, expiration timestamp, nonce, integrity hash, risk level, and approval status. It either uses a matching approved Action Center action via `--from-action <action_id>` or the command's user-confirmed compose mode, where Apple's compose UI is the final confirmation surface. The user must tap Send or Cancel in iOS; the agent has no silent-send path and cannot mark a send complete unless a future iOS companion app reports `sent` or `queued`. Status records stay under `./workspace/messaging/ios_compose/results/`. See `docs/decisions/ios_companion_message_compose.md`.
+
+Lead Inbox abstraction:
+
+```bash
+python smart_agent.py leads list
+python smart_agent.py leads show mock-lead-001
+python smart_agent.py leads classify mock-lead-001
+python smart_agent.py leads summarize mock-lead-001
+python smart_agent.py leads draft-response mock-lead-001
+python smart_agent.py leads suggest-followup mock-lead-001
+python smart_agent.py leads suggest-meeting mock-lead-001
+python smart_agent.py leads create-send-action mock-lead-001 <draft_id>
+python smart_agent.py leads send --from-action <action_id>
+python smart_agent.py leads handoff <draft_id>
+python smart_agent.py leads mark-responded mock-lead-001
+```
+
+Lead Inbox v1 is channel-neutral and mock-only. It defines the shared schema for future Gmail, Telegram, Apple Messages for Business, personal iMessage manual handoff, web form, manual, and mock sources, but it does not read real provider inboxes or send responses. `leads list`, `leads classify`, `leads summarize`, `leads draft-response`, `leads suggest-followup`, and `leads suggest-meeting` use synthetic mock/local records through `ToolBroker`; `leads show` represents future selected full-message reads and is HIGH risk plus disabled by default until a selected-scope provider is explicitly approved.
+
+Lead content is treated as untrusted message data. Classification and summarization create no actions, draft-response creates an editable local `MessageDraft` with source and assumptions, suggest-followup queues a pending Action Center `tasks.create` item without creating a real task, and suggest-meeting reads no calendar and creates no event. `leads create-send-action` creates a CRITICAL exact-preview Action Center proposal only. `leads send --from-action` either routes to an already gated channel path, such as iOS compose handoff or disabled-by-default macOS Messages, or returns fallback options. Manual handoff saves/copies only after separate approval. No lead content is written to long-term memory by default, no CRM sync exists in v1, bulk responses are forbidden, auto-send is disabled, and approval reuse is denied. See `docs/workflows/lead_response_drafting.md` and `docs/workflows/lead_response_send.md`.
+
+Apple Messages for Business provider stub:
+
+```bash
+python smart_agent.py apple-business doctor
+python smart_agent.py apple-business status
+python smart_agent.py apple-business mock-inbound
+python smart_agent.py apple-business draft-response <lead_id>
+```
+
+The Apple Messages for Business v1 path is a mock/local provider stub for the business lead-response lane. `apple-business doctor` and `status` are config metadata only and do not call a provider or print secrets. `mock-inbound` writes a local `UNTRUSTED_MESSAGE` Lead Inbox record under `./workspace/leads/apple_business/`; `draft-response` creates a local `MessageDraft` with `channel=apple_messages_for_business`. Live provider credentials are not required, live webhooks are not polled, personal iMessage automation is not used, and no send action or send execution is added. Future Apple Business sends remain disabled, CRITICAL, exact-preview, per-action, and no-reuse.
 
 Memory tools:
 
@@ -658,21 +1134,21 @@ Interactive commands such as `:doctor`, `:tools`, `:config`, and `:approvals` do
 
 ## Local Startup
 
-This project requires Python 3.11 or newer. macOS may run Apple Python 3.9 when you type `python3`; that version is not supported. `smart_agent.py` now checks the Python version before importing agent modules and prints setup commands instead of crashing.
+This project requires Python 3.11 or newer. Python 3.12 is the recommended local runtime. macOS may run Apple Python 3.9 when you type `python3`; that version is not supported. `smart_agent.py` checks the Python version before importing agent modules and prints setup commands instead of crashing.
 
 Recommended local setup:
 
 ```bash
 cd "/Users/sambehdjou/Documents/AI Super Agent"
-python3.11 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e '.[dev]'
 ```
 
-If `python3.11` is not installed:
+If `python3.12` is not installed:
 
 ```bash
-brew install python@3.11
+brew install python@3.12
 ```
 
 Use the local launcher after setup:
@@ -682,7 +1158,17 @@ Use the local launcher after setup:
 ./scripts/agent --no-tools "Explain RCS vs iMessage"
 ```
 
-The launcher prefers `AI_AGENT_PYTHON`, then `./.venv/bin/python`, then the bundled Codex Python runtime if present, and only falls back to system `python3` when it is Python 3.11+.
+The launcher prefers `AI_AGENT_PYTHON`, then `./.venv/bin/python`, then `python3.12`. If none are available, it prints setup guidance instead of falling back to Apple Python 3.9.
+
+Developer shortcuts:
+
+```bash
+make doctor
+make test
+make policy-check
+make command-check
+make run MESSAGE="Explain RCS vs iMessage"
+```
 
 LM Studio setup:
 
@@ -713,15 +1199,45 @@ TOOL_MODE=auto
 DEBUG=false
 AUDIT_LOG_PATH=logs/audit.jsonl
 CAPABILITIES_CONFIG=config/capabilities.yaml
+PLATFORM_BRIDGES_ENABLED=false
+PLATFORM_BRIDGE_MODE=auto
+PLATFORM_DETECTION_CACHE_SECONDS=300
+PLATFORM_LAZY_LOAD_BRIDGES=true
+MACOS_BRIDGE_ENABLED=false
+IOS_COMPANION_BRIDGE_ENABLED=false
+WINDOWS_BRIDGE_ENABLED=false
+WEB_APP_BRIDGE_ENABLED=false
+APP_BRIDGE_ENABLED=false
+APP_BRIDGE_HOST=127.0.0.1
+APP_BRIDGE_PORT=
+APP_BRIDGE_TRANSPORT=stdio
+APP_BRIDGE_REQUIRE_PAIRING=true
+APP_BRIDGE_ALLOW_REMOTE=false
 WEB_ACCESS_ENABLED=true
+PROVIDER_COST_MODE=free_first
+ALLOW_PAID_APIS=false
+MAX_PAID_API_CALLS_PER_DAY=0
+SEARCH_DEFAULT_PROVIDER=auto
 WEB_SEARCH_PROVIDER=brave
 BRAVE_SEARCH_API_KEY=
+BRAVE_SEARCH_ENABLED=false
+BRAVE_SEARCH_TIMEOUT_SECONDS=10
+BRAVE_SEARCH_MAX_RESULTS=10
+BRAVE_SEARCH_SAFE_SEARCH=true
+SEARXNG_BASE_URL=
+SERPAPI_API_KEY=
+SERPAPI_ENABLED=false
+SERPAPI_TIMEOUT_SECONDS=10
+SERPAPI_MAX_RESULTS=10
 WEB_SEARCH_TIMEOUT_SECONDS=10
 WEB_SEARCH_MAX_RESULTS=8
 WEB_SAFE_SEARCH=true
 WEB_SEARCH_AUDIT_QUERIES=false
 WEB_FETCH_MAX_BYTES=500000
+WEATHER_DEFAULT_PROVIDER=auto
 WEATHER_PROVIDER=open_meteo
+WEATHER_API_KEY=
+WEATHERAPI_API_KEY=
 WEATHERKIT_TEAM_ID=
 WEATHERKIT_SERVICE_ID=
 WEATHERKIT_KEY_ID=
@@ -756,9 +1272,23 @@ IMAP_PORT=993
 IMAP_USERNAME=
 IMAP_PASSWORD=
 IMAP_MAILBOX=INBOX
+GMAIL_USER=
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_TOKEN_PATH=
+GMAIL_SCOPES=
+MESSAGES_CONNECTOR=
+MESSAGES_THREAD_MAX_CHARS=12000
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_DEFAULT_CHAT_ID=
+TELEGRAM_ALLOWED_CHAT_IDS=
 ```
 
 `TOOL_MODE` may be `auto`, `no-tools`, or `force-time`. The older `LMSTUDIO_TEMPERATURE`, `LMSTUDIO_TOP_P`, `LMSTUDIO_MAX_TOKENS`, and `AGENT_AUDIT_LOG` names are still accepted as fallbacks.
+
+### App Bridge Contract
+
+Future Mac, iOS companion, Windows, or local web frontends use the App Bridge contract documented in `docs/platforms/APP_BRIDGE_API.md`. The bridge is disabled by default, local-only in v1, requires pairing before sensitive surfaces, starts no server during import, and cannot approve actions, execute tools, change policy, read personal data, or bypass ToolBroker/PolicyEngine/ApprovalManager/AuditLogger.
 
 ## LM Studio Smoke Test
 
@@ -853,6 +1383,9 @@ Dogfood suites are curated command lists for systematic manual QA. They run exis
 
 ```bash
 python smart_agent.py dogfood list
+python smart_agent.py dogfood plan
+python smart_agent.py dogfood next
+python smart_agent.py dogfood checklist
 python smart_agent.py dogfood show all_safe
 python smart_agent.py dogfood run all_safe --dry-run
 python smart_agent.py dogfood run all_safe
@@ -862,7 +1395,24 @@ python smart_agent.py session replay --last
 python smart_agent.py session end
 ```
 
-Suites live in `dogfood_suites/` and are documented in [docs/dogfood/DOGFOOD_GUIDE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/DOGFOOD_GUIDE.md>) and [docs/dogfood/COMMAND_SUITES.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/COMMAND_SUITES.md>). Start with `all_safe`; use `personal_dry_run` only for preflight-only personal connector checks.
+Suites live in `dogfood_suites/` and are documented in [docs/dogfood/DOGFOOD_GUIDE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/DOGFOOD_GUIDE.md>) and [docs/dogfood/COMMAND_SUITES.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/COMMAND_SUITES.md>). The live validation workflow is documented in [docs/dogfood/LIVE_TEST_RUNBOOK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/LIVE_TEST_RUNBOOK.md>), with daily and weekly checklists in [docs/dogfood/DAILY_DOGFOOD_CHECKLIST.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/DAILY_DOGFOOD_CHECKLIST.md>) and [docs/dogfood/WEEKLY_RELEASE_CHECK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/WEEKLY_RELEASE_CHECK.md>). Start with `all_safe`; use `personal_dry_run` only for preflight-only personal connector checks.
+
+Daily dogfood should start a session, run safe suites, add feedback, end the session, review it, generate bugs for confirmed failures, and create regression tests when feasible. `dogfood next` uses feature maturity notes plus the latest session metadata to recommend the next safe step without running commands.
+
+## Product Quality Dashboard
+
+The product quality dashboard is a read-only local health view over redacted session metadata, feedback, bug records, regression-test links, eval reports, feature maturity, and release-gate docs.
+
+```bash
+python smart_agent.py quality status
+python smart_agent.py quality sessions
+python smart_agent.py quality bugs
+python smart_agent.py quality regressions
+python smart_agent.py quality features
+python smart_agent.py quality next
+```
+
+`quality status` shows the latest session result, last recorded full test result, open bugs by severity, recent feedback, features lacking live validation or regression coverage, mature/immature feature summaries, the next dogfood recommendation, and release-gate status. It does not execute tools, read personal connectors, show raw personal data, grant approvals, or write memory.
 
 ## Test Environments
 

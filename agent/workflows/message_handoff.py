@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from agent.core.tool_broker import ToolBroker
+from agent.messaging.registry import load_draft
 from agent.safety.actions import ActionCenter, ActionRecord, ActionStatus
 from agent.safety.approvals import ApprovalManager, ApprovalResult
 from agent.safety.trust import TrustLevel
@@ -18,6 +19,7 @@ def draft_message_handoff_actions(
     *,
     to: str,
     draft: str,
+    draft_id: str = "",
     source_thread_id: str = "",
     save_path: str = "",
     source_workflow: str = "draft_from_text",
@@ -29,10 +31,12 @@ def draft_message_handoff_actions(
     base_args: dict[str, Any] = {
         "to": to.strip(),
         "draft": draft,
+        "draft_id": draft_id.strip(),
         "source_thread_id": source_thread_id,
         "source_trust_level": TrustLevel.UNTRUSTED_MESSAGE.value,
         "stored_in_memory": False,
         "sent": False,
+        "personal_data_detected": message_handoff_contains_personal_data(to, draft),
     }
     save_args = dict(base_args)
     if save_path:
@@ -49,6 +53,52 @@ def draft_message_handoff_actions(
             source_workflow=f"messages.{source_workflow}.copy",
         ),
     }
+
+
+def draft_message_handoff_actions_for_draft(
+    project_root: str,
+    center: ActionCenter,
+    *,
+    draft_id: str,
+    save_path: str = "",
+    source_workflow: str = "draft_handoff",
+) -> dict[str, Any]:
+    draft = load_draft(project_root, draft_id)
+    recipient = draft.recipient.channel_address or draft.recipient.recipient_id or draft.recipient_display
+    actions = draft_message_handoff_actions(
+        center,
+        to=recipient,
+        draft=draft.body,
+        draft_id=draft.draft_id,
+        source_thread_id=str(draft.source_context.get("thread_id") or draft.source_context.get("lead_id") or ""),
+        save_path=save_path,
+        source_workflow=source_workflow,
+    )
+    return {
+        "status": "ok",
+        "draft_id": draft.draft_id,
+        "draft": draft.to_dict(),
+        "handoff_actions": {name: record.to_dict() for name, record in actions.items()},
+        "personal_data_detected": message_handoff_contains_personal_data(recipient, draft.body),
+        "copy_requires_approval": True,
+        "save_requires_approval": True,
+        "sent": False,
+        "stored_in_memory": False,
+        "instructions": [
+            "Inspect or edit the draft before handoff.",
+            "Approve either the save or copy Action Center item.",
+            "Run messages save-draft <draft_id> or messages copy-draft <draft_id> after approval, or use --from-action for the exact action id.",
+            "No automatic message sending is implemented in v1.",
+        ],
+    }
+
+
+def message_handoff_contains_personal_data(to: str, draft: str) -> bool:
+    text = f"{to}\n{draft}"
+    if "@" in text:
+        return True
+    digits = "".join(ch for ch in text if ch.isdigit())
+    return len(digits) >= 7
 
 
 def execute_message_handoff_action(

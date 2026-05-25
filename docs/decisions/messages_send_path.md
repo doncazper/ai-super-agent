@@ -23,7 +23,10 @@ The project does not read `~/Library/Messages`, Messages private SQLite database
 Current v1 actions:
 
 - Draft a reply from a workspace file.
+- Create a local manual-handoff draft from user-provided text.
+- Create a local draft from a selected/mock Lead Inbox record.
 - Queue Action Center handoff records for saving or copying a draft.
+- Recreate reviewed handoff records from a local `draft_id`.
 - Save an approved draft inside `./workspace`.
 - Copy an approved draft to the clipboard.
 
@@ -68,9 +71,13 @@ Mitigation in v1:
 Manual handoff is the recommended v1 path:
 
 1. Draft from a user-provided workspace file.
-2. Review the draft and Action Center preview.
-3. Save the draft to `./workspace` or copy it to clipboard after approval.
-4. User manually sends from their preferred Messages app.
+2. Store the draft as a local `MessageDraft` under `./workspace/messaging/drafts/`.
+3. Review or edit the draft before handoff.
+4. Create save/copy Action Center items with `messages handoff <draft_id>`.
+5. Save the draft to `./workspace` or copy it to clipboard after approval.
+6. User manually sends from their preferred Messages app.
+
+`messages save-draft <draft_id>` and `messages copy-draft <draft_id>` execute only when a matching approved Action Center item already exists. If approval is missing, they create or show pending handoff actions and do not execute.
 
 ## Future Approved Send Requirements
 

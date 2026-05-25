@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Any
 
 from agent.native_skills.finder import find_native_skills
-from agent.safety.policy import RiskLevel
+from agent.native_skills.vetter import inspect_candidate, last_report, score_candidate as score_native_skill_candidate, vet_candidate
 from agent.tools.errors import ToolError
 
 
@@ -20,77 +19,69 @@ MANIFEST_NAMES = {"package.json", "pyproject.toml", "requirements.txt", "Pipfile
 
 def make_native_skill_tools(project_root: str | Path) -> dict[str, Any]:
     root = Path(project_root).resolve()
-    workspace = (root / "workspace").resolve()
 
-    def vet_skill_file(path: str) -> dict[str, Any]:
-        target = _resolve_workspace_file(workspace, path)
-        text = _read_text(target)
-        report = _analyze_skill_text(text, path=str(target))
-        report["status"] = "ok"
-        report["path"] = str(target)
+    def inspect_skill(path_or_skill_id: str) -> dict[str, Any]:
+        report = inspect_candidate(root, path_or_skill_id)
         return {
             **report,
             "_audit": {
-                "files_read": [str(target)],
-                "result_summary": f"Native skill file vetted: risk={report['risk_level']}; safe_to_port={report['safe_to_port']}",
+                "files_read": report.get("files_read", []),
+                "result_summary": f"Native skill inspected: target={report.get('skill_id')}",
             },
         }
 
-    def score_candidate(path: str) -> dict[str, Any]:
-        target = _resolve_workspace_file(workspace, path)
-        text = _read_text(target)
-        report = _analyze_skill_text(text, path=str(target))
+    def vet_skill_file(path: str) -> dict[str, Any]:
+        report = vet_candidate(root, path)
+        files_read = [str(report.get("path"))]
+        files_written = [str(report["report_path"])] if report.get("report_path") else []
         return {
-            "status": "ok",
-            "path": str(target),
-            "score": report["score"],
-            "risk_level": report["risk_level"],
-            "safe_to_port": report["safe_to_port"],
-            "reasons": report["reasons"],
-            "required_capabilities": report["required_capabilities"],
-            "approval_gates": report["approval_gates"],
-            "trust_level": TRUST_LEVEL,
+            **report,
             "_audit": {
-                "files_read": [str(target)],
-                "result_summary": f"Native skill candidate scored: risk={report['risk_level']}; score={report['score']}",
+                "files_read": files_read,
+                "files_written": files_written,
+                "result_summary": f"Native skill vetted: risk={report['risk_level']}; safe_to_import={report['safe_to_import']}; safe_to_enable={report['safe_to_enable']}",
             },
         }
 
     def vet_skill_folder(path: str) -> dict[str, Any]:
-        folder = _resolve_workspace_path(workspace, path, must_exist=True)
-        if not folder.is_dir():
-            raise ToolError("path is not a folder")
-        files = [item for item in sorted(folder.rglob("*")) if item.is_file()]
-        if len(files) > MAX_FOLDER_FILES:
-            raise ToolError("skill folder has too many files to vet safely")
-        skill_md = folder / "SKILL.md"
-        files_read: list[str] = []
-        if skill_md.exists():
-            text = _read_text(skill_md)
-            files_read.append(str(skill_md))
-        else:
-            text = ""
-        report = _analyze_skill_text(text, path=str(skill_md) if skill_md.exists() else str(folder))
-        inventory = _folder_inventory(folder, files)
-        report = _merge_folder_findings(report, inventory)
-        report["status"] = "ok"
-        report["path"] = str(folder)
-        report["folder_inventory"] = inventory
+        report = vet_candidate(root, path)
+        files_written = [str(report["report_path"])] if report.get("report_path") else []
         return {
             **report,
             "_audit": {
-                "files_read": files_read or [str(folder)],
-                "result_summary": f"Native skill folder vetted: risk={report['risk_level']}; safe_to_port={report['safe_to_port']}",
+                "files_read": [str(report.get("path"))],
+                "files_written": files_written,
+                "result_summary": f"Native skill folder vetted: risk={report['risk_level']}; safe_to_import={report['safe_to_import']}",
             },
         }
+
+    def score_candidate(path: str) -> dict[str, Any]:
+        report = score_native_skill_candidate(root, path)
+        return {
+            **report,
+            "_audit": {
+                "files_read": [str(report.get("path"))],
+                "result_summary": f"Native skill candidate scored: risk={report['risk_level']}; score={report['score']}",
+            },
+        }
+
+    def report_last() -> dict[str, Any]:
+        report = last_report(root)
+        audit = {
+            "files_read": [report["report_path"]] if report.get("report_path") else [],
+            "result_summary": f"Native skill report lookup: status={report['status']}",
+        }
+        return {**report, "_audit": audit}
 
     def find_skill(query: str, max_results: int = 5) -> dict[str, Any]:
         return find_native_skills(query, project_root=root, max_results=max_results)
 
     return {
+        "native_skills.inspect_skill": inspect_skill,
         "native_skills.vet_skill_file": vet_skill_file,
         "native_skills.vet_skill_folder": vet_skill_folder,
         "native_skills.score_candidate": score_candidate,
+        "native_skills.report_last": report_last,
         "native_skills.find_skill": find_skill,
     }
 
@@ -329,6 +320,19 @@ def _merge_folder_findings(report: dict[str, Any], inventory: dict[str, Any]) ->
 
 
 NATIVE_SKILL_SCHEMAS = {
+    "native_skills.inspect_skill": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.inspect_skill",
+            "description": "Read-only inspection of a workspace/project native skill candidate or manifest id without executing it.",
+            "parameters": {
+                "type": "object",
+                "properties": {"path_or_skill_id": {"type": "string"}},
+                "required": ["path_or_skill_id"],
+                "additionalProperties": False,
+            },
+        },
+    },
     "native_skills.vet_skill_file": {
         "type": "function",
         "function": {
@@ -364,6 +368,18 @@ NATIVE_SKILL_SCHEMAS = {
                 "type": "object",
                 "properties": {"path": {"type": "string"}},
                 "required": ["path"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "native_skills.report_last": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.report_last",
+            "description": "Read the most recent native skill vetting report from reports/native_skills.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
                 "additionalProperties": False,
             },
         },

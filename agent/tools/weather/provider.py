@@ -8,6 +8,13 @@ from typing import Any, Callable, Protocol
 
 import httpx
 
+from agent.connectors.cost_policy import (
+    ProviderCostConfig,
+    ProviderDecision,
+    ProviderDecisionStatus,
+    select_provider,
+    weather_provider_candidates,
+)
 from agent.config.runtime import env_bool, parse_float, parse_int
 from agent.tools.weather.cache import WeatherCache, weather_cache_allowed, weather_cache_key
 from agent.tools.weather.models import (
@@ -98,6 +105,33 @@ class UnsupportedWeatherProvider:
 
     def alerts(self, location: str, locale: str | None = None) -> dict[str, Any]:
         return {}
+
+
+@dataclass(frozen=True)
+class UnavailableWeatherProvider:
+    name: str
+    error: str
+    setup_hint: str = ""
+    decision: ProviderDecision | None = None
+
+    def is_configured(self) -> bool:
+        return False
+
+    def current_weather(self, location: str, units: str, locale: str | None = None) -> dict[str, Any]:
+        raise WeatherProviderError(self.error)
+
+    def forecast(
+        self,
+        location: str,
+        days: int,
+        units: str,
+        locale: str | None = None,
+        include_hourly: bool = False,
+    ) -> dict[str, Any]:
+        raise WeatherProviderError(self.error)
+
+    def alerts(self, location: str, locale: str | None = None) -> dict[str, Any]:
+        raise WeatherProviderError(self.error)
 
 
 @dataclass(frozen=True)
@@ -493,6 +527,177 @@ class NWSProvider:
         return httpx.Client(timeout=self.timeout_seconds)
 
 
+@dataclass(frozen=True)
+class WeatherAPIProvider:
+    api_key: str | None = None
+    timeout_seconds: float = 10
+    base_url: str = "https://api.weatherapi.com/v1"
+    client_factory: Callable[[float], httpx.Client] | None = None
+    name: str = "weatherapi"
+
+    def is_configured(self) -> bool:
+        return bool(self._api_key())
+
+    def current_weather(self, location: str, units: str, locale: str | None = None) -> dict[str, Any]:
+        payload = self._get_json(
+            "current.json",
+            {"q": location, "aqi": "no", **_weatherapi_language_param(locale)},
+        )
+        result = WeatherResult(
+            status="ok",
+            provider=self.name,
+            units=normalize_unit_system(units),
+            retrieved_at=datetime.now(UTC).isoformat(),
+            location=_weatherapi_location(payload),
+            current=_normalize_weatherapi_current(payload.get("current"), units),
+            timezone=_string_or_none(_weatherapi_location_payload(payload).get("tz_id")),
+            provider_timestamp=_string_or_none(_weatherapi_current_payload(payload).get("last_updated")),
+            metadata=_provider_metadata(self.name),
+            raw_provider_payload={"current": payload},
+        )
+        return result.to_dict(include_raw=_debug_raw_enabled())
+
+    def forecast(
+        self,
+        location: str,
+        days: int,
+        units: str,
+        locale: str | None = None,
+        include_hourly: bool = False,
+    ) -> dict[str, Any]:
+        payload = self._get_json(
+            "forecast.json",
+            {
+                "q": location,
+                "days": max(1, min(int(days), 10)),
+                "aqi": "no",
+                "alerts": "yes",
+                **_weatherapi_language_param(locale),
+            },
+        )
+        forecast_days = _weatherapi_forecast_days(payload)
+        result = WeatherResult(
+            status="ok",
+            provider=self.name,
+            units=normalize_unit_system(units),
+            retrieved_at=datetime.now(UTC).isoformat(),
+            location=_weatherapi_location(payload),
+            daily=[_normalize_weatherapi_daily(day, units) for day in forecast_days[:days]],
+            hourly=_normalize_weatherapi_hourly(forecast_days, units) if include_hourly else [],
+            alerts=_normalize_weatherapi_alerts(payload),
+            timezone=_string_or_none(_weatherapi_location_payload(payload).get("tz_id")),
+            metadata=_provider_metadata(self.name),
+            raw_provider_payload={"forecast": payload},
+        )
+        return result.to_dict(include_raw=_debug_raw_enabled())
+
+    def alerts(self, location: str, locale: str | None = None) -> dict[str, Any]:
+        payload = self._get_json(
+            "forecast.json",
+            {"q": location, "days": 1, "aqi": "no", "alerts": "yes", **_weatherapi_language_param(locale)},
+        )
+        result = WeatherResult(
+            status="ok",
+            provider=self.name,
+            units=UnitSystem.METRIC,
+            retrieved_at=datetime.now(UTC).isoformat(),
+            location=_weatherapi_location(payload),
+            alerts=_normalize_weatherapi_alerts(payload),
+            timezone=_string_or_none(_weatherapi_location_payload(payload).get("tz_id")),
+            metadata=_provider_metadata(self.name),
+            raw_provider_payload={"alerts": payload},
+        )
+        return result.to_dict(include_raw=_debug_raw_enabled())
+
+    def _api_key(self) -> str:
+        return (self.api_key or os.getenv("WEATHERAPI_API_KEY") or os.getenv("WEATHER_API_KEY") or "").strip()
+
+    def _get_json(self, endpoint: str, params: dict[str, Any]) -> dict[str, Any]:
+        api_key = self._api_key()
+        if not api_key:
+            raise WeatherProviderError(_weatherapi_setup_hint())
+        url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+        safe_params = dict(params)
+        safe_params["key"] = api_key
+        try:
+            with self._client() as client:
+                response = client.get(url, params=safe_params)
+                response.raise_for_status()
+                payload = response.json()
+        except httpx.TimeoutException as exc:
+            raise WeatherProviderError("retryable weather provider error: WeatherAPI request timed out") from exc
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            if status >= 500:
+                raise WeatherProviderError(f"retryable weather provider error: WeatherAPI returned HTTP {status}") from exc
+            raise WeatherProviderError(f"weather provider returned HTTP {status}") from exc
+        except httpx.HTTPError as exc:
+            raise WeatherProviderError(f"retryable weather provider error: {type(exc).__name__}") from exc
+        except ValueError as exc:
+            raise WeatherProviderError("weather provider returned malformed JSON") from exc
+        if not isinstance(payload, dict):
+            raise WeatherProviderError("weather provider returned malformed JSON")
+        error = payload.get("error")
+        if isinstance(error, dict):
+            message = _string_or_none(error.get("message")) or "WeatherAPI returned an error"
+            raise WeatherProviderError(message)
+        return payload
+
+    def _client(self) -> httpx.Client:
+        if self.client_factory is not None:
+            return self.client_factory(self.timeout_seconds)
+        return httpx.Client(timeout=self.timeout_seconds)
+
+
+@dataclass(frozen=True)
+class WeatherProviderSelector:
+    timeout_seconds: float = 10
+    open_meteo: WeatherProvider | None = None
+    nws: WeatherProvider | None = None
+    weatherapi: WeatherProvider | None = None
+    name: str = "auto"
+
+    def is_configured(self) -> bool:
+        return True
+
+    def provider_for_action(
+        self,
+        action: str,
+        *,
+        explicit_provider: str | None = None,
+        configured_default: str | None = None,
+    ) -> tuple[WeatherProvider, ProviderDecision]:
+        return _select_weather_provider(
+            action,
+            explicit_provider=explicit_provider,
+            configured_default=configured_default,
+            providers={
+                "open_meteo": self.open_meteo or OpenMeteoProvider(timeout_seconds=self.timeout_seconds),
+                "nws": self.nws or NWSProvider(timeout_seconds=self.timeout_seconds),
+                "weatherapi": self.weatherapi or WeatherAPIProvider(timeout_seconds=self.timeout_seconds),
+            },
+        )
+
+    def current_weather(self, location: str, units: str, locale: str | None = None) -> dict[str, Any]:
+        provider, decision = self.provider_for_action("current")
+        return _attach_provider_decision(provider.current_weather(location, units, locale), decision)
+
+    def forecast(
+        self,
+        location: str,
+        days: int,
+        units: str,
+        locale: str | None = None,
+        include_hourly: bool = False,
+    ) -> dict[str, Any]:
+        provider, decision = self.provider_for_action("forecast")
+        return _attach_provider_decision(provider.forecast(location, days, units, locale, include_hourly), decision)
+
+    def alerts(self, location: str, locale: str | None = None) -> dict[str, Any]:
+        provider, decision = self.provider_for_action("alerts")
+        return _attach_provider_decision(provider.alerts(location, locale), decision)
+
+
 def provider_from_env() -> WeatherProvider:
     provider_name = weather_preferences().provider
     timeout = parse_float(
@@ -503,10 +708,15 @@ def provider_from_env() -> WeatherProvider:
     )
     if provider_name in {"disabled", "none"}:
         return DisabledWeatherProvider()
-    if provider_name in {"", "auto", "open_meteo", "open-meteo", "openmeteo"}:
+    if provider_name in {"", "auto"}:
+        return WeatherProviderSelector(timeout_seconds=timeout)
+    if provider_name in {"open_meteo", "open-meteo", "openmeteo"}:
         return OpenMeteoProvider(timeout_seconds=timeout)
     if provider_name == "nws":
         return NWSProvider(timeout_seconds=timeout)
+    if provider_name == "weatherapi":
+        provider, _decision = _select_weather_provider("current", configured_default="weatherapi")
+        return provider
     if provider_name == "weatherkit":
         return WeatherKitProvider()
     return UnsupportedWeatherProvider(provider_name)
@@ -525,14 +735,17 @@ def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any
         no_cache: bool = False,
         provider: str | None = None,
     ) -> dict[str, Any]:
-        selected_provider = _provider_for_request(provider, active_provider)
+        selected_provider, provider_decision = _provider_for_request(provider, active_provider, "current")
         location, default_audit = _resolve_location_input(location)
         location_error = _validate_location(location)
         if location_error:
-            return _error_payload(selected_provider, location_error, configured=_provider_configured(selected_provider))
+            return _attach_provider_decision(
+                _error_payload(selected_provider, location_error, configured=_provider_configured(selected_provider)),
+                provider_decision,
+            )
         configured_error = _configuration_error(selected_provider)
         if configured_error:
-            return configured_error
+            return _attach_provider_decision(configured_error, provider_decision)
         resolved_units = _resolve_units(units)
         cache_allowed = _weather_cache_enabled() and weather_cache_allowed(location)
         cache = WeatherCache(_weather_cache_path())
@@ -547,28 +760,39 @@ def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any
             cached_entry = cache.get(cache_key)
             if cached_entry is not None and not cached_entry.expired:
                 return _with_weather_audit(
-                    _apply_cache_metadata(cached_entry.payload, cached=True, cached_at=cached_entry.cached_at, expires_at=cached_entry.expires_at),
+                    _attach_provider_decision(
+                        _apply_cache_metadata(
+                            cached_entry.payload,
+                            cached=True,
+                            cached_at=cached_entry.cached_at,
+                            expires_at=cached_entry.expires_at,
+                        ),
+                        provider_decision,
+                    ),
                     selected_provider,
-                    _audit_summary("weather cache hit", default_audit),
+                    _audit_summary("weather cache hit", default_audit, provider_decision),
                 )
             if cached_entry is not None and cached_entry.expired:
                 cache_summary = "weather cache expired refresh"
         try:
             raw = selected_provider.current_weather(location.strip(), resolved_units, locale)
         except Exception as exc:
-            return _provider_error(selected_provider, exc)
+            return _attach_provider_decision(_provider_error(selected_provider, exc), provider_decision)
         if isinstance(raw, dict) and raw.get("status") == "ok":
             if no_cache or not cache_allowed:
                 return _with_weather_audit(
-                    _apply_cache_metadata(raw, cached=False, cached_at=None, expires_at=None),
+                    _attach_provider_decision(_apply_cache_metadata(raw, cached=False, cached_at=None, expires_at=None), provider_decision),
                     selected_provider,
-                    _audit_summary(_weather_cache_skip_summary(no_cache, cache_allowed), default_audit),
+                    _audit_summary(_weather_cache_skip_summary(no_cache, cache_allowed), default_audit, provider_decision),
                 )
             cache_entry = cache.set(cache_key, raw, _weather_cache_ttl("current"))
             return _with_weather_audit(
-                _apply_cache_metadata(raw, cached=False, cached_at=cache_entry.cached_at, expires_at=cache_entry.expires_at),
+                _attach_provider_decision(
+                    _apply_cache_metadata(raw, cached=False, cached_at=cache_entry.cached_at, expires_at=cache_entry.expires_at),
+                    provider_decision,
+                ),
                 selected_provider,
-                _audit_summary(cache_summary, default_audit),
+                _audit_summary(cache_summary, default_audit, provider_decision),
             )
         retrieved_at = datetime.now(UTC).isoformat()
         fallback = {
@@ -586,15 +810,21 @@ def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any
         }
         if no_cache or not cache_allowed:
             return _with_weather_audit(
-                _apply_cache_metadata(fallback, cached=False, cached_at=None, expires_at=None),
+                _attach_provider_decision(
+                    _apply_cache_metadata(fallback, cached=False, cached_at=None, expires_at=None),
+                    provider_decision,
+                ),
                 selected_provider,
-                _audit_summary(_weather_cache_skip_summary(no_cache, cache_allowed), default_audit),
+                _audit_summary(_weather_cache_skip_summary(no_cache, cache_allowed), default_audit, provider_decision),
             )
         cache_entry = cache.set(cache_key, fallback, _weather_cache_ttl("current"))
         return _with_weather_audit(
-            _apply_cache_metadata(fallback, cached=False, cached_at=cache_entry.cached_at, expires_at=cache_entry.expires_at),
+            _attach_provider_decision(
+                _apply_cache_metadata(fallback, cached=False, cached_at=cache_entry.cached_at, expires_at=cache_entry.expires_at),
+                provider_decision,
+            ),
             selected_provider,
-            _audit_summary(cache_summary, default_audit),
+            _audit_summary(cache_summary, default_audit, provider_decision),
         )
 
     def forecast(
@@ -606,14 +836,17 @@ def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any
         no_cache: bool = False,
         provider: str | None = None,
     ) -> dict[str, Any]:
-        selected_provider = _provider_for_request(provider, active_provider)
+        selected_provider, provider_decision = _provider_for_request(provider, active_provider, "forecast")
         location, default_audit = _resolve_location_input(location)
         location_error = _validate_location(location)
         if location_error:
-            return _error_payload(selected_provider, location_error, configured=_provider_configured(selected_provider))
+            return _attach_provider_decision(
+                _error_payload(selected_provider, location_error, configured=_provider_configured(selected_provider)),
+                provider_decision,
+            )
         configured_error = _configuration_error(selected_provider)
         if configured_error:
-            return configured_error
+            return _attach_provider_decision(configured_error, provider_decision)
         resolved_units = _resolve_units(units)
         max_days = parse_int(
             "WEATHER_MAX_FORECAST_DAYS",
@@ -640,9 +873,17 @@ def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any
                 payload = dict(cached_entry.payload)
                 payload["days"] = clamped_days
                 return _with_weather_audit(
-                    _apply_cache_metadata(payload, cached=True, cached_at=cached_entry.cached_at, expires_at=cached_entry.expires_at),
+                    _attach_provider_decision(
+                        _apply_cache_metadata(
+                            payload,
+                            cached=True,
+                            cached_at=cached_entry.cached_at,
+                            expires_at=cached_entry.expires_at,
+                        ),
+                        provider_decision,
+                    ),
                     selected_provider,
-                    _audit_summary("weather cache hit", default_audit),
+                    _audit_summary("weather cache hit", default_audit, provider_decision),
                 )
             if cached_entry is not None and cached_entry.expired:
                 cache_summary = "weather cache expired refresh"
@@ -655,21 +896,27 @@ def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any
                 bool(include_hourly),
             )
         except Exception as exc:
-            return _provider_error(selected_provider, exc)
+            return _attach_provider_decision(_provider_error(selected_provider, exc), provider_decision)
         if isinstance(raw, dict) and raw.get("status") == "ok":
             payload = dict(raw)
             payload["days"] = clamped_days
             if no_cache or not cache_allowed:
                 return _with_weather_audit(
-                    _apply_cache_metadata(payload, cached=False, cached_at=None, expires_at=None),
+                    _attach_provider_decision(
+                        _apply_cache_metadata(payload, cached=False, cached_at=None, expires_at=None),
+                        provider_decision,
+                    ),
                     selected_provider,
-                    _audit_summary(_weather_cache_skip_summary(no_cache, cache_allowed), default_audit),
+                    _audit_summary(_weather_cache_skip_summary(no_cache, cache_allowed), default_audit, provider_decision),
                 )
             cache_entry = cache.set(cache_key, payload, _weather_cache_ttl("forecast"))
             return _with_weather_audit(
-                _apply_cache_metadata(payload, cached=False, cached_at=cache_entry.cached_at, expires_at=cache_entry.expires_at),
+                _attach_provider_decision(
+                    _apply_cache_metadata(payload, cached=False, cached_at=cache_entry.cached_at, expires_at=cache_entry.expires_at),
+                    provider_decision,
+                ),
                 selected_provider,
-                _audit_summary(cache_summary, default_audit),
+                _audit_summary(cache_summary, default_audit, provider_decision),
             )
         periods = raw.get("forecast", raw.get("periods", [])) if isinstance(raw, dict) else []
         if not isinstance(periods, list):
@@ -691,15 +938,21 @@ def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any
         }
         if no_cache or not cache_allowed:
             return _with_weather_audit(
-                _apply_cache_metadata(fallback, cached=False, cached_at=None, expires_at=None),
+                _attach_provider_decision(
+                    _apply_cache_metadata(fallback, cached=False, cached_at=None, expires_at=None),
+                    provider_decision,
+                ),
                 selected_provider,
-                _audit_summary(_weather_cache_skip_summary(no_cache, cache_allowed), default_audit),
+                _audit_summary(_weather_cache_skip_summary(no_cache, cache_allowed), default_audit, provider_decision),
             )
         cache_entry = cache.set(cache_key, fallback, _weather_cache_ttl("forecast"))
         return _with_weather_audit(
-            _apply_cache_metadata(fallback, cached=False, cached_at=cache_entry.cached_at, expires_at=cache_entry.expires_at),
+            _attach_provider_decision(
+                _apply_cache_metadata(fallback, cached=False, cached_at=cache_entry.cached_at, expires_at=cache_entry.expires_at),
+                provider_decision,
+            ),
             selected_provider,
-            _audit_summary(cache_summary, default_audit),
+            _audit_summary(cache_summary, default_audit, provider_decision),
         )
 
     def alerts(
@@ -707,31 +960,41 @@ def make_weather_tools(provider: WeatherProvider | None = None) -> dict[str, Any
         locale: str | None = None,
         provider: str | None = None,
     ) -> dict[str, Any]:
-        selected_provider = _provider_for_request(provider, active_provider)
+        selected_provider, provider_decision = _provider_for_request(provider, active_provider, "alerts")
         location, default_audit = _resolve_location_input(location)
         location_error = _validate_location(location)
         if location_error:
-            return _error_payload(selected_provider, location_error, configured=_provider_configured(selected_provider))
+            return _attach_provider_decision(
+                _error_payload(selected_provider, location_error, configured=_provider_configured(selected_provider)),
+                provider_decision,
+            )
         configured_error = _configuration_error(selected_provider)
         if configured_error:
-            return configured_error
+            return _attach_provider_decision(configured_error, provider_decision)
         try:
             raw = selected_provider.alerts(location.strip(), locale)
         except Exception as exc:
-            return _provider_error(selected_provider, exc)
+            return _attach_provider_decision(_provider_error(selected_provider, exc), provider_decision)
         if isinstance(raw, dict) and raw.get("status") == "ok":
-            return _with_weather_audit(raw, selected_provider, _audit_summary("weather alerts provider call", default_audit))
+            return _with_weather_audit(
+                _attach_provider_decision(raw, provider_decision),
+                selected_provider,
+                _audit_summary("weather alerts provider call", default_audit, provider_decision),
+            )
         return _with_weather_audit(
-            {
-                "status": "ok",
-                "provider": selected_provider.name,
-                "location": _display_location(raw, location),
-                "trust_level": "UNTRUSTED_WEB",
-                "retrieved_at": datetime.now(UTC).isoformat(),
-                "alerts": raw.get("alerts", []) if isinstance(raw, dict) else [],
-            },
+            _attach_provider_decision(
+                {
+                    "status": "ok",
+                    "provider": selected_provider.name,
+                    "location": _display_location(raw, location),
+                    "trust_level": "UNTRUSTED_WEB",
+                    "retrieved_at": datetime.now(UTC).isoformat(),
+                    "alerts": raw.get("alerts", []) if isinstance(raw, dict) else [],
+                },
+                provider_decision,
+            ),
             selected_provider,
-            _audit_summary("weather alerts provider call", default_audit),
+            _audit_summary("weather alerts provider call", default_audit, provider_decision),
         )
 
     def cache_clear() -> dict[str, Any]:
@@ -766,22 +1029,54 @@ def weather_provider_status(provider: WeatherProvider | None = None) -> dict[str
         error = "configured weather provider is not supported by this build"
         if not os.getenv("WEATHER_API_KEY", "").strip():
             error += "; WEATHER_API_KEY is not set if this provider requires one"
-    return {
+    elif active_provider.name == "weatherapi" and not configured:
+        error = _weatherapi_setup_hint()
+    elif isinstance(active_provider, UnavailableWeatherProvider):
+        error = active_provider.error
+    payload = {
         "status": "ok" if configured and supported else "error",
         "provider": active_provider.name,
         "configured": configured,
         "supported": supported,
-        "requires_api_key": active_provider.name == "weatherkit"
+        "requires_api_key": active_provider.name in {"weatherkit", "weatherapi"}
         or (active_provider.name != "open_meteo" and active_provider.name.startswith("unsupported:")),
         "api_key_configured": _weatherkit_credentials_configured()
         if active_provider.name == "weatherkit"
-        else bool(os.getenv("WEATHER_API_KEY", "").strip()),
+        else _weatherapi_credentials_configured(),
         "credentials_configured": _weatherkit_credentials_configured() if active_provider.name == "weatherkit" else None,
         "web_access_enabled": os.getenv("WEB_ACCESS_ENABLED", "true").strip().casefold() not in {"0", "false", "no", "off"},
         "preferences": preferences.to_dict(),
         "trust_level": "UNTRUSTED_WEB",
         "error": error,
     }
+    if active_provider.name == "auto":
+        payload["providers"] = weather_providers_status()
+        payload["decisions"] = {
+            action: decision.to_dict()
+            for action, decision in {
+                "current": _select_weather_provider("current")[1],
+                "forecast": _select_weather_provider("forecast")[1],
+                "alerts": _select_weather_provider("alerts")[1],
+            }.items()
+        }
+    return payload
+
+
+def weather_providers_status() -> list[dict[str, Any]]:
+    config = ProviderCostConfig.from_env()
+    return [
+        {
+            "name": candidate.name,
+            "configured": candidate.configured,
+            "no_key_required": candidate.no_key_required,
+            "official": candidate.official,
+            "paid_api": candidate.paid_api,
+            "quota_limited": candidate.quota_limited,
+            "default_allowed": select_provider("weather", [candidate], config=config).status == ProviderDecisionStatus.SELECTED,
+            "setup_hint": candidate.setup_hint,
+        }
+        for candidate in weather_provider_candidates()
+    ]
 
 
 def _validate_location(location: str) -> str | None:
@@ -799,9 +1094,103 @@ def _resolve_units(units: str | None) -> str:
     return "metric"
 
 
+def _select_weather_provider(
+    action: str,
+    *,
+    explicit_provider: str | None = None,
+    configured_default: str | None = None,
+    providers: dict[str, WeatherProvider] | None = None,
+) -> tuple[WeatherProvider, ProviderDecision]:
+    candidates = _weather_candidates_for_action(action)
+    env = dict(os.environ)
+    if configured_default:
+        env["WEATHER_DEFAULT_PROVIDER"] = configured_default
+    config = ProviderCostConfig.from_env(env)
+    explicit = None if _normalize_weather_provider_name(explicit_provider) == "auto" else explicit_provider
+    decision = select_provider("weather", candidates, config=config, explicit_provider=explicit)
+    selected = decision.selected_provider
+    provider_map = providers or {}
+    if decision.status == ProviderDecisionStatus.SELECTED and selected:
+        return _weather_provider_by_name(selected, provider_map), decision
+    fallback_name = _normalize_weather_provider_name(explicit_provider or configured_default or selected or "auto")
+    if fallback_name == "auto":
+        fallback_name = "weatherapi" if explicit_provider == "weatherapi" else "auto"
+    return (
+        UnavailableWeatherProvider(
+            fallback_name,
+            decision.reason,
+            setup_hint=decision.setup_hint,
+            decision=decision,
+        ),
+        decision,
+    )
+
+
+def _weather_candidates_for_action(action: str) -> list[Any]:
+    candidates = weather_provider_candidates()
+    if action != "alerts":
+        return candidates
+    adjusted = []
+    for candidate in candidates:
+        if candidate.name == "open_meteo":
+            adjusted.append(
+                type(candidate)(
+                    candidate.name,
+                    candidate.domain,
+                    candidate.configured,
+                    "Open-Meteo does not provide active alert data; use NOAA/NWS for U.S. official alerts.",
+                    no_key_required=candidate.no_key_required,
+                    official=candidate.official,
+                    local=candidate.local,
+                    cached=candidate.cached,
+                    user_provided=candidate.user_provided,
+                    paid_api=candidate.paid_api,
+                    quota_limited=candidate.quota_limited,
+                    supports_requested_action=False,
+                    metadata=candidate.metadata,
+                )
+            )
+        else:
+            adjusted.append(candidate)
+    return adjusted
+
+
+def _weather_provider_by_name(provider_name: str, provider_map: dict[str, WeatherProvider] | None = None) -> WeatherProvider:
+    normalized = _normalize_weather_provider_name(provider_name)
+    if provider_map and normalized in provider_map:
+        return provider_map[normalized]
+    timeout = parse_float(
+        "WEATHER_TIMEOUT_SECONDS",
+        os.getenv("WEATHER_TIMEOUT_SECONDS", "10"),
+        minimum=1,
+        maximum=60,
+    )
+    if normalized == "open_meteo":
+        return OpenMeteoProvider(timeout_seconds=timeout)
+    if normalized == "nws":
+        return NWSProvider(timeout_seconds=timeout)
+    if normalized == "weatherapi":
+        return WeatherAPIProvider(timeout_seconds=timeout)
+    if normalized == "weatherkit":
+        return WeatherKitProvider()
+    if normalized in {"disabled", "none"}:
+        return DisabledWeatherProvider()
+    return UnsupportedWeatherProvider(normalized)
+
+
+def _normalize_weather_provider_name(provider_name: str | None) -> str:
+    normalized = (provider_name or "").strip().casefold().replace("-", "_")
+    if normalized == "openmeteo":
+        return "open_meteo"
+    return normalized or "auto"
+
+
 def _configuration_error(provider: WeatherProvider) -> dict[str, Any] | None:
     if provider.name == "disabled":
         return _error_payload(provider, "weather provider is not configured", configured=False)
+    unavailable_error = getattr(provider, "error", None)
+    if isinstance(unavailable_error, str) and unavailable_error:
+        return _error_payload(provider, unavailable_error, configured=False)
     if provider.name.startswith("unsupported:"):
         return _error_payload(provider, "configured weather provider is not supported by this build", configured=False)
     if provider.name == "weatherkit" and not _provider_configured(provider):
@@ -830,6 +1219,14 @@ def _provider_error(provider: WeatherProvider, exc: Exception) -> dict[str, Any]
 def _with_weather_audit(payload: dict[str, Any], provider: WeatherProvider, summary: str = "weather provider call") -> dict[str, Any]:
     result = dict(payload)
     result["_audit"] = {"network_domains": _provider_domains(provider.name), "result_summary": summary}
+    return result
+
+
+def _attach_provider_decision(payload: dict[str, Any], decision: ProviderDecision | None) -> dict[str, Any]:
+    if decision is None:
+        return payload
+    result = dict(payload)
+    result["provider_decision"] = decision.to_dict()
     return result
 
 
@@ -894,20 +1291,31 @@ def _resolve_location_input(location: str | None) -> tuple[str, dict[str, Any] |
     return default.location, {"default_location_used": True, "default_location_source": default.source}
 
 
-def _audit_summary(summary: str, default_audit: dict[str, Any] | None) -> str:
+def _audit_summary(
+    summary: str,
+    default_audit: dict[str, Any] | None,
+    provider_decision: ProviderDecision | None = None,
+) -> str:
+    if provider_decision is not None:
+        selected = provider_decision.selected_provider or "unavailable"
+        summary = f"{summary}; weather provider selected: {selected} ({provider_decision.reason})"
     if not default_audit:
         return summary
     return f"{summary}; weather default location used from {default_audit['default_location_source']}"
 
 
 def _error_payload(provider: WeatherProvider, error: str, *, configured: bool) -> dict[str, Any]:
-    return {
+    payload = {
         "status": "error",
         "provider": provider.name,
         "error": error,
         "configured": configured,
         "trust_level": "UNTRUSTED_WEB",
     }
+    setup_hint = getattr(provider, "setup_hint", None)
+    if isinstance(setup_hint, str) and setup_hint:
+        payload["setup_hint"] = setup_hint
+    return payload
 
 
 def _provider_configured(provider: WeatherProvider) -> bool:
@@ -917,27 +1325,40 @@ def _provider_configured(provider: WeatherProvider) -> bool:
     return provider.name != "disabled" and not provider.name.startswith("unsupported:")
 
 
-def _provider_for_request(provider_name: str | None, default_provider: WeatherProvider) -> WeatherProvider:
-    normalized = (provider_name or "").strip().lower()
-    if not normalized:
-        return default_provider
+def _provider_for_request(
+    provider_name: str | None,
+    default_provider: WeatherProvider,
+    action: str,
+) -> tuple[WeatherProvider, ProviderDecision | None]:
+    requested = (provider_name or "").strip()
+    if not requested:
+        if isinstance(default_provider, WeatherProviderSelector):
+            return default_provider.provider_for_action(action)
+        decision = getattr(default_provider, "decision", None)
+        if isinstance(decision, ProviderDecision):
+            return default_provider, decision
+        return default_provider, None
+    normalized = _normalize_weather_provider_name(requested)
+    if normalized == "auto":
+        if isinstance(default_provider, WeatherProviderSelector):
+            return default_provider.provider_for_action(action, explicit_provider="auto")
+        provider, decision = _select_weather_provider(action, explicit_provider="auto")
+        return provider, decision
+    if isinstance(default_provider, WeatherProviderSelector):
+        return default_provider.provider_for_action(action, explicit_provider=normalized)
     if normalized in {default_provider.name, default_provider.name.replace("-", "_"), default_provider.name.replace("_", "-")}:
-        return default_provider
-    timeout = parse_float(
-        "WEATHER_TIMEOUT_SECONDS",
-        os.getenv("WEATHER_TIMEOUT_SECONDS", "10"),
-        minimum=1,
-        maximum=60,
-    )
+        return default_provider, None
     if normalized in {"open_meteo", "open-meteo", "openmeteo"}:
-        return OpenMeteoProvider(timeout_seconds=timeout)
+        return _weather_provider_by_name("open_meteo"), None
     if normalized == "nws":
-        return NWSProvider(timeout_seconds=timeout)
+        return _weather_provider_by_name("nws"), None
+    if normalized == "weatherapi":
+        return _select_weather_provider(action, explicit_provider="weatherapi")
     if normalized == "weatherkit":
-        return WeatherKitProvider()
+        return WeatherKitProvider(), None
     if normalized in {"disabled", "none"}:
-        return DisabledWeatherProvider()
-    return UnsupportedWeatherProvider(normalized)
+        return DisabledWeatherProvider(), None
+    return UnsupportedWeatherProvider(normalized), None
 
 
 def _display_location(raw: dict[str, Any], fallback: str) -> str:
@@ -957,6 +1378,10 @@ def _provider_domains(provider_name: str) -> list[str]:
         return ["geocoding-api.open-meteo.com", "api.open-meteo.com"]
     if provider_name == "nws":
         return ["geocoding-api.open-meteo.com", "api.weather.gov"]
+    if provider_name == "weatherapi":
+        return ["api.weatherapi.com"]
+    if provider_name == "auto":
+        return ["geocoding-api.open-meteo.com", "api.open-meteo.com", "api.weather.gov"]
     if provider_name == "weatherkit":
         return ["weatherkit.apple.com"]
     if provider_name in {"disabled", ""}:
@@ -978,6 +1403,14 @@ def _weatherkit_credentials_configured() -> bool:
         "WEATHERKIT_PRIVATE_KEY_PATH",
     )
     return all(os.getenv(name, "").strip() for name in required)
+
+
+def _weatherapi_credentials_configured() -> bool:
+    return bool((os.getenv("WEATHERAPI_API_KEY") or os.getenv("WEATHER_API_KEY") or "").strip())
+
+
+def _weatherapi_setup_hint() -> str:
+    return "weatherapi provider is not configured; set WEATHERAPI_API_KEY or WEATHER_API_KEY"
 
 
 def _weatherkit_stub_error() -> str:
@@ -1256,6 +1689,165 @@ def _normalize_nws_alert(feature: dict[str, Any]) -> WeatherAlert:
     )
 
 
+def _weatherapi_language_param(locale: str | None) -> dict[str, str]:
+    language = _language_from_locale(locale)
+    return {"lang": language} if language else {}
+
+
+def _weatherapi_location_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    location = payload.get("location")
+    if not isinstance(location, dict):
+        raise WeatherProviderError("WeatherAPI returned malformed location")
+    return location
+
+
+def _weatherapi_current_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    current = payload.get("current")
+    if not isinstance(current, dict):
+        raise WeatherProviderError("WeatherAPI returned malformed current weather")
+    return current
+
+
+def _weatherapi_forecast_days(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    forecast = payload.get("forecast")
+    if not isinstance(forecast, dict):
+        raise WeatherProviderError("WeatherAPI returned malformed forecast")
+    forecast_days = forecast.get("forecastday")
+    if not isinstance(forecast_days, list):
+        raise WeatherProviderError("WeatherAPI returned malformed forecast days")
+    return [item for item in forecast_days if isinstance(item, dict)]
+
+
+def _weatherapi_location(payload: dict[str, Any]) -> WeatherLocation:
+    location = _weatherapi_location_payload(payload)
+    return WeatherLocation(
+        name=", ".join(
+            part
+            for part in [
+                _string_or_none(location.get("name")),
+                _string_or_none(location.get("region")),
+                _string_or_none(location.get("country")),
+            ]
+            if part
+        )
+        or "WeatherAPI location",
+        latitude=_float_or_none(location.get("lat")),
+        longitude=_float_or_none(location.get("lon")),
+        timezone=_string_or_none(location.get("tz_id")),
+        admin1=_string_or_none(location.get("region")),
+        country=_string_or_none(location.get("country")),
+    )
+
+
+def _normalize_weatherapi_current(current_value: Any, units: str) -> WeatherCurrent:
+    if not isinstance(current_value, dict):
+        raise WeatherProviderError("WeatherAPI returned malformed current weather")
+    imperial = normalize_unit_system(units) == UnitSystem.IMPERIAL
+    condition = current_value.get("condition") if isinstance(current_value.get("condition"), dict) else {}
+    return WeatherCurrent(
+        time=_string_or_none(current_value.get("last_updated")),
+        temperature=current_value.get("temp_f" if imperial else "temp_c"),
+        temperature_unit="F" if imperial else "C",
+        apparent_temperature=current_value.get("feelslike_f" if imperial else "feelslike_c"),
+        apparent_temperature_unit="F" if imperial else "C",
+        precipitation=current_value.get("precip_in" if imperial else "precip_mm"),
+        precipitation_unit="inch" if imperial else "mm",
+        wind_speed=current_value.get("wind_mph" if imperial else "wind_kph"),
+        wind_speed_unit="mph" if imperial else "km/h",
+        wind_direction=current_value.get("wind_degree"),
+        wind_direction_unit="degrees",
+        humidity=current_value.get("humidity"),
+        humidity_unit="%",
+        pressure=current_value.get("pressure_in" if imperial else "pressure_mb"),
+        pressure_unit="inHg" if imperial else "mb",
+        uv_index=current_value.get("uv"),
+        weather_code=_int_or_none(condition.get("code")),
+        condition=_string_or_none(condition.get("text")),
+    )
+
+
+def _normalize_weatherapi_daily(day_value: dict[str, Any], units: str) -> WeatherDaily:
+    day = day_value.get("day")
+    if not isinstance(day, dict):
+        raise WeatherProviderError("WeatherAPI returned malformed daily forecast")
+    imperial = normalize_unit_system(units) == UnitSystem.IMPERIAL
+    condition = day.get("condition") if isinstance(day.get("condition"), dict) else {}
+    return WeatherDaily(
+        date=str(day_value.get("date") or "unknown"),
+        weather_code=_int_or_none(condition.get("code")),
+        condition=_string_or_none(condition.get("text")),
+        temperature_max=day.get("maxtemp_f" if imperial else "maxtemp_c"),
+        temperature_max_unit="F" if imperial else "C",
+        temperature_min=day.get("mintemp_f" if imperial else "mintemp_c"),
+        temperature_min_unit="F" if imperial else "C",
+        precipitation_sum=day.get("totalprecip_in" if imperial else "totalprecip_mm"),
+        precipitation_sum_unit="inch" if imperial else "mm",
+        precipitation_probability_max=day.get("daily_chance_of_rain"),
+        precipitation_probability_max_unit="%" if day.get("daily_chance_of_rain") is not None else None,
+        wind_speed_max=day.get("maxwind_mph" if imperial else "maxwind_kph"),
+        wind_speed_max_unit="mph" if imperial else "km/h",
+        uv_index_max=day.get("uv"),
+    )
+
+
+def _normalize_weatherapi_hourly(forecast_days: list[dict[str, Any]], units: str) -> list[WeatherHourly]:
+    imperial = normalize_unit_system(units) == UnitSystem.IMPERIAL
+    normalized: list[WeatherHourly] = []
+    for day in forecast_days:
+        hours = day.get("hour")
+        if not isinstance(hours, list):
+            continue
+        for hour in hours[:24]:
+            if not isinstance(hour, dict):
+                continue
+            condition = hour.get("condition") if isinstance(hour.get("condition"), dict) else {}
+            normalized.append(
+                WeatherHourly(
+                    time=str(hour.get("time") or "unknown"),
+                    temperature=hour.get("temp_f" if imperial else "temp_c"),
+                    temperature_unit="F" if imperial else "C",
+                    precipitation_probability=hour.get("chance_of_rain"),
+                    precipitation_probability_unit="%" if hour.get("chance_of_rain") is not None else None,
+                    precipitation=hour.get("precip_in" if imperial else "precip_mm"),
+                    precipitation_unit="inch" if imperial else "mm",
+                    wind_speed=hour.get("wind_mph" if imperial else "wind_kph"),
+                    wind_speed_unit="mph" if imperial else "km/h",
+                    wind_direction=hour.get("wind_degree"),
+                    wind_direction_unit="degrees",
+                    humidity=hour.get("humidity"),
+                    humidity_unit="%",
+                    uv_index=hour.get("uv"),
+                    weather_code=_int_or_none(condition.get("code")),
+                    condition=_string_or_none(condition.get("text")),
+                )
+            )
+    return normalized
+
+
+def _normalize_weatherapi_alerts(payload: dict[str, Any]) -> list[WeatherAlert]:
+    alerts_payload = payload.get("alerts")
+    if not isinstance(alerts_payload, dict):
+        return []
+    alerts = alerts_payload.get("alert")
+    if not isinstance(alerts, list):
+        return []
+    normalized = []
+    for item in alerts:
+        if not isinstance(item, dict):
+            continue
+        normalized.append(
+            WeatherAlert(
+                title=_string_or_none(item.get("headline") or item.get("event")) or "Weather alert",
+                severity=_string_or_none(item.get("severity")),
+                starts_at=_string_or_none(item.get("effective")),
+                ends_at=_string_or_none(item.get("expires")),
+                source=_string_or_none(item.get("source")),
+                description=_string_or_none(item.get("desc") or item.get("instruction")),
+            )
+        )
+    return normalized
+
+
 def _nws_period_date(period: dict[str, Any]) -> str | None:
     start = _string_or_none(period.get("startTime"))
     if not start:
@@ -1445,6 +2037,15 @@ def _int_or_none(value: Any) -> int | None:
         return None
     try:
         return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _float_or_none(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
     except (TypeError, ValueError):
         return None
 

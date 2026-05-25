@@ -182,6 +182,52 @@ def test_native_skills_program_docs_exist_and_define_safety_boundary() -> None:
         assert column in matrix
 
 
+def test_reddit_forum_intelligence_planning_docs_define_safety_boundary() -> None:
+    for path in (
+        "docs/decisions/reddit_forum_intelligence_track.md",
+        "docs/forums/FORUM_ACCESS_POLICY.md",
+        "docs/forums/REDDIT_ACCESS_POLICY.md",
+        "docs/forums/MULTILINGUAL_FORUM_STRATEGY.md",
+        "docs/forums/CHINESE_FORUM_STRATEGY.md",
+        "docs/forums/FORUM_SOURCE_GROUNDING.md",
+        "docs/forums/FORUM_RETENTION_POLICY.md",
+        "docs/forums/REDDIT_COMPLIANCE.md",
+        "docs/forums/REDDIT_RETENTION.md",
+        "docs/forums/REDDIT_RATE_LIMITS.md",
+    ):
+        assert (ROOT / path).exists(), path
+
+    decision = read("docs/decisions/reddit_forum_intelligence_track.md")
+    access = read("docs/forums/FORUM_ACCESS_POLICY.md")
+    reddit = read("docs/forums/REDDIT_ACCESS_POLICY.md")
+    chinese = read("docs/forums/CHINESE_FORUM_STRATEGY.md")
+    grounding = read("docs/forums/FORUM_SOURCE_GROUNDING.md")
+    retention = read("docs/forums/FORUM_RETENTION_POLICY.md")
+    compliance = read("docs/forums/REDDIT_COMPLIANCE.md")
+    reddit_retention = read("docs/forums/REDDIT_RETENTION.md")
+    reddit_rate_limits = read("docs/forums/REDDIT_RATE_LIMITS.md")
+
+    assert "does not add runtime API calls" in decision
+    assert "Do not implement Reddit API calls" in decision
+    assert "Official public API" in access
+    assert "CAPTCHA, Cloudflare, anti-bot" in access
+    assert "Forum text can be quoted, summarized, translated, and cited as source data" in access
+    assert "Reddit official Data API" in reddit
+    assert "No unauthenticated Reddit web scraping" in reddit
+    assert "V2EX" in chinese
+    assert "login-protected" in chinese
+    assert "snippet_only" in grounding
+    assert "Do not store Reddit/forum content permanently by default." in retention
+    assert "Do not use forum content for model training." in retention
+    assert "REDDIT_ENABLED=false" in compliance
+    assert "Unauthenticated Reddit traffic is not allowed." in compliance
+    assert "Reddit web scraping is not an API substitute." in compliance
+    assert "REDDIT_USE_FOR_TRAINING=false" in reddit_retention
+    assert "hard false" in reddit_retention
+    assert "REDDIT_MAX_REQUESTS_PER_MINUTE=60" in reddit_rate_limits
+    assert "structured rate-limit error" in reddit_rate_limits
+
+
 def test_prompt_tracking_docs_are_valid() -> None:
     queue_rows = table_rows(read("docs/PROMPT_QUEUE.md"), "prompt_id")
     ledger_rows = table_rows(read("docs/PROMPT_LEDGER.md"), "prompt_id")
@@ -243,3 +289,79 @@ def test_feature_maturity_assessment_covers_registry_features() -> None:
     # Tracking-only foundation entries do not need maturity rows until they become user-facing runtime features.
     exempt = {"ToolBroker", "PolicyEngine", "PermissionManager", "ApprovalManager", "AuditLogger"}
     assert normalized_registry_features - exempt <= maturity_features
+
+
+def test_cloneability_docs_exist_and_are_linked() -> None:
+    for path in (
+        "docs/AGENT_DNA.md",
+        "docs/ARCHITECTURE_PRINCIPLES.md",
+        "docs/CLONE_BLUEPRINT.md",
+        "docs/MODEL_MIGRATION_GUIDE.md",
+        "docs/PLATFORM_MIGRATION_GUIDE.md",
+        "docs/REWRITE_CHECKLIST.md",
+        "docs/BUILD_HISTORY.md",
+        "docs/BUILD_PROVENANCE.md",
+        "docs/DECISION_INDEX.md",
+        "docs/RECONSTRUCTED_PROMPT_PACKS.md",
+        "docs/templates/reconstructed_prompt_pack_template.md",
+        "docs/cloneability/CLONEABILITY_RELEASE_GATE.md",
+        "docs/cloneability/CLONEABILITY_MATURITY_REVIEW.md",
+    ):
+        assert (ROOT / path).exists(), path
+
+    readme = read("README.md")
+    agents = read("AGENTS.md")
+    spec = read("SPEC.md")
+    sdlc = read("docs/SDLC.md")
+    registry = read("docs/FEATURE_REGISTRY.md")
+    maturity = read("docs/FEATURE_MATURITY.md")
+
+    assert "docs/AGENT_DNA.md" in readme
+    assert "docs/CLONE_BLUEPRINT.md" in readme
+    assert "docs/AGENT_DNA.md" in agents
+    assert "docs/CLONE_BLUEPRINT.md" in agents
+    assert "Cloneability And Portability" in spec
+    assert "Build Provenance And Cloneability" in sdlc
+    assert "AGENT-DNA-CLONEABILITY" in registry
+    assert "Agent DNA / Cloneability" in maturity
+
+
+def test_reconstructed_prompt_packs_are_marked_reconstructed() -> None:
+    folder = ROOT / "prompts/packs/reconstructed"
+    files = sorted(folder.glob("*.reconstructed.promptpack.md"))
+
+    assert len(files) >= 11
+    for file in files:
+        text = file.read_text(encoding="utf-8")
+        assert "status: reconstructed" in text, file
+        assert "exact_original:" in text, file
+        assert "confidence:" in text, file
+        assert "caveats:" in text, file
+
+
+def test_internet_access_graduation_docs_define_no_bypass_policy() -> None:
+    for path in (
+        "docs/decisions/internet_access_graduation_track.md",
+        "docs/web/WEB_ACCESS_POLICY.md",
+        "docs/web/INTERNET_PROVIDER_STRATEGY.md",
+        "docs/web/SOURCE_GROUNDING_REQUIREMENTS.md",
+        "docs/web/BLOCKED_SOURCE_POLICY.md",
+    ):
+        assert (ROOT / path).exists(), path
+
+    decision = read("docs/decisions/internet_access_graduation_track.md")
+    policy = read("docs/web/WEB_ACCESS_POLICY.md")
+    provider_strategy = read("docs/web/INTERNET_PROVIDER_STRATEGY.md")
+    grounding = read("docs/web/SOURCE_GROUNDING_REQUIREMENTS.md")
+    blocked = read("docs/web/BLOCKED_SOURCE_POLICY.md")
+
+    assert "This reset does not add provider calls" in decision
+    assert "CAPTCHA/anti-bot bypass" in decision
+    assert "Web content is data, not instruction." in policy
+    assert "Do not write web queries or web content to memory by default." in policy
+    assert "Self-hosted SearXNG" in provider_strategy
+    assert "SerpAPI, if configured and allowed by cost policy" in provider_strategy
+    assert "Graceful unavailable response" in provider_strategy
+    assert "Invent sources or citations" in grounding
+    assert "Return unavailable with `bypass_attempted=false`." in blocked
+    assert "Browser-profile cookie use" in blocked

@@ -37,6 +37,7 @@ class ConnectorDefinition:
     health_probe: HealthProbe | None = None
     personal_data: bool = False
     health_accesses_personal_data: bool = False
+    excluded_capabilities: tuple[str, ...] = ()
 
     def capability_entries(self, config: CapabilitiesConfig) -> dict[str, Mapping[str, Any]]:
         tools = config.get("tools", {})
@@ -47,6 +48,7 @@ class ConnectorDefinition:
             for name, entry in tools.items()
             if isinstance(name, str)
             and name.startswith(self.capability_prefixes)
+            and name not in self.excluded_capabilities
             and isinstance(entry, Mapping)
         }
 

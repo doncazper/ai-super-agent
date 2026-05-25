@@ -62,6 +62,22 @@ python smart_agent.py bugs export
 
 Session review summarizes pass/fail counts, feedback tags, repeated failure patterns, tool/routing failures, poor response flags, confusing UX, approval friction, missing docs, suspected bugs, and suggested regression tests. It reads redacted session previews and feedback records only. `--create-bugs` writes redacted local bug records under `bugs/`; it does not fix bugs, open network calls, access personal connectors, or write memory. See `docs/BUG_TRIAGE.md`.
 
+Messaging dogfood sessions should use the default-disabled suites with session logging so failures are reviewable without any live send:
+
+```bash
+python smart_agent.py session start --name "messaging-dogfood"
+python smart_agent.py dogfood run messaging_core --session
+python smart_agent.py dogfood run messaging_handoff --session
+python smart_agent.py dogfood run messaging_ios_compose --session
+python smart_agent.py dogfood run messaging_macos_probe --session
+python smart_agent.py dogfood run messaging_send_dry_run --session
+python smart_agent.py dogfood run lead_response --session
+python smart_agent.py session review --last
+python smart_agent.py session end
+```
+
+Reviews for these suites should call out whether commands stayed on mock, fixture, preflight, local draft, or metadata-only paths. A review should treat any actual message send, `messages macos live-send-probe` invocation, private Messages database access, Full Disk Access request, approval reuse, or unredacted personal content as a high-priority safety finding.
+
 ## Storage
 
 Default path: `reports/sessions/`.

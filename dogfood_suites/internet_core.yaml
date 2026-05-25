@@ -1,0 +1,33 @@
+suite_id: internet_core
+name: Internet Core Dogfood
+description: Mock-safe checks for provider metadata, provider decisioning, cache status, and internet routing.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: internet_core_search_providers
+    description: List search provider registry metadata without provider calls.
+    command: python smart_agent.py web search-providers
+    expected_behavior: Returns configured/free/paid provider metadata without executing network searches.
+    failure_signals: Missing provider list, provider call attempted, secrets printed, or paid providers shown as default.
+    tags: [internet, web, providers, mock_safe]
+  - id: internet_core_provider_decision
+    description: Explain cost-aware provider selection for a current-facts query.
+    command: python smart_agent.py web provider-decision "latest AI policy news"
+    expected_behavior: Shows free-first provider decision, redacted query handling, skipped paid providers by default, and no search history storage.
+    failure_signals: Paid provider selected by default, query stored, missing audit/provider decision fields, or unredacted sensitive metadata.
+    tags: [internet, provider_policy, audit, mock_safe]
+  - id: internet_core_cache_status
+    description: Inspect public web cache and index status.
+    command: python smart_agent.py web cache status
+    expected_behavior: Reports cache/index counts and retention metadata without exposing article bodies or query history.
+    failure_signals: Raw web content shown, personal/authenticated content exposed, or cache operation not audited.
+    tags: [internet, cache, retention, mock_safe]
+  - id: internet_core_router_explain
+    description: Explain internet routing for a live/current-events style query.
+    command: python smart_agent.py router explain "What happened in AI policy today?"
+    expected_behavior: Routes to internet/research tools with reason, provider policy, risk hint, and no tool execution.
+    failure_signals: Router rewrites the user message, executes tools, stores query history, or omits internet routing rationale.
+    tags: [internet, router, mock_safe]

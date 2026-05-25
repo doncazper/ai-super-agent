@@ -18,7 +18,13 @@ RISK_ORDER = {
     "FORBIDDEN": 5,
 }
 SECRET_KEY_MARKERS = ("password", "secret", "token", "api_key", "apikey", "access_key", "private_key")
-NON_SECRET_STATUS_KEYS = {"api_key_configured", "requires_api_key", "credentials_configured"}
+NON_SECRET_STATUS_KEYS = {
+    "api_key_configured",
+    "requires_api_key",
+    "credentials_configured",
+    "token_configured",
+    "optional_token_supported",
+}
 
 
 def build_connector_status(

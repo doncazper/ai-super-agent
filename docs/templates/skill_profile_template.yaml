@@ -1,0 +1,17 @@
+profile_id: example_profile
+name: Example Profile
+description: Describe where this profile is used.
+allowed_skills: []
+blocked_skills: []
+allowed_categories: []
+blocked_categories: []
+risk_ceiling: MEDIUM
+allow_personal_data: false
+allow_network: false
+allow_writes: false
+allow_critical_actions: false
+default_tools: []
+memory_policy: no_store
+approval_policy: policy_engine_final
+docs_path: docs/native_skills/SKILL_PROFILES.md
+enabled_by_default: true

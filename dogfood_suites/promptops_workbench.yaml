@@ -1,0 +1,33 @@
+suite_id: promptops_workbench
+name: PromptOps Workbench Smoke
+description: Exercises PromptOps status, next, review, and disabled runner behavior.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: work_status
+    description: Show PromptOps status.
+    command: python smart_agent.py work status
+    expected_behavior: Status summarizes queue counts and next prompt.
+    failure_signals: Crash, secret leakage, or prompt body execution.
+    tags: [promptops, status]
+  - id: work_next
+    description: Show next work item.
+    command: python smart_agent.py work next
+    expected_behavior: Next safe queued prompt metadata is printed.
+    failure_signals: High/critical prompt selected for autopilot or dependency bypass.
+    tags: [promptops, queue]
+  - id: work_review
+    description: Review prompt queue and audit evidence.
+    command: python smart_agent.py work review
+    expected_behavior: Review reports active, queued, completed, and evidence state.
+    failure_signals: More than one active prompt or missing audit state.
+    tags: [promptops, review]
+  - id: work_run_next_disabled
+    description: Verify runner remains disabled by default.
+    command: python smart_agent.py work run-next
+    expected_behavior: Runner reports disabled/fallback and does not execute Codex.
+    failure_signals: External runner starts without CODEX_RUNNER_ENABLED=true.
+    tags: [promptops, safety]

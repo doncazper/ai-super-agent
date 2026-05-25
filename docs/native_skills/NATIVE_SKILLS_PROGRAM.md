@@ -81,19 +81,37 @@ Required manifest fields:
 - `version`
 - `status`
 - `maturity_level`
+- `root_id`
+- `source`
+- `provenance`
 - `risk_level`
 - `trust_level`
 - `allowed_tools`
 - `required_capabilities`
+- `required_connectors`
+- `required_env`
+- `required_config`
+- `required_binaries`
+- `required_files`
+- `required_platforms`
+- `required_python`
+- `required_model_features`
 - `approval_required`
+- `approval_reuse_allowed`
 - `memory_behavior`
 - `audit_required`
+- `network_behavior`
+- `filesystem_behavior`
 - `inputs_schema`
 - `outputs_schema`
 - `docs_path`
 - `tests_path`
+- `dogfood_suite`
 - `owner`
+- `license`
 - `last_reviewed`
+- `setup_hint`
+- `known_limitations`
 
 Validation rules:
 
@@ -102,8 +120,10 @@ Validation rules:
 - `allowed_tools` must be a subset of `required_capabilities`.
 - Personal-data native skills must be `disabled` by default.
 - `CRITICAL` native skills require `approval_required: per_action`.
+- `CRITICAL` native skills must set `approval_reuse_allowed: false`.
 - Executable fields such as `script`, `entrypoint`, `command`, `module`, `code_path`, `install`, or `package_install` fail validation.
 - Manifest text that requests ToolBroker, policy, approval, or audit bypass fails validation.
+- Dependency checks are detection-only: they may check env var presence, config key presence, binary presence, workspace/project files, current platform, capability IDs, Python version, and model-feature setup hints, but they must not install packages, execute scripts, call providers, or call connectors.
 
 Example manifest:
 
@@ -118,13 +138,17 @@ maturity_level: "4 Tested"
 risk_level: LOW
 trust_level: UNTRUSTED_DOCUMENT
 allowed_tools:
+  - native_skills.inspect_skill
   - native_skills.vet_skill_file
   - native_skills.vet_skill_folder
   - native_skills.score_candidate
+  - native_skills.report_last
 required_capabilities:
+  - native_skills.inspect_skill
   - native_skills.vet_skill_file
   - native_skills.vet_skill_folder
   - native_skills.score_candidate
+  - native_skills.report_last
 approval_required: false
 memory_behavior: no_store
 audit_required: true
@@ -132,8 +156,8 @@ inputs_schema:
   type: object
 outputs_schema:
   type: object
-docs_path: docs/native_skills/SKILL_INTAKE_PROCESS.md
-tests_path: tests/test_native_skills.py
+docs_path: docs/native_skills/SKILL_VETTING.md
+tests_path: tests/native_skills/test_skill_inspection_vetting.py
 owner: local-agent
 last_reviewed: "2026-05-23"
 ```

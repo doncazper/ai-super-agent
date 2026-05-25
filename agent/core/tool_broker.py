@@ -433,11 +433,44 @@ class ToolBroker:
 
     def _sanitize_args(self, tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
         sanitized = dict(args)
-        if tool_name == "web.search" and "query" in sanitized and not env_bool(
+        if tool_name.startswith(
+            (
+                "web.search",
+                "web.provider_decision",
+                "web.index.search",
+                "web.cache.lookup",
+                "web.official_api.search",
+                "reddit.search_posts",
+                "reddit.summarize_search",
+                "reddit.consensus",
+                "reddit.pros_cons",
+                "reddit.complaints",
+                "reddit.buying_advice",
+                "v2ex.node_topics",
+                "cn_forums.search",
+                "cn_forums.research",
+            )
+        ) and ("query" in sanitized or "topic" in sanitized) and not env_bool(
             "WEB_SEARCH_AUDIT_QUERIES",
             default=False,
         ):
-            sanitized["query"] = "[WEB_SEARCH_QUERY_REDACTED]"
+            if "query" in sanitized:
+                sanitized["query"] = "[WEB_SEARCH_QUERY_REDACTED]"
+            if "topic" in sanitized:
+                sanitized["topic"] = "[WEB_SEARCH_QUERY_REDACTED]"
+        if tool_name.startswith(("reddit.", "v2ex.", "cn_forums.")):
+            for key in ("body_text", "content", "raw", "author_display"):
+                if key in sanitized:
+                    sanitized[key] = "[FORUM_CONTENT_REDACTED]"
+        if tool_name.startswith("web.index.add_public_source"):
+            if "query" in sanitized:
+                sanitized["query"] = "[WEB_SEARCH_QUERY_REDACTED]"
+            if isinstance(sanitized.get("source"), dict):
+                source_preview = dict(sanitized["source"])
+                for key in ("text", "html_sanitized", "content", "body_text", "full_content", "raw", "query", "raw_query"):
+                    if key in source_preview:
+                        source_preview[key] = "[WEB_CONTENT_REDACTED]"
+                sanitized["source"] = source_preview
         if tool_name.startswith("weather.") and "location" in sanitized:
             sanitized["location"] = "[WEATHER_LOCATION_REDACTED]"
         if tool_name.startswith("calendar."):
@@ -448,6 +481,14 @@ class ToolBroker:
             for key in ("task_id", "title", "notes"):
                 if key in sanitized:
                     sanitized[key] = "[TASK_REDACTED]"
+        if tool_name.startswith("lead."):
+            for key in ("lead_id", "sender_ref", "sender_display", "message_preview", "body", "content"):
+                if key in sanitized:
+                    sanitized[key] = "[LEAD_CONTENT_REDACTED]"
+        if tool_name.startswith("apple_business."):
+            for key in ("lead_id", "sender", "message", "subject", "conversation_id", "body", "content"):
+                if key in sanitized:
+                    sanitized[key] = "[APPLE_BUSINESS_CONTENT_REDACTED]"
         if tool_name.startswith("contacts."):
             sanitized = redact_contact_args(sanitized)
         if tool_name.startswith("memory.") and "content" in sanitized:
@@ -456,8 +497,8 @@ class ToolBroker:
             from agent.safety.redaction import SecretRedactor
 
             sanitized["query"] = SecretRedactor().redact(sanitized["query"])
-        if tool_name.startswith(("email.", "messages.")):
-            for key in ("thread_text", "body", "content"):
+        if tool_name.startswith(("email.", "messages.", "messaging.")):
+            for key in ("thread_text", "body", "content", "to", "cc", "bcc", "recipient", "recipient_id", "recipient_display"):
                 if key in sanitized:
                     sanitized[key] = "[PERSONAL_CONTENT_REDACTED]"
         return sanitized
@@ -467,10 +508,16 @@ class ToolBroker:
             return TrustLevel.LOCAL_PRIVATE_DATA
         if tool_name.startswith("email."):
             return TrustLevel.UNTRUSTED_EMAIL
-        if tool_name.startswith("messages."):
+        if tool_name.startswith(("messages.", "messaging.")):
             return TrustLevel.UNTRUSTED_MESSAGE
-        if tool_name.startswith(("web.", "weather.")):
+        if tool_name.startswith("lead."):
+            return TrustLevel.UNTRUSTED_MESSAGE
+        if tool_name.startswith("apple_business."):
+            return TrustLevel.UNTRUSTED_MESSAGE
+        if tool_name.startswith(("web.", "weather.", "reddit.", "v2ex.", "cn_forums.")):
             return TrustLevel.UNTRUSTED_WEB
+        if tool_name.startswith("platform."):
+            return TrustLevel.LOCAL_PRIVATE_DATA
         if tool_name.startswith(("native_skills.", "documents.pdf.")):
             return TrustLevel.UNTRUSTED_DOCUMENT
         if tool_name == "filesystem.read":
