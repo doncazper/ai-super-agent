@@ -1,16 +1,19 @@
 # Last Git Review
 
-Prompt ID: CLEAN-RELEASE-BOUNDARY-POST-CANON-01
-Date: 2026-05-26 UTC / 2026-05-25 PDT
+Prompt ID: `DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01`
+Date: 2026-05-26 UTC / 2026-05-26 PDT
 
 ## Summary
 
-- Branch: `checkpoint/large-working-tree-20260523`.
+- Branch: `main`.
 - Remote: `origin https://github.com/doncazper/ai-super-agent.git`.
-- Upstream: `origin/checkpoint/large-working-tree-20260523`.
-- Ahead/behind: no ahead/behind marker in `git status -sb`.
-- Last commit: `2be398f Refactor agent prompts and project state tracking`.
-- Dirty worktree: large mixed tree with 55 modified tracked files and 637 untracked non-ignored files before this review's updates.
+- Upstream: none for local `main`.
+- Local `main`: `d3c632a Fix fake secret scanner fixtures`.
+- Remote `origin/main`: `5115a76 Initial commit`.
+- Merge-base between local `main` and `origin/main`: none.
+- Dirty worktree: intentional launcher work from the previous prompt plus duplicate-cleanup reports/tracker updates.
+- GitHub CLI: installed at `/opt/homebrew/bin/gh`, not authenticated.
+- Normal push: blocked. `git push --dry-run` has no upstream; explicit dry-run push to `origin/main` is rejected as non-fast-forward.
 
 ## Review Result
 
@@ -18,35 +21,32 @@ Commit decision: do not commit yet.
 
 Push decision: do not push.
 
-Reason: the worktree combines many completed prompt packs plus generated reports and future/unrun prompt packs. It needs pathspec-based commit grouping and a staged secret/preflight check per group.
+Reason: local `main` has no upstream and `origin/main` has unrelated initial history. A normal push to `origin/main` is rejected; replacing remote main requires an explicit future human approval because force push, rebase, and unrelated-history merge are forbidden in this prompt.
 
-## Safe To Stage After Review
+## Duplicate Cleanup Result
 
-- Source/docs/tests/prompt records for completed packs.
-- `.gitkeep` files for generated-report directories.
-- Tracker docs when staged with the feature group they describe.
+- Removed 182 exact duplicate copied files.
+- Removed 2 empty duplicate directories.
+- Quarantined 1 differing stale source copy under ignored `docs/reconciliation/duplicate_file_quarantine/`.
+- Current duplicate search for `* 2.*`: none remain outside ignored quarantine.
+- Remaining duplicate-looking `* 2.*` / `* 2` artifacts outside ignored quarantine: none known.
 
-## Exclude By Default
+## Safe To Stage Later
 
-- `reports/performance/*` generated reports and baselines.
-- `reports/qa/*` generated logs/reports.
-- `reports/brain/*.json`.
-- `reports/autonomy/*.json`.
-- Timestamped `reports/evals/*.json`.
+- Launcher source/tests/docs from `GLOBAL-LAUNCHER-SELF-REPAIR-AND-LAUNCH-01`.
+- Duplicate cleanup docs and tracker updates from `REMOTE-MAIN-RECONCILE-AND-DUPLICATE-FILE-CLEANUP-01`.
+- `.gitignore` quarantine rule and `.gitkeep` placeholder.
+
+## Exclude
+
+- `docs/reconciliation/duplicate_file_quarantine/*` raw quarantined copies.
 - `.env`, `.env.*`, token/OAuth/private-key/credential files.
-- `__pycache__/`, `.pytest_cache/`, `.DS_Store`, local databases, raw logs, raw session/audit reports.
+- Raw logs, raw audit/session reports, local databases, caches, pyc files, `.pytest_cache/`, `.venv/`, and generated junk.
 
-## Validation Snapshot
+## Remote/Main Recommendation
 
-- `git diff --check`: passed.
-- `./scripts/agent git preflight`: passed for tracked scope.
-- `./scripts/agent secrets scan`: passed for tracked scope; placeholder test-key info findings only.
-- Strict untracked secret-value scan: no confirmed real secrets; findings are prompt/test fixtures or placeholders.
-- `./scripts/agent commands validate`: passed with 589 commands.
-- `make policy-check`: passed.
-- Latest full suite before this review: CANON-10 full suite passed with 1723 tests.
+Use `docs/git/REMOTE_MAIN_RECONCILIATION_PLAN.md` as the source of truth. Prefer pushing a candidate branch first, or explicitly authorize a future main replacement gate after tests and secret scans pass.
 
-## Next Review Step
+## Current Next Prompt
 
-Choose one logical commit group from `docs/git/SAFE_COMMIT_PLAN.md`, stage only that group with explicit pathspecs, rerun staged preflight/tests, then decide whether to commit.
-
+`CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01`

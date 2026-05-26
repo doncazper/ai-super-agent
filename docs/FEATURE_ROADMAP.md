@@ -16,6 +16,13 @@ Canonical Runtime Gateway Hardening is complete locally through CANON-10 plus EX
 
 Full Feature Status, Maturity, and Prompt-Tracker Audit `MATURITY-AUDIT-01` is complete as an audit-only productization pass. It adds productization audit docs, a conservative scorecard, a prompt tracker missed-prompts audit, next maturity queue, next feature expansion candidates, and a manual validation plan. The Codebase Bug Review and Hardening `CODEBUG-01` through `CODEBUG-08` controlled batch is complete locally: it created focused bug-review docs, fixed a closed-pipe CLI traceback, added regression coverage, ran safety/runtime/connector/tracker/static-scan/release-gate validation, and kept release readiness conservative. Broad local-tested groundwork exists, but a clean release-candidate boundary, broader prompt tracker reconciliation, generated artifact hygiene follow-through, subprocess/deletion allowlist review, and live/manual validation remain higher priority than broad feature expansion.
 
+## Global Launcher Track
+
+| Order | Feature / Task | Status | Prerequisites | Approval / Gate |
+|---:|---|---|---|---|
+| 1 | Configurable global `smartagent` launcher with diagnostics, repo switching, and safe repair | complete | Existing `./scripts/agent`, Python 3.11+, local repo checkout or fresh GitHub clone | User-level launcher installer, current Git-root install default, alias validation, config, strong repo verification, bounded repo discovery, `--repo-status` / `--find-repos` / `--set-repo` / `--repair-path`, repo/PATH/Python diagnostics, Level 1 safe repairs, explicit Level 2 `.venv` repair, Level 3 manual warnings, docs, and tests are complete locally; manual install/PATH smoke remains pending |
+| 2 | Manual launcher smoke and release-boundary commit | planned | Clean duplicate-file/release-boundary cleanup | Run installer dry-run/install/update/uninstall in a reviewed user shell, then secret/git/test gates before commit/push |
+
 ## Canonical Runtime Gateway Hardening Track
 
 | Order | Prompt | Status | Dependencies | Notes |

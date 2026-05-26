@@ -1,5 +1,66 @@
 # Safe Commit Plan
 
+## Current Recommendation: Launcher And Cleanup Boundary
+
+Prompt IDs: `GLOBAL-LAUNCHER-SELF-REPAIR-AND-LAUNCH-01`, `REMOTE-MAIN-RECONCILE-AND-DUPLICATE-FILE-CLEANUP-01`, `DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01`
+
+Status: planning only; no commit created.
+
+Do not push local `main` directly to `origin/main` until the unrelated remote history decision is explicit. Local `main` has no upstream and `origin/main` is an unrelated initial commit. `git push --dry-run origin HEAD:refs/heads/main` was rejected as non-fast-forward on 2026-05-26.
+
+Suggested next reviewed commit group, after final tests/scans:
+
+```bash
+git add -- \
+  .gitignore \
+  CHANGELOG.md \
+  README.md \
+  agent/launcher \
+  agent/ui/command_registry.py \
+  docs/SMARTAGENT_GLOBAL_LAUNCHER.md \
+  docs/COMMAND_REGISTRY.md \
+  docs/COMMAND_TEST_MATRIX.md \
+  docs/COMPLETION_REPORT.md \
+  docs/FEATURE_MATURITY.md \
+  docs/FEATURE_REGISTRY.md \
+  docs/FEATURE_ROADMAP.md \
+  docs/PROJECT_STATE.md \
+  docs/PROMPT_AUDIT.md \
+  docs/PROMPT_LEDGER.md \
+  docs/PROMPT_QUEUE.md \
+  docs/git/LAST_GIT_REVIEW.md \
+  docs/git/DUPLICATE_CLEANUP_GH_AUTH_GIT_BOUNDARY_REPORT.md \
+  docs/git/REMOTE_MAIN_RECONCILIATION_PLAN.md \
+  docs/reconciliation/ARTIFACT_TRACKING_DECISION.md \
+  docs/reconciliation/DUPLICATE_FILE_CLEANUP_REPORT.md \
+  docs/reconciliation/duplicate_file_quarantine/.gitkeep \
+  scripts/install-smartagent-launcher \
+  tests/launcher
+```
+
+Do not stage `docs/reconciliation/duplicate_file_quarantine/agent__tools__secrets_2.py`.
+
+Before committing, rerun:
+
+```bash
+git diff --cached --check
+./scripts/agent secrets scan --staged
+./scripts/agent git preflight --staged
+./scripts/agent commands validate
+make policy-check
+./.venv/bin/python -m pytest tests/launcher tests/test_startup_ergonomics.py tests/test_command_registry.py -q
+```
+
+After a clean commit, choose one remote plan from `docs/git/REMOTE_MAIN_RECONCILIATION_PLAN.md`.
+
+Current preferred remote plan: push a candidate branch only after explicit human approval, for example:
+
+```bash
+git push -u origin main:codex/main-candidate
+```
+
+Do not run `git push --force-with-lease origin main` unless a future prompt explicitly authorizes replacing the unrelated remote `origin/main` history after staged secret scans, git preflight, command validation, policy-check, and tests pass.
+
 Prompt ID: CLEAN-RELEASE-BOUNDARY-POST-CANON-01
 Status: planning only; no commit created.
 
@@ -206,4 +267,3 @@ Do not push until:
 - full tests pass after staging,
 - no generated reports/secrets are staged,
 - and the user explicitly authorizes push.
-

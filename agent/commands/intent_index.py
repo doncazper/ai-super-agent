@@ -59,6 +59,7 @@ INTENT_BY_GROUP_KEYWORD: tuple[tuple[str, str], ...] = (
     ("core", "chat.general"),
     ("brain", "doctor.status"),
     ("platform", "doctor.status"),
+    ("launcher", "doctor.status"),
     ("git", "git.status"),
     ("self-improvement", "git.status"),
     ("media", "media.plan"),

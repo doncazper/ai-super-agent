@@ -81,6 +81,55 @@ On this Mac, the bundled Codex runtime is the known-good Python 3.12 path:
 PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
 ```
 
+## Global Launcher
+
+Install the optional user-level launcher to run AI Super Agent from any Terminal directory:
+
+```bash
+./scripts/install-smartagent-launcher
+```
+
+Fresh clones can install from their own repo root:
+
+```bash
+git clone https://github.com/doncazper/ai-super-agent.git
+cd ai-super-agent
+./scripts/install-smartagent-launcher --alias smartagent
+```
+
+After `$HOME/bin` is in `PATH`, `smartagent` launches `./scripts/agent --interactive`, while arguments pass through to the repo-local wrapper:
+
+```bash
+smartagent
+smartagent doctor
+smartagent status
+smartagent qa dashboard
+```
+
+Launcher-only diagnostics and repairs use double-dash flags and do not call LM Studio:
+
+```bash
+smartagent --doctor
+smartagent --repair
+smartagent --repair-and-launch
+smartagent --repair-venv
+smartagent --repo
+smartagent --repo-status
+smartagent --find-repos
+smartagent --set-repo "/path/to/repo"
+smartagent --repair-path
+```
+
+Launcher repo discovery is bounded to configured/last-known/current/common user-owned paths and explicit `--repo` input. It does not scan the whole home directory, does not select silently among multiple valid repos, and verifies `smart_agent.py`, `scripts/agent`, and strong repo markers before saving a repo switch.
+
+Custom aliases are supported:
+
+```bash
+./scripts/install-smartagent-launcher --alias sa
+```
+
+See [docs/SMARTAGENT_GLOBAL_LAUNCHER.md](</Users/sambehdjou/Documents/AI Super Agent/docs/SMARTAGENT_GLOBAL_LAUNCHER.md>) for PATH setup, update, repair, and uninstall behavior.
+
 ## Usage
 
 No-tool chat:

@@ -43,3 +43,21 @@ A generated report may be promoted to tracked docs only when:
 
 Top-level `.gitignore` now ignores `reports/performance/*` while allowing `reports/performance/.gitkeep`.
 
+## Update: Remote/Main And Duplicate Cleanup
+
+Prompt ID: `REMOTE-MAIN-RECONCILE-AND-DUPLICATE-FILE-CLEANUP-01`
+
+- Byte-for-byte duplicate copied files named like `* 2.*` were removed after hash comparison against their intended counterparts.
+- Extra exact duplicate copy artifacts (`scripts/agent 2`, `.gitkeep 2` files, and empty `providers 2` directories) were also removed after comparison.
+- One differing duplicate source copy, `agent/tools/secrets 2.py`, was moved into `docs/reconciliation/duplicate_file_quarantine/` for manual review and is intentionally ignored by `.gitignore`.
+- Quarantined copied source/docs/tests are local review artifacts, not tracked release evidence.
+- The tracked release evidence is `docs/reconciliation/DUPLICATE_FILE_CLEANUP_REPORT.md`.
+
+## Update: Duplicate Cleanup GH Auth Git Boundary
+
+Prompt ID: `DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01`
+
+- A fresh `* 2.*` duplicate scan found no remaining copied files outside ignored paths.
+- GitHub CLI authentication diagnostics are release-boundary metadata, not a blocker for normal Git authentication.
+- The tracked release evidence is `docs/git/DUPLICATE_CLEANUP_GH_AUTH_GIT_BOUNDARY_REPORT.md`.
+- Do not track quarantined raw duplicate source copies; keep only the `.gitkeep` placeholder and the redacted report.

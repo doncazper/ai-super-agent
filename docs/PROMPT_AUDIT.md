@@ -8,12 +8,79 @@ Completion evidence classifications: `complete_verified`, `likely_complete`, `pa
 
 | category | count | notes |
 |---|---:|---|
-| definitely completed | 250 | Inferred from implemented files, tests, docs, feature registry, maturity tracker, changelog, completion report, prompt tracker release-gate docs, prompt completion evidence, and local validation through MEDIA-12. |
+| definitely completed | 254 | Inferred from implemented files, tests, docs, feature registry, maturity tracker, changelog, completion report, prompt tracker release-gate docs, prompt completion evidence, and local validation through the global launcher and remote/main duplicate cleanup passes. |
 | likely completed | 0 | No separate likely bucket is currently needed; uncertain items are left queued or blocked. |
-| queued but not confirmed | 3 | Standing queue still includes `news-provider-registry-status-commands` and platform manifest/startup follow-ups. CODEBUG recommends a focused clean release-candidate boundary and prompt tracker reconciliation before returning to the standing feature queue. |
+| queued but not confirmed | 4 | Queue now explicitly prioritizes `CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01` before returning to standing feature work such as `news-provider-registry-status-commands` and platform manifest/startup follow-ups. |
 | blocked by missing source files | 0 | Creative Media pack is now imported and complete through `MEDIA-12`; Secrets pack remains `needs_review` because it has not been imported/run in this pass. |
 | blocked by approval gates | 0 | No queued prompt is currently blocked in prompt tracking. |
 | superseded by later work | 1 | Superseded rows remain documented below where older tracking concepts were replaced by mature features. |
+
+## Duplicate Cleanup GH Auth Git Boundary Snapshot
+
+- snapshot_at: 2026-05-26 after `DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01`
+- current_active_prompt: none
+- completed_prompt: `DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01`
+- evidence: repo root verified as `/Users/sambehdjou/Documents/AI Super Agent`; fresh `* 2.*` duplicate scan found no files; `gh` exists but is not authenticated; normal `git push --dry-run` failed because local `main` has no upstream; explicit dry-run push to `origin/main` failed as non-fast-forward; added Git boundary report and updated remote-main, duplicate cleanup, artifact, project state, ledger, queue, audit, and completion docs.
+- validation: secrets scan passed with placeholder-only tracked findings; git preflight passed for tracked scope; command registry validation passed with 603 commands; startup policy/capability validation passed; `git diff --check` passed.
+- commit_push_status: no files were staged, committed, or pushed because local `main` and `origin/main` are unrelated and force push / unrelated-history merge / rebase are forbidden.
+- next_action: `CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01`
+
+## Writing Naturalizer and Voice Polish Request Snapshot
+
+- snapshot_at: 2026-05-26 after WRITE preflight
+- requested_pack: `writing-naturalizer-voice-polish-v1`
+- source_file: `prompts/packs/writing-naturalizer-voice-polish-v1.promptpack.md`
+- import_status: not imported
+- current_active_prompt: none
+- WRITE-01 through WRITE-18: not queued, not active, not completed
+- status: blocked before import/run
+- blockers: dirty uncommitted launcher/cleanup worktree, newly untracked `prompts/packs/bug-intelligence-and-failure-capture-v1.promptpack.md`, local `main` has no upstream, `origin/main` is unrelated initial history, and repository rules require a clean commit/remote boundary plus import-only/no automatic whole-pack execution before starting another large prompt pack.
+- validation: secrets scan passed with placeholder-only tracked findings; git preflight passed for tracked scope; command registry validation passed with 599 commands; startup policy/capability validation passed; `git diff --check` passed.
+- next_action: `CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01`
+
+## GLOBAL-LAUNCHER-REPO-DISCOVERY-SWITCHING-01 Snapshot
+
+- snapshot_at: 2026-05-26 after scoped launcher repo discovery/switching hardening
+- current_active_prompt: none
+- completed_prompt: `GLOBAL-LAUNCHER-REPO-DISCOVERY-SWITCHING-01`
+- evidence: implemented strong launcher repo marker verification, current Git-root installer defaults, bounded safe candidate discovery, `--repo-status`, `--find-repos`, `--set-repo`, stricter `--repair-path`, generated-wrapper discovery parity, `last_repo_verification_status`, docs/registry/maturity/roadmap updates, and natural-language intent-index adjustment so unknown requests do not match launcher commands.
+- validation: `tests/launcher` 40 passed; launcher plus command-registry tests 46 passed; full suite 1763 passed; command registry validation passed with 603 commands; startup policy/capability validation passed; `git diff --check` passed; installer dry-runs wrote nothing.
+- next_action: `CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01`
+
+## Authorized Deep Scan and Source Acquisition Request Snapshot
+
+- snapshot_at: 2026-05-26 after AUTHSCAN preflight
+- requested_pack: `authorized-deep-scan-and-source-acquisition-v1`
+- source_file: `prompts/packs/authorized-deep-scan-and-source-acquisition-v1.promptpack.md`
+- import_status: not imported
+- current_active_prompt: none
+- AUTHSCAN-01 through AUTHSCAN-16: not queued, not active, not completed
+- status: blocked before import/run
+- blockers: dirty uncommitted launcher/cleanup worktree, newly untracked `prompts/packs/bug-intelligence-and-failure-capture-v1.promptpack.md`, local `main` has no upstream, `origin/main` is unrelated initial history, and repository rules require a clean commit/remote boundary before starting another large prompt pack.
+- validation: secrets scan passed with placeholder-only tracked findings; git preflight passed for tracked scope; command registry validation passed with 599 commands; startup policy/capability validation passed; `git diff --check` passed.
+- next_action: `CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01`
+
+## REMOTE-MAIN-RECONCILE-AND-DUPLICATE-FILE-CLEANUP-01 Snapshot
+
+- snapshot_at: 2026-05-26 after `REMOTE-MAIN-RECONCILE-AND-DUPLICATE-FILE-CLEANUP-01`
+- current_active_prompt: none
+- completed_prompt: `REMOTE-MAIN-RECONCILE-AND-DUPLICATE-FILE-CLEANUP-01`
+- evidence: removed 182 exact duplicate copied files and 2 empty duplicate directories after hash/cmp checks; moved the one differing stale source copy to ignored duplicate-file quarantine; added `docs/reconciliation/DUPLICATE_FILE_CLEANUP_REPORT.md`; added `docs/git/REMOTE_MAIN_RECONCILIATION_PLAN.md`; updated artifact tracking, project state, prompt queue, prompt ledger, completion report, and changelog.
+- remote_main_status: local `main` has no upstream; `origin/main` is `5115a76 Initial commit`; local `main` has no merge-base with `origin/main`; no merge, rebase, branch deletion, force push, commit, or push was performed.
+- next_action: create a clean commit boundary and choose a human-approved remote-main plan before importing AIHUB or another large prompt pack.
+
+## AI Ecosystem Intelligence v2 Re-Request Snapshot
+
+- snapshot_at: 2026-05-26 after second AIHUB preflight
+- requested_pack: `ai-ecosystem-intelligence-v2`
+- source_file: `prompts/packs/ai-ecosystem-intelligence-v2.promptpack.md`
+- import_status: not imported
+- current_active_prompt: none
+- AIHUB-01 through AIHUB-20: not queued, not active, not completed
+- status: blocked before import/run
+- blockers: dirty uncommitted launcher/cleanup worktree, newly untracked `prompts/packs/bug-intelligence-and-failure-capture-v1.promptpack.md`, local `main` has no upstream, `origin/main` is unrelated initial history, and repository rules require a clean commit/remote boundary before starting another large prompt pack.
+- validation: secrets scan passed with placeholder-only tracked findings; git preflight passed for tracked scope; command registry validation passed with 599 commands; startup policy/capability validation passed; `git diff --check` passed.
+- next_action: `CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01`
 
 ## SOURCE-TRUTH-RECONCILE-01 Snapshot
 

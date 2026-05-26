@@ -12,19 +12,19 @@ Brain Runtime Independence `BRAIN-01` through `BRAIN-11` are complete by explici
 
 ## Current Batch
 
-Canonical Runtime Gateway Hardening prompt pack completed locally as a controlled batch by explicit user request. The pack was validated and imported as `CANON-01` through `CANON-10` plus `EXTREV-01`; all prompts in the pack are complete with local evidence.
+No active prompt batch. The duplicate cleanup, GitHub auth, and Git boundary review prompt completed as a cleanup/reporting pass outside a prompt pack.
 
 ## Current Task
 
-Canonical Runtime Gateway Hardening `CANON-10` release gate is complete. Recommended next work is a clean release-candidate boundary / generated artifact hygiene pass before commit or push.
+`DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01` completed locally. It verified the repo root, confirmed no `* 2.*` duplicate copied files remain, diagnosed unauthenticated GitHub CLI status, confirmed normal push from local `main` to `origin/main` is blocked by unrelated remote history, updated Git/reconciliation reports, and stopped without staging, committing, or pushing.
 
 ## Current Status
 
-idle
+Launcher repo discovery/switching implementation and cleanup reports are updated locally; commit/push remains blocked by dirty tree, missing upstream, and unrelated `origin/main`. `gh` is installed but not authenticated; normal Git push is separately blocked by branch history, not by GitHub CLI auth.
 
 ## Current Branch
 
-`checkpoint/large-working-tree-20260523`
+`main`
 
 ## Last Known Good Commit
 
@@ -32,7 +32,7 @@ idle
 
 ## Last Test Result
 
-CANON-10 validation with `./.venv/bin/python` 3.12.13: full suite passed with 1723 tests in 162.19s; focused canonical runtime release-gate tests passed with 58 tests; focused docs/registry/maturity tests passed with 24 tests; command registry validation passed with 589 commands; startup policy and capability manifest validation passed via `make policy-check`; prompt audit passed with one active prompt before mark-complete; both doctor commands passed; `dogfood run all_safe --dry-run` passed with 8 skipped dry-run entries.
+Duplicate cleanup / Git boundary validation with `./.venv/bin/python` 3.12.13: fresh duplicate scan found no `* 2.*` files; `gh auth status` reported no logged-in GitHub hosts; `git push --dry-run` failed because local `main` has no upstream; `git push --dry-run origin HEAD:refs/heads/main` was rejected as non-fast-forward; `./scripts/agent secrets scan` passed with 31 placeholder-only tracked findings and zero failures; `./scripts/agent git preflight` passed for tracked scope; `./scripts/agent commands validate` passed with 603 commands; `make policy-check` passed startup policy and capability manifest validation; `git diff --check` passed. The immediately preceding launcher run passed the full suite with 1763 tests.
 
 ## Startup Policy Status
 
@@ -41,13 +41,13 @@ startup policy ok.
 ## Prompt Tracking
 
 - active_prompt_id: none
-- next_prompt_id: news-provider-registry-status-commands
+- next_prompt_id: CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01
 - active_prompt_pack: none
-- prompt_queue_status: `canonical-runtime-gateway-hardening-v1` completed locally with `CANON-01` through `CANON-10` plus `EXTREV-01` verified in prompt files, ledger, queue, audit, completion report, tests, and docs.
-- last_prompt_audit_result: 2026-05-26 prompt audit passed after CANON-10 completion with active_count 0, completed_count 281, completed_missing_evidence empty, queued_count 3, blocked_count 0, superseded_count 1, and next_prompt_id `news-provider-registry-status-commands`.
+- prompt_queue_status: `DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01` completed locally as a cleanup/reporting prompt. `canonical-runtime-gateway-hardening-v1` completed locally with `CANON-01` through `CANON-10` plus `EXTREV-01` verified in prompt files, ledger, queue, audit, completion report, tests, and docs. `agent-memory-kernel-tracker-intelligence-v1`, `self-healing-rollback-maturity-v1`, `ai-ecosystem-intelligence-v2`, `authorized-deep-scan-and-source-acquisition-v1`, and `writing-naturalizer-voice-polish-v1` exist under `prompts/packs/` but are not imported into the prompt queue and have no queued/active/completed MEMKERNEL, SELFHEAL, AIHUB, AUTHSCAN, or WRITE prompt files.
+- last_prompt_audit_result: 2026-05-26 prompt audit passed after WRITE preflight with active_count 0, completed_count 283, completed_missing_evidence empty, queued_count 4, blocked_count 3, superseded_count 1, and next_prompt_id `CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01`.
 - current_prompt_batch: none.
-- prompt_blockers: no verified P0. Remaining blockers are a large dirty worktree, need for clean release-candidate boundary review before push, manual/live validation gaps, external secret scan gap, and stale queued prompt file archival such as `prompts/queued/REDDIT-OAUTH-CONFIG-DOCTOR.md`.
-- prompt_resume_instructions: No active prompt. Recommended next prompt is clean release-candidate boundary / generated artifact hygiene before commit or push. Do not install packages, run live providers, call paid APIs, download models, access personal data, create web servers, start background services, rewrite runtime architecture, commit, or push without an explicit safe flow.
+- prompt_blockers: MEMKERNEL, SELFHEAL, AIHUB, AUTHSCAN, and WRITE pack import/run are no longer blocked by duplicate-looking `* 2.*` files, but remain blocked by local `main` lacking upstream, remote `origin/main` having unrelated initial history/non-fast-forward dry-run rejection, a dirty uncommitted launcher/cleanup worktree, a new untracked `prompts/packs/bug-intelligence-and-failure-capture-v1.promptpack.md`, and repo rules requiring prompt-pack import-only by default plus no automatic whole-pack execution.
+- prompt_resume_instructions: No active prompt. First create a clean commit boundary and choose a human-approved remote-main plan. Do not merge unrelated histories, rebase, force push, import AIHUB, run queued packs, install packages, run live providers, call paid APIs, download models, access personal data, create web servers, start background services, rewrite runtime architecture, commit, or push without an explicit safe flow.
 
 ## Command QA Frontend/Backend Boundary
 
@@ -56,6 +56,18 @@ startup policy ok.
 - `agent.qa.dashboard` is now a presentation adapter over the service boundary; `qa dashboard` and `qa status` report `backend_boundary=agent.qa.service.QAService`.
 - Read-only service/dashboard calls do not execute commands. `run_safe_batch()` supports only Tier 0, Tier 1, and sandboxed Tier 3, and blocks HIGH/CRITICAL/FORBIDDEN or personal-data candidates before delegating to the existing safe runner.
 - Docs added: `docs/qa/QA_FRONTEND_BACKEND_BOUNDARY.md` and `docs/qa/QA_DASHBOARD_API_CONTRACT.md`.
+
+## Global Launcher
+
+- `scripts/install-smartagent-launcher` now installs or repairs a user-level launcher alias, defaulting to `smartagent` in `$HOME/bin`, without sudo or system path writes.
+- `agent.launcher` contains config models, diagnostics, wrapper generation, safe repair helpers, and a lightweight launcher CLI.
+- `smartagent` launches `./scripts/agent --interactive`; `smartagent <args>` passes args to `./scripts/agent`; `smartagent --doctor` runs launcher-only diagnostics.
+- Installer default repo selection now uses the current Git root from `git rev-parse --show-toplevel` when run from inside a clone, and falls back to the current directory only if it passes strong repo verification.
+- Repo verification requires `smart_agent.py`, `scripts/agent`, at least two strong optional markers, and matching Git root when `.git` exists. It does not require LM Studio or live providers.
+- Repo switching/status commands now include `smartagent --repo-status`, `smartagent --find-repos`, `smartagent --set-repo "/path/to/repo"`, and `smartagent --repair-path`.
+- Repo discovery is bounded to configured/last-known/current/common user-owned paths plus explicit input; it does not scan the whole home directory and does not silently choose among multiple valid repos.
+- Level 1 repairs are bounded to config refresh, unambiguous repo-path repair, Python selection metadata, and executable-bit fixes. Level 2 `.venv` repair/package install and shell profile edits require explicit flags. Level 3 destructive/system repairs are manual-only.
+- Docs and command registry/test matrix rows were added in `docs/SMARTAGENT_GLOBAL_LAUNCHER.md`, README, `docs/COMMAND_REGISTRY.md`, and `docs/COMMAND_TEST_MATRIX.md`.
 
 ## Full Feature Status, Maturity, and Prompt-Tracker Audit Completed
 
@@ -165,9 +177,24 @@ This future track graduates generic web/research current-events work into dedica
 
 ## Last Updated Timestamp
 
-2026-05-26 06:35 UTC / 2026-05-25 23:35 PDT
+2026-05-26 07:44 UTC / 2026-05-26 00:44 PDT
 
 ## Last Completed Work
+
+- `DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01` completed locally. Verified the repo root is `/Users/sambehdjou/Documents/AI Super Agent`; fresh duplicate search found no remaining `* 2.*` files; `gh` exists but is not authenticated; `git push --dry-run` failed due missing upstream; explicit dry-run push to `origin/main` failed as non-fast-forward; local `main` and `origin/main` remain unrelated with no merge-base. Added `docs/git/DUPLICATE_CLEANUP_GH_AUTH_GIT_BOUNDARY_REPORT.md` and updated duplicate cleanup, remote-main, artifact, prompt tracker, project state, and completion docs. No files were staged, committed, pushed, deleted, imported, or run as queued prompt packs.
+
+- Global Launcher repo discovery/switching hardening is complete for this scoped run. Implemented strong repo marker verification, current-Git-root installer defaults, bounded candidate discovery, `--repo-status`, `--find-repos`, `--set-repo`, stricter `--repair-path`, generated-wrapper discovery parity, launcher config `last_repo_verification_status`, docs, registry/maturity/roadmap updates, intent-index classification to avoid natural-language unknown-route pollution, and launcher/full-suite validation. No sudo/system writes, package installs, shell profile edits, whole-home scans, live provider calls, personal-data access, commit, or push were performed.
+- AI Ecosystem Intelligence v2 pack request was re-inspected and blocked before import/run. The source pack exists at `prompts/packs/ai-ecosystem-intelligence-v2.promptpack.md` and contains `AIHUB-01` through `AIHUB-20`, but there are still no queued/active/completed AIHUB prompt files. The duplicate `* 2.*` blocker is resolved, but the repo remains unsuitable for a 20-prompt feature batch because the launcher/cleanup work is uncommitted, `prompts/packs/bug-intelligence-and-failure-capture-v1.promptpack.md` is newly untracked, local `main` has no upstream, and `origin/main` is unrelated initial history. Validation for the blocked preflight used `./.venv/bin/python` 3.12.13: secrets scan passed with placeholder-only tracked findings, git preflight passed for tracked scope, command registry validation passed with 599 commands, policy-check passed, and `git diff --check` passed. No AIHUB import, prompt split, queued prompt files, runtime code, Hugging Face provider, model/dataset/Space handling, live provider call, commit, or push was performed.
+
+- `REMOTE-MAIN-RECONCILE-AND-DUPLICATE-FILE-CLEANUP-01` completed locally. Removed 179 byte-for-byte `* 2.*` duplicate files, removed 3 additional exact duplicate copy files, removed 2 empty duplicate provider directories, and quarantined the one differing stale source copy under ignored `docs/reconciliation/duplicate_file_quarantine/`. Added `docs/reconciliation/DUPLICATE_FILE_CLEANUP_REPORT.md`, `docs/git/REMOTE_MAIN_RECONCILIATION_PLAN.md`, and updated artifact tracking, prompt tracking, changelog, project state, and completion report. Remote diagnosis: local `main` has no upstream; `origin/main` is unrelated `5115a76 Initial commit`; no merge-base exists; no merge, rebase, force push, commit, or push was performed. AIHUB was not imported or run.
+
+- `GLOBAL-LAUNCHER-SELF-REPAIR-AND-LAUNCH-01` completed locally. Added `agent/launcher/`, `scripts/install-smartagent-launcher`, launcher tests, global launcher docs, README setup guidance, command registry/test matrix rows, feature registry/maturity/roadmap updates, changelog, project state, and completion report updates. Validation used `./.venv/bin/python` 3.12.13: launcher tests 29 passed; focused launcher/startup/command-registry tests 38 passed; command registry validation passed with 599 commands; policy-check passed; installer dry-run/repair-wrapper dry-run smokes passed; `git diff --check` passed. No real install, shell profile edit, `.venv` creation, package install, model/provider call, personal-data access, commit, or push was performed.
+
+- AI Ecosystem Intelligence v2 pack request was inspected and blocked before import/run. The pack exists at `prompts/packs/ai-ecosystem-intelligence-v2.promptpack.md`, but no AIHUB prompt files are queued/active/completed. A duplicate untracked `prompts/packs/ai-ecosystem-intelligence-v2.promptpack 2.md` file is also present and should be reviewed during cleanup. Blockers are the unreviewed duplicate `* 2.*` files, unrelated remote `main` history, missing upstream on local `main`, and repository rules against automatic whole-pack execution. No Hugging Face connector, AI source registry, provider policy, model/dataset/Space/card normalization, supply-chain scanning, watchlist, dogfood/eval, release gate, commit, or push was performed.
+
+- Self-Healing Rollback Maturity pack request was inspected and blocked before import/run. The pack exists at `prompts/packs/self-healing-rollback-maturity-v1.promptpack.md`, but no SELFHEAL prompt files are queued/active/completed. Blockers are the unreviewed duplicate `* 2.*` files, unrelated remote `main` history, missing upstream on local `main`, and repository rules against automatic whole-pack execution. No self-heal roadmap files, recovery capsule, rollback system, patch sandbox, safety lint, test ladder, dashboard, release gate, commit, or push was performed.
+
+- Agent Memory Kernel and Tracker Intelligence pack request was inspected and blocked before import/run. The pack exists at `prompts/packs/agent-memory-kernel-tracker-intelligence-v1.promptpack.md`, but no MEMKERNEL prompt files are queued/active/completed. Blockers are the unreviewed duplicate `* 2.*` files, unrelated remote `main` history, missing upstream on local `main`, and repository rules against automatic whole-pack execution. No runtime feature, memory ingestion, tracker overwrite, commit, or push was performed.
 
 - Canonical Runtime Gateway Hardening `CANON-10` completed on `checkpoint/large-working-tree-20260523`.
 - Added `docs/runtime/CANONICAL_RUNTIME_RELEASE_GATE.md`, `docs/runtime/CANONICAL_RUNTIME_MATURITY_REVIEW.md`, `docs/reviews/EXTERNAL_REVIEW_HARDENING_RELEASE_GATE.md`, and release-gate docs tests. Full suite passed with 1723 tests, focused release-gate tests passed with 58 tests, command registry validation passed with 589 commands, policy-check passed, doctor commands passed, and all_safe dogfood dry-run passed. No server, background service, runtime rewrite, package install, model download, live provider call, personal-data enablement, send/write enablement, commit, or push was performed.

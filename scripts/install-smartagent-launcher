@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CODEX_PY="/Users/sambehdjou/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
+
+if [[ -n "${AI_AGENT_PYTHON:-}" ]]; then
+  PY="$AI_AGENT_PYTHON"
+elif [[ -x "$ROOT/.venv/bin/python" ]]; then
+  PY="$ROOT/.venv/bin/python"
+elif command -v python3.12 >/dev/null 2>&1; then
+  PY="$(command -v python3.12)"
+elif command -v python3.11 >/dev/null 2>&1; then
+  PY="$(command -v python3.11)"
+elif [[ -x "$CODEX_PY" ]]; then
+  PY="$CODEX_PY"
+else
+  PY=""
+fi
+
+if [[ -z "$PY" ]]; then
+  cat >&2 <<'EOF'
+AI Super Agent launcher installation requires Python 3.11 or newer.
+
+Recommended setup:
+  python3.12 -m venv .venv
+  source .venv/bin/activate
+  python -m pip install -e '.[dev]'
+
+If Python 3.12 is not installed:
+  brew install python@3.12
+EOF
+  exit 2
+fi
+
+if ! "$PY" - <<'PY'
+import sys
+raise SystemExit(0 if sys.version_info[:2] >= (3, 11) else 1)
+PY
+then
+  detected="$("$PY" -c 'import sys; print(".".join(map(str, sys.version_info[:3])))' 2>/dev/null || echo "unknown")"
+  cat >&2 <<EOF
+AI Super Agent launcher installation requires Python 3.11 or newer.
+
+Detected Python: $detected
+Executable: $PY
+
+Run:
+  python3.12 -m venv .venv
+  source .venv/bin/activate
+  python -m pip install -e '.[dev]'
+EOF
+  exit 2
+fi
+
+exec "$PY" -c 'from agent.launcher.cli import installer_main; raise SystemExit(installer_main())' "$@"

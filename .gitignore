@@ -46,6 +46,11 @@ reports/performance/*
 bugs/*.json
 !bugs/.gitkeep
 
+# Manual-review duplicate-file quarantine. Keep the report tracked, but do not
+# accidentally commit quarantined copied source/docs/tests.
+docs/reconciliation/duplicate_file_quarantine/*
+!docs/reconciliation/duplicate_file_quarantine/.gitkeep
+
 # Local generated workspace artifacts. Keep source fixtures such as
 # workspace/dogfood/ and workspace/skills/ reviewable unless explicitly moved.
 workspace/eval/*

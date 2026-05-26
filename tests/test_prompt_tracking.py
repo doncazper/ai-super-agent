@@ -51,10 +51,11 @@ def test_prompt_list_next_and_audit_from_docs() -> None:
                 "PLATFORM-DOCTOR-CAPABILITY-COMMANDS",
                 "PLATFORM-BRIDGE-STUBS",
                 "APP-BRIDGE-API-CONTRACT",
-                "PLATFORM-CAPABILITY-MANIFEST-MAPPING",
-                "news-capability-manifest-provider-policy",
-                "news-provider-registry-status-commands",
-            }
+            "PLATFORM-CAPABILITY-MANIFEST-MAPPING",
+            "news-capability-manifest-provider-policy",
+            "news-provider-registry-status-commands",
+            "CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01",
+        }
 
     audit = audit_prompts(ROOT)
     assert audit["total"] >= 37
@@ -93,6 +94,7 @@ def test_prompt_list_next_and_audit_from_docs() -> None:
                         "PLATFORM-CAPABILITY-MANIFEST-MAPPING",
                         "news-capability-manifest-provider-policy",
                         "news-provider-registry-status-commands",
+                        "CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01",
                         None,
                     }
 
