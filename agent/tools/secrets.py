@@ -97,13 +97,13 @@ def make_secret_tools(project_root: str | Path = ".") -> dict[str, Callable[...,
     def redaction_test() -> dict[str, Any]:
         fake = {
             "api_key": "sk-testtesttesttest123456",
-            "nested": [{"GITHUB_TOKEN": "ghp_1234567890abcdef1234567890"}],
-            "text": "TELEGRAM_BOT_TOKEN=123456:abcdefabcdefabcdefabcdef",
+            "nested": [{"GITHUB_TOKEN": "ghp_fake1234567890abcdef1234567890"}],
+            "text": "TELEGRAM_BOT_TOKEN=123456:fakefakefakefakefakefake",
         }
         redacted = SecretRedactor().redact(fake)
         raw = str(fake)
         redacted_text = str(redacted)
-        passed = "sk-testtest" not in redacted_text and "ghp_" not in redacted_text and "123456:abcdef" not in redacted_text
+        passed = "sk-testtest" not in redacted_text and "ghp_" not in redacted_text and "123456:fake" not in redacted_text
         return _with_audit(
             {
                 "status": "ok" if passed else "failed",
