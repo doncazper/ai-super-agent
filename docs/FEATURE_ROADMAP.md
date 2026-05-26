@@ -16,6 +16,16 @@ Canonical Runtime Gateway Hardening is complete locally through CANON-10 plus EX
 
 Full Feature Status, Maturity, and Prompt-Tracker Audit `MATURITY-AUDIT-01` is complete as an audit-only productization pass. It adds productization audit docs, a conservative scorecard, a prompt tracker missed-prompts audit, next maturity queue, next feature expansion candidates, and a manual validation plan. The Codebase Bug Review and Hardening `CODEBUG-01` through `CODEBUG-08` controlled batch is complete locally: it created focused bug-review docs, fixed a closed-pipe CLI traceback, added regression coverage, ran safety/runtime/connector/tracker/static-scan/release-gate validation, and kept release readiness conservative. Broad local-tested groundwork exists, but a clean release-candidate boundary, broader prompt tracker reconciliation, generated artifact hygiene follow-through, subprocess/deletion allowlist review, and live/manual validation remain higher priority than broad feature expansion.
 
+## Daydream Lab Idle Research Track
+
+The Daydream Lab Idle Research pack is imported and queued only. It remains behind the clean commit/remote-main boundary because the repo prompt queue still prioritizes `CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01` and repository rules prohibit automatic whole-pack execution.
+
+| Order | Feature / Task | Status | Prerequisites | Approval / Gate |
+|---:|---|---|---|---|
+| 1 | DAYDREAM-01 through DAYDREAM-24 imported and queued | complete | `prompts/packs/daydream-lab-idle-research-v1.promptpack.md` | Import-only; no prompt executed automatically; prompt bodies preserved under `prompts/queued/` |
+| 2 | Daydream Lab roadmap, philosophy, and safety policy | queued | Clean commit/remote-main decision or explicit queue override | Docs-only first prompt; no runtime engine |
+| 3 | Daydream runtime/idle/research/scoring/reporting/eval/release prompts | queued | DAYDREAM-01 and subsequent prompt prerequisites | Must remain disabled-by-default, no hidden persistence, no personal-data access, no memory write by default, no live providers by default, and no bypass behavior |
+
 ## Global Launcher Track
 
 | Order | Feature / Task | Status | Prerequisites | Approval / Gate |

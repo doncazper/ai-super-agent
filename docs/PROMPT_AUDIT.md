@@ -15,6 +15,17 @@ Completion evidence classifications: `complete_verified`, `likely_complete`, `pa
 | blocked by approval gates | 0 | No queued prompt is currently blocked in prompt tracking. |
 | superseded by later work | 1 | Superseded rows remain documented below where older tracking concepts were replaced by mature features. |
 
+## Dirty-Tree Blocked Prompt Audit Snapshot
+
+- snapshot_at: 2026-05-26 after `RUN-DIRTY-TREE-BLOCKED-PROMPTS-IN-ORDER-01`
+- current_active_prompt: none
+- completed_prompt: `RUN-DIRTY-TREE-BLOCKED-PROMPTS-IN-ORDER-01`
+- evidence: repo root verified as `/Users/sambehdjou/Documents/AI Super Agent`; local `main` and `origin/main` both point at `148f10f`; duplicate copied-file scan found no `* 2.*` files; safety validations passed; `docs/reconciliation/DIRTY_TREE_BLOCKED_PROMPT_AUDIT.md` and `docs/reconciliation/BLOCKED_PROMPT_EXECUTION_PLAN.md` were added.
+- decision: no feature prompt or pack was executed because the Daydream import/tracker set remains uncommitted active dirty work. Duplicate-file and remote/main blockers are resolved, but the tree is not clean enough to mix in another large prompt-pack execution.
+- classification_summary: launcher/canonical/performance/secrets/media/codebug/NLCMD/QA are completed; AIHUB v2, AuthScan, Writing, Memory Kernel, Bug Intelligence, Self-Heal, and Daydream remain not-run or queued; AIHUB v1 is superseded by v2; stale queued `REDDIT-OAUTH-CONFIG-DOCTOR.md` needs separate reconciliation.
+- validation: `git diff --check`, `./scripts/agent secrets scan`, `./scripts/agent git preflight`, `./scripts/agent commands validate`, and `make policy-check` passed.
+- next_action: `CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01`
+
 ## Duplicate Cleanup GH Auth Git Boundary Snapshot
 
 - snapshot_at: 2026-05-26 after `DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01`
@@ -376,7 +387,6 @@ Before running it:
 - prompt_count: 11
 - prompt_ids: BRAIN-01, BRAIN-02, BRAIN-03, BRAIN-04, BRAIN-05, BRAIN-06, BRAIN-07, BRAIN-08, BRAIN-09, BRAIN-10, BRAIN-11
 - execution: import_only; no prompt executed automatically.
-
 ## Brain Runtime Independence Batch Progress
 
 - updated_at: 2026-05-25T17:45:00+00:00
@@ -504,3 +514,12 @@ Before running it:
 - queued_remaining: none for this pack
 - evidence: completion report entries, completed prompt files, full suite 1723 passed, focused release-gate tests 58 passed, command registry validation, policy-check, prompt audit, and all_safe dogfood dry-run evidence.
 - blockers: none for CANON-10. Repo-level blockers remain: large dirty worktree, clean release-candidate boundary review, external secret scan gap, and live/manual validation gaps.
+## Prompt Pack Import
+
+- imported_at: 2026-05-26T07:54:41+00:00
+- pack_id: daydream-lab-idle-research-v1
+- pack_title: Daydream Lab — Idle Research, Curiosity Engine, and Prompt-Pack Incubator
+- mode: controlled_batch_until_blocked
+- prompt_count: 24
+- prompt_ids: DAYDREAM-01, DAYDREAM-02, DAYDREAM-03, DAYDREAM-04, DAYDREAM-05, DAYDREAM-06, DAYDREAM-07, DAYDREAM-08, DAYDREAM-09, DAYDREAM-10, DAYDREAM-11, DAYDREAM-12, DAYDREAM-13, DAYDREAM-14, DAYDREAM-15, DAYDREAM-16, DAYDREAM-17, DAYDREAM-18, DAYDREAM-19, DAYDREAM-20, DAYDREAM-21, DAYDREAM-22, DAYDREAM-23, DAYDREAM-24
+- execution: import_only; no prompt executed automatically.

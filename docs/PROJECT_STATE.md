@@ -12,15 +12,15 @@ Brain Runtime Independence `BRAIN-01` through `BRAIN-11` are complete by explici
 
 ## Current Batch
 
-No active prompt batch. The duplicate cleanup, GitHub auth, and Git boundary review prompt completed as a cleanup/reporting pass outside a prompt pack.
+No active prompt batch. Dirty-tree blocked prompt audit completed and stopped before feature execution. The Daydream Lab Idle Research pack remains imported and split into queued prompts only; no Daydream prompt was executed automatically.
 
 ## Current Task
 
-`DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01` completed locally. It verified the repo root, confirmed no `* 2.*` duplicate copied files remain, diagnosed unauthenticated GitHub CLI status, confirmed normal push from local `main` to `origin/main` is blocked by unrelated remote history, updated Git/reconciliation reports, and stopped without staging, committing, or pushing.
+`RUN-DIRTY-TREE-BLOCKED-PROMPTS-IN-ORDER-01` audited prompt packs previously blocked by dirty Git state, duplicate copied files, or remote/main confusion. Duplicate and remote/main blockers are resolved, but feature execution stopped because the Daydream import/tracker set remains uncommitted active dirty work.
 
 ## Current Status
 
-Launcher repo discovery/switching implementation and cleanup reports are updated locally; commit/push remains blocked by dirty tree, missing upstream, and unrelated `origin/main`. `gh` is installed but not authenticated; normal Git push is separately blocked by branch history, not by GitHub CLI auth.
+Daydream is imported but queued-only. Local `main` now tracks `origin/main` at the same commit. The next boundary problem is not remote divergence; it is the dirty tree containing the Daydream import/tracker updates and the dirty-tree blocked prompt audit docs.
 
 ## Current Branch
 
@@ -28,11 +28,11 @@ Launcher repo discovery/switching implementation and cleanup reports are updated
 
 ## Last Known Good Commit
 
-`2be398f Refactor agent prompts and project state tracking`
+`148f10f Add launcher hardening and git boundary cleanup`
 
 ## Last Test Result
 
-Duplicate cleanup / Git boundary validation with `./.venv/bin/python` 3.12.13: fresh duplicate scan found no `* 2.*` files; `gh auth status` reported no logged-in GitHub hosts; `git push --dry-run` failed because local `main` has no upstream; `git push --dry-run origin HEAD:refs/heads/main` was rejected as non-fast-forward; `./scripts/agent secrets scan` passed with 31 placeholder-only tracked findings and zero failures; `./scripts/agent git preflight` passed for tracked scope; `./scripts/agent commands validate` passed with 603 commands; `make policy-check` passed startup policy and capability manifest validation; `git diff --check` passed. The immediately preceding launcher run passed the full suite with 1763 tests.
+Dirty-tree blocked prompt audit with `./.venv/bin/python` available as Python 3.12.13: repo root verified, duplicate copied-file scan found no `* 2.*` files, local `main` and `origin/main` both point at `148f10f`, `./scripts/agent secrets scan` passed with placeholder-only tracked findings, `./scripts/agent git preflight` passed, `./scripts/agent commands validate` passed with 603 commands, `make policy-check` passed startup policy/capability validation, and `git diff --check` passed. Full pytest was not run because no runtime/source implementation changed and feature execution stopped.
 
 ## Startup Policy Status
 
@@ -43,11 +43,11 @@ startup policy ok.
 - active_prompt_id: none
 - next_prompt_id: CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01
 - active_prompt_pack: none
-- prompt_queue_status: `DUPLICATE-CLEANUP-GH-AUTH-GIT-BOUNDARY-01` completed locally as a cleanup/reporting prompt. `canonical-runtime-gateway-hardening-v1` completed locally with `CANON-01` through `CANON-10` plus `EXTREV-01` verified in prompt files, ledger, queue, audit, completion report, tests, and docs. `agent-memory-kernel-tracker-intelligence-v1`, `self-healing-rollback-maturity-v1`, `ai-ecosystem-intelligence-v2`, `authorized-deep-scan-and-source-acquisition-v1`, and `writing-naturalizer-voice-polish-v1` exist under `prompts/packs/` but are not imported into the prompt queue and have no queued/active/completed MEMKERNEL, SELFHEAL, AIHUB, AUTHSCAN, or WRITE prompt files.
-- last_prompt_audit_result: 2026-05-26 prompt audit passed after WRITE preflight with active_count 0, completed_count 283, completed_missing_evidence empty, queued_count 4, blocked_count 3, superseded_count 1, and next_prompt_id `CLEAN-COMMIT-AND-REMOTE-MAIN-DECISION-01`.
+- prompt_queue_status: Dirty-tree blocked prompt audit completed; Daydream remains imported/queued only; no feature prompt was executed.
+- last_prompt_audit_result: 2026-05-26 dirty-tree blocked prompt audit classified launcher/canonical/performance/secrets/media/codebug/NLCMD/QA as completed, AIHUB v2/AuthScan/Writing/Memory Kernel/Bug Intelligence/Self-Heal as not imported/run, Daydream as imported/queued only, AIHUB v1 as superseded, and stale queued Reddit OAuth as needs separate reconciliation.
 - current_prompt_batch: none.
-- prompt_blockers: MEMKERNEL, SELFHEAL, AIHUB, AUTHSCAN, and WRITE pack import/run are no longer blocked by duplicate-looking `* 2.*` files, but remain blocked by local `main` lacking upstream, remote `origin/main` having unrelated initial history/non-fast-forward dry-run rejection, a dirty uncommitted launcher/cleanup worktree, a new untracked `prompts/packs/bug-intelligence-and-failure-capture-v1.promptpack.md`, and repo rules requiring prompt-pack import-only by default plus no automatic whole-pack execution.
-- prompt_resume_instructions: No active prompt. First create a clean commit boundary and choose a human-approved remote-main plan. Do not merge unrelated histories, rebase, force push, import AIHUB, run queued packs, install packages, run live providers, call paid APIs, download models, access personal data, create web servers, start background services, rewrite runtime architecture, commit, or push without an explicit safe flow.
+- prompt_blockers: Large prompt-pack execution remains blocked by the dirty tree containing Daydream import/tracker updates plus this audit/plan work. Remote/main is no longer the current blocker.
+- prompt_resume_instructions: No active prompt. First run the clean commit boundary flow for the Daydream import/tracker and dirty-tree audit docs, then start the next eligible pack in order. Do not force push, run queued packs wholesale, install packages, run live providers, call paid APIs, download models, access personal data, create web servers, start background services, rewrite runtime architecture, commit, or push without an explicit safe flow.
 
 ## Command QA Frontend/Backend Boundary
 
