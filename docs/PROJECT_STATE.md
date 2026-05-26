@@ -8,19 +8,19 @@ Build a local Mac AI agent with safety-first governance, ToolBroker-only tool ex
 
 ## Current Overall Phase
 
-Release Hardening Loop v2 completed locally with YELLOW release readiness. News Intelligence is now specified as a docs-first track with source policy, provider strategy, freshness controls, source grounding, retention policy, architecture decision, planned command tracking, disabled/planned capability manifest entries, safe config defaults, provider-policy selection logic, and conservative risk/threat notes; no runtime news command, provider call, article fetch, paid provider default, search-history storage, or full article-body persistence exists yet. Cross-Platform Core + Platform Bridge architecture is specified, Platform Capability Registry v1 exists as portable static metadata, platform bridge base interfaces exist, platform-aware config/paths/detection scaffolding exists with safe disabled/lazy defaults, read-only platform doctor/capability commands exist through brokered SAFE metadata tools, lazy macOS/iOS companion/Windows/web bridge stubs now exist as fail-closed implementation seams, the App Bridge API contract exists as disabled-by-default schema/docs scaffolding for future native/local frontends, and the current cross-platform release gate/future build guides are complete for the current groundwork. Runtime platform behavior remains future work. The repo has green local tests and validation, release audit/blocker/plan docs, tracker navigation docs, and generated artifact hygiene, but it still needs a human-reviewed clean release candidate boundary plus broader live/manual validation before broad feature expansion. Current tracker summaries are indexed from `docs/TRACKER_DASHBOARD.md` and `docs/TRACKER_INDEX.md`.
+Brain Runtime Independence `BRAIN-01` through `BRAIN-11` are complete by explicit user request. The local release gate validates the provider-neutral brain runtime scaffold: BrainProvider interface, lazy model registry, LM Studio provider wrapping, disabled local-provider scaffolds, mock benchmark/eval reports, fallback/router metadata, disabled MCP stubs, command registry, startup/capability validation, and optional import guards. No default-provider change, paid/cloud API default, MCP enablement, listener startup, model/runtime install, model download, personal-data enablement, high-risk tool execution, no-tools regression, ToolBroker flow change, unverified tool-call support, or safety-control bypass was added. LM Studio dependency is partially optional, not fully removed, because normal live chat still uses the existing LM Studio-compatible path until future gateway wiring. Hermes-inspired Safe Autonomy `HERMES-01` through `HERMES-13` are complete locally after recovering the skipped HERMES-09 sequence. The track now includes architecture/policy docs, gateway/channel process scaffolding, Telegram/mobile status scaffolding, repeated-task skill proposal commands, skill improvement proposal commands, scheduler UX/dry-run commands, subagent isolation metadata/mock dry-run commands, sandbox backend abstraction/mock dry-run commands, model switching/session-continuity metadata, redacted memory continuity/context-preview commands, authorized web automation boundary docs, mock-first safe autonomy dogfood/eval suites, and a local release gate/maturity review. It remains local-tested groundwork only: no runtime autonomy, external channel connections, bot polling, webhook/listener startup, background persistence, personal-data access/carryover, send/write behavior, browser automation, real subagent launch, subagent write permissions, direct subagent tool calls, CRITICAL subagent execution, arbitrary sandbox command execution, networked sandbox execution, Docker/VM/browser/cloud execution, cloud/private-data execution, automatic skill creation/import/enablement/execution, automatic skill modification, lockfile update, package installation, OS scheduler persistence, unattended HIGH/CRITICAL workflows, or safety-control bypass was added. Release Hardening Loop v2 completed locally with YELLOW release readiness. News Intelligence is now specified as a docs-first track with source policy, provider strategy, freshness controls, source grounding, retention policy, architecture decision, planned command tracking, disabled/planned capability manifest entries, safe config defaults, provider-policy selection logic, and conservative risk/threat notes; no runtime news command, provider call, article fetch, paid provider default, search-history storage, or full article-body persistence exists yet. Cross-Platform Core + Platform Bridge architecture is specified, Platform Capability Registry v1 exists as portable static metadata, platform bridge base interfaces exist, platform-aware config/paths/detection scaffolding exists with safe disabled/lazy defaults, read-only platform doctor/capability commands exist through brokered SAFE metadata tools, lazy macOS/iOS companion/Windows/web bridge stubs now exist as fail-closed implementation seams, the App Bridge API contract exists as disabled-by-default schema/docs scaffolding for future native/local frontends, and the current cross-platform release gate/future build guides are complete for the current groundwork. Runtime platform behavior remains future work. The repo has green local tests and validation, release audit/blocker/plan docs, tracker navigation docs, and generated artifact hygiene, but it still needs a human-reviewed clean release candidate boundary plus broader live/manual validation before broad feature expansion. Current tracker summaries are indexed from `docs/TRACKER_DASHBOARD.md` and `docs/TRACKER_INDEX.md`.
 
 ## Current Batch
 
-Native Skill System Hardening pack `native-skill-system-hardening-v1` is imported, split into `SKILL-01` through `SKILL-10`, and complete through the local metadata-only release gate. The batch preserved the stop conditions: no approval gate was crossed, no package installation occurred, no arbitrary external skill/script execution occurred, no plugin runtime executed, no personal-data skill was enabled, and no safety-control bypass was added.
+Canonical Runtime Gateway Hardening prompt pack completed locally as a controlled batch by explicit user request. The pack was validated and imported as `CANON-01` through `CANON-10` plus `EXTREV-01`; all prompts in the pack are complete with local evidence.
 
 ## Current Task
 
-SKILL-10 complete: Native Skill System Hardening release gate passed locally for metadata-only native skill controls. Added release-gate and maturity-review docs, validated roots/precedence, manifest schema, dependency gating, provenance/trust, lockfile verification status, inspection/vetting, profile allowlists, compatibility matrix, conflict detector, test/dogfood harness, docs generator/catalog, command registry, native skill evals, and safe dogfood suites. Non-goals held: no external skill installation, no external skill enablement, no external skill/script execution, no dependency installation, no provider/connector calls for skill metadata checks, no plugin runtime execution, no personal-data skill enablement, no memory write, no permission grant, and no ToolBroker/Policy/Permission/Approval/Audit bypass.
+Canonical Runtime Gateway Hardening `CANON-10` release gate is complete. Recommended next work is a clean release-candidate boundary / generated artifact hygiene pass before commit or push.
 
 ## Current Status
 
-complete
+idle
 
 ## Current Branch
 
@@ -28,11 +28,11 @@ complete
 
 ## Last Known Good Commit
 
-`e1dfdbf Add command registry and documentation tracking`
+`2be398f Refactor agent prompts and project state tracking`
 
 ## Last Test Result
 
-Native Skill System Hardening `SKILL-10` release gate on 2026-05-25 with `./.venv/bin/python`: full suite passed with 1205 passed and 1 skipped; startup policy and capability manifest validation passed via `make policy-check`; docs/prompt/release artifact tests passed with 11 passed; command registry validation passed with 428 commands; native skill manifest validation passed with 3 valid manifests; `skills lock verify` returned expected `requires_setup` for missing reviewed real lockfile records without writing; `skills conflicts` passed with 0 conflicts; `skills docs-check` passed with current catalog and 0 missing docs; `dogfood run native_skills_core --session` passed 3/3; `dogfood run native_skill_vetting --session` passed 3/3 in redacted session `sess_20260525T110516Z_c5539999`; `eval run --native-skills --json` passed 3 native-skill checks and skipped 5 personal-data checks by default.
+CANON-10 validation with `./.venv/bin/python` 3.12.13: full suite passed with 1723 tests in 162.19s; focused canonical runtime release-gate tests passed with 58 tests; focused docs/registry/maturity tests passed with 24 tests; command registry validation passed with 589 commands; startup policy and capability manifest validation passed via `make policy-check`; prompt audit passed with one active prompt before mark-complete; both doctor commands passed; `dogfood run all_safe --dry-run` passed with 8 skipped dry-run entries.
 
 ## Startup Policy Status
 
@@ -42,12 +42,30 @@ startup policy ok.
 
 - active_prompt_id: none
 - next_prompt_id: news-provider-registry-status-commands
-- active_prompt_pack: native-skill-system-hardening-v1
-- prompt_queue_status: Imported `native-skill-system-hardening-v1` and queued `SKILL-01` through `SKILL-10`; running sequentially by explicit user request until blocked.
-- last_prompt_audit_result: prompt audit passed after Native Skill System Hardening release gate with active_count 0, completed_count 181, queued_count 3, total 185, next_prompt_id `news-provider-registry-status-commands`, and no completed prompts missing evidence.
-- current_prompt_batch: Native Skill System Hardening controlled batch; `SKILL-01` through `SKILL-10` complete after local metadata-only release gate.
-- prompt_blockers: no P0/P1; P2 clean source/diff release-boundary, live/manual validation, and direct network/subprocess static-guard blockers remain documented in `docs/release/RELEASE_BLOCKERS.md`.
-- prompt_resume_instructions: Native Skill System Hardening pack is complete. Queue next is `news-provider-registry-status-commands`; native-skill-specific recommended follow-up is a reviewed lockfile/pinning workflow or clean release-candidate boundary prompt selected by the user.
+- active_prompt_pack: none
+- prompt_queue_status: `canonical-runtime-gateway-hardening-v1` completed locally with `CANON-01` through `CANON-10` plus `EXTREV-01` verified in prompt files, ledger, queue, audit, completion report, tests, and docs.
+- last_prompt_audit_result: 2026-05-26 prompt audit passed after CANON-10 completion with active_count 0, completed_count 281, completed_missing_evidence empty, queued_count 3, blocked_count 0, superseded_count 1, and next_prompt_id `news-provider-registry-status-commands`.
+- current_prompt_batch: none.
+- prompt_blockers: no verified P0. Remaining blockers are a large dirty worktree, need for clean release-candidate boundary review before push, manual/live validation gaps, external secret scan gap, and stale queued prompt file archival such as `prompts/queued/REDDIT-OAUTH-CONFIG-DOCTOR.md`.
+- prompt_resume_instructions: No active prompt. Recommended next prompt is clean release-candidate boundary / generated artifact hygiene before commit or push. Do not install packages, run live providers, call paid APIs, download models, access personal data, create web servers, start background services, rewrite runtime architecture, commit, or push without an explicit safe flow.
+
+## Command QA Frontend/Backend Boundary
+
+- `agent.qa.service.QAService` now owns read-only QA status/coverage/failure/bug/regression/maturity summaries and safe action wrappers for plan creation, safe batch runs, bug generation, regression generation, and self-heal planning.
+- `agent.qa.api_models` defines JSON-serializable service/action envelopes and summary models for future frontends.
+- `agent.qa.dashboard` is now a presentation adapter over the service boundary; `qa dashboard` and `qa status` report `backend_boundary=agent.qa.service.QAService`.
+- Read-only service/dashboard calls do not execute commands. `run_safe_batch()` supports only Tier 0, Tier 1, and sandboxed Tier 3, and blocks HIGH/CRITICAL/FORBIDDEN or personal-data candidates before delegating to the existing safe runner.
+- Docs added: `docs/qa/QA_FRONTEND_BACKEND_BOUNDARY.md` and `docs/qa/QA_DASHBOARD_API_CONTRACT.md`.
+
+## Full Feature Status, Maturity, and Prompt-Tracker Audit Completed
+
+- Current maturity ranking: strongest areas are Safety Control Plane, Command Registry, PromptOps, Workspace/Memory, Weather/Web local scaffolds, Native Skills metadata, and Safe Autonomy metadata. Weakest areas are News runtime providers, real platform bridge behavior, live/manual provider validation, clean release boundary, and prompt tracker reconciliation.
+- Top blockers: large dirty worktree, stale prompt tracker rows, missing queued prompt files for some planned prompts, stale queued Reddit prompt file, generated artifact hygiene, and limited live/manual validation.
+- Top next maturity queue: prompt tracker reconciliation, clean release-candidate boundary, generated artifact hygiene, static safety bypass scan, and current all-safe dogfood evidence.
+- Prompt packs incomplete or needing review: Apple platform compatibility, command QA/self-heal, and natural-language command understanding prompt packs have file evidence but no completion evidence verified in this audit.
+- Prompts likely missed or stale: stale SKILL queued rows, stale `news-capability-manifest-provider-policy` queue reference in older audit text now corrected, and stale `prompts/queued/REDDIT-OAUTH-CONFIG-DOCTOR.md`.
+- Recommended first prompt to run next: `news-provider-registry-status-commands`.
+- Recommended first dogfood suite: `dogfood run all_safe --dry-run` for preview, then a controlled `all_safe --session` only if live/web commands are intentionally allowed by the user.
 
 ## Cross-Platform Core + Platform Bridge Track
 
@@ -147,9 +165,43 @@ This future track graduates generic web/research current-events work into dedica
 
 ## Last Updated Timestamp
 
-2026-05-25 11:05 UTC / 2026-05-25 04:05 PDT
+2026-05-26 06:35 UTC / 2026-05-25 23:35 PDT
 
 ## Last Completed Work
+
+- Canonical Runtime Gateway Hardening `CANON-10` completed on `checkpoint/large-working-tree-20260523`.
+- Added `docs/runtime/CANONICAL_RUNTIME_RELEASE_GATE.md`, `docs/runtime/CANONICAL_RUNTIME_MATURITY_REVIEW.md`, `docs/reviews/EXTERNAL_REVIEW_HARDENING_RELEASE_GATE.md`, and release-gate docs tests. Full suite passed with 1723 tests, focused release-gate tests passed with 58 tests, command registry validation passed with 589 commands, policy-check passed, doctor commands passed, and all_safe dogfood dry-run passed. No server, background service, runtime rewrite, package install, model download, live provider call, personal-data enablement, send/write enablement, commit, or push was performed.
+
+- Canonical Runtime Gateway Hardening `EXTREV-01` completed on `checkpoint/large-working-tree-20260523`.
+- Added external architecture review parity findings, hardening plan, parity checklist, planned-only audit verifier/export command registry rows, release-gate docs, and docs tests. Audit receipt runtime implementation remains a planned follow-up, not a completed command.
+
+- Canonical Runtime Gateway Hardening `CANON-09` completed on `checkpoint/large-working-tree-20260523`.
+- Added read-only tracker sync preview and conflict commands, migration/sync policy docs, prompt tracker integration docs, command registry/test matrix rows, and tests. Canonical runtime state is now documented as the machine-readable active-work view while prompt ledger/queue/audit remain history, planned-order, and reconciliation views. No auto-overwrite, broad tracker rewrite, provider call, or tracker mutation was added.
+
+- Canonical Runtime Gateway Hardening `CANON-08` completed on `checkpoint/large-working-tree-20260523`.
+- Added read-only canonical dashboard and handoff metadata commands, docs, and tests. The dashboard summarizes canonical state, active prompt/job/workflow/action, next prompt, validation evidence, tracker conflicts, dirty worktree summary, safety status, gateway/kernel status, recovery hints, and handoff recommendations. It writes no files, mutates no trackers, executes no tools, calls no providers, starts no server, and resumes nothing.
+
+- Canonical Runtime Gateway Hardening `CANON-07` completed on `checkpoint/large-working-tree-20260523`.
+- Added brokered read-only backup roundtrip/policy/restore-check commands, restore hardening docs, capability manifest entries, command registry/test matrix rows, and tests for dry-run no-write behavior, restore hash checks, pre-restore copies, CRITICAL approval reuse refusal, unredacted secret refusal, and path traversal refusal. Restore remains HIGH approval-gated and live restore smoke remains disposable-workspace-only.
+
+- Canonical Runtime Gateway Hardening `CANON-04` completed on `checkpoint/large-working-tree-20260523`.
+- Added checkpoint and recovery report contracts, preview-only recovery behavior, read-only recovery/checkpoint commands, docs, tests, and command registry rows. Recovery preview does not auto-resume; active approval gates remain active; CRITICAL resumes require fresh explicit approval; prompt-pack recovery depends on prompt tracker evidence. No rollback executor, checkpoint writer command, tracker mutation, commit, or push was added.
+
+- Canonical Runtime Gateway Hardening `CANON-03` completed on `checkpoint/large-working-tree-20260523`.
+- Added Agent Gateway / Runtime Kernel boundary contracts, gateway request/response envelope previews, kernel/frontend status commands, docs/ADR, tests, and command registry rows. No Fastify/TypeScript gateway, local web server, listener, native UI, external tool exposure, direct tool execution, approval bypass, policy/capability mutation, CLI replacement, commit, or push was added.
+
+- Canonical Runtime Gateway Hardening `CANON-02` completed on `checkpoint/large-working-tree-20260523`.
+- Added durable execution record contracts for prompt/job/workflow/command/QA/self-heal/approval-gated/future media/future secret-scan records, read-only record list/show/latest/validate commands, docs, tests, and command registry rows. No queued prompt execution, background worker, executor, tracker mutation, raw secret/personal-data storage, web server, commit, or push was added.
+
+- Canonical Runtime Gateway Hardening `CANON-01` completed on `checkpoint/large-working-tree-20260523`.
+- Added read-only canonical runtime state model, source-of-truth hierarchy, reconciliation preview conflict markers, docs/ADR, targeted tests, and `runtime canonical-state`, `runtime source-of-truth`, and `runtime reconcile-preview` commands. No provider calls, tool execution, personal-data access, tracker mutation, web server, background service, package install, model download, commit, or push was added.
+
+- Created `docs/HANDOFF_TO_CHATGPT.md` as a reporting-only handoff summary for ChatGPT. No runtime behavior, feature implementation, queued prompt execution, commit, or push was performed. The handoff records the current dirty git state, completed Performance Bottleneck Scanner pack, active prompt status, next prompt options, changed files, command/test evidence, source-of-truth conflicts, safety status, blockers, upload recommendations, and safe next actions.
+
+- Secrets and API Key Management `SECRETS-08` release gate completed on `checkpoint/large-working-tree-20260523`.
+- Added `docs/secrets/SECRETS_RELEASE_GATE.md` and `docs/secrets/SECRETS_MATURITY_REVIEW.md`, completed SECRETS-01 through SECRETS-08, and recorded the safe reliance boundary: local setup guidance, redaction, resolver/provider diagnostics, Keychain dry-run strategy, scanner, and Git preflight are safe to rely on for best-effort local hygiene; real Keychain access, live credential validation, external scanner parity, secret rotation, and commit/push decisions remain manual/future.
+- Validation passed with `./.venv/bin/python` 3.12.13: full suite 1616 passed; `tests/secrets` 31 passed; startup policy and capability manifest validation passed via `make policy-check`; command registry validation passed with 541 commands; tracked/staged `secrets scan` and `git preflight` passed with no likely real secret findings.
+- Remaining blocker: the worktree is large and dirty from multiple prior batches; run a clean release-candidate boundary review before staging, committing, or pushing.
 
 - Native Skill System Hardening `SKILL-10` release gate completed on `checkpoint/large-working-tree-20260523`.
 - Added native skill system release-gate and maturity-review docs, completed the metadata-only hardening batch through `SKILL-10`, and recorded the safe reliance boundary: metadata review/vetting/docs/evidence are safe; external skill installation/execution remains not approved.

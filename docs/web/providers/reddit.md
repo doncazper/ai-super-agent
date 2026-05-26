@@ -21,3 +21,5 @@ Safe defaults:
 - No Reddit web scraping fallback.
 
 Future Reddit implementation must remain read-only unless a later approved track changes that policy.
+
+Secret setup is tracked in `docs/secrets/PROVIDER_SECRET_SETUP.md`. Run `python smart_agent.py secrets doctor reddit`, `python smart_agent.py reddit doctor`, or `python smart_agent.py connectors status reddit` to inspect OAuth readiness without printing client secrets, access tokens, refresh tokens, or fetching Reddit content.

@@ -1,5 +1,1017 @@
 # Completion Report
 
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening CANON-10
+
+- Scope confirmed: run CANON-10 as a release gate for the Canonical Runtime Gateway Hardening batch, covering CANON-01 through CANON-10 plus EXTREV-01 with validation, docs, maturity review, prompt tracking, and tracker updates.
+- Non-goals confirmed: no web server, no Fastify/TypeScript gateway, no runtime rewrite, no CLI replacement, no background service, no personal-data enablement, no send/write enablement, no live provider calls, no paid APIs, no package installs, no model downloads, no commit, and no push.
+- prompt_id: `CANON-10`.
+- next_prompt_id: `news-provider-registry-status-commands` by standing prompt queue; recommended safer next task is a clean release-candidate boundary and generated artifact hygiene pass before commit/push.
+- Files created: `docs/runtime/CANONICAL_RUNTIME_RELEASE_GATE.md`, `docs/runtime/CANONICAL_RUNTIME_MATURITY_REVIEW.md`, `docs/reviews/EXTERNAL_REVIEW_HARDENING_RELEASE_GATE.md`, and `tests/runtime/test_canonical_runtime_release_gate_docs.py`.
+- Files changed: `CHANGELOG.md`, `docs/PROJECT_STATE.md`, `docs/FEATURE_REGISTRY.md`, `docs/FEATURE_MATURITY.md`, `docs/FEATURE_ROADMAP.md`, `docs/PROMPT_QUEUE.md`, `docs/PROMPT_LEDGER.md`, `docs/PROMPT_AUDIT.md`, `docs/COMPLETION_REPORT.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, and `docs/RELEASE_CHECKLIST.md`.
+- Commands added or changed: no CANON-10 runtime command added; EXTREV-01 added planned-only command registry rows for `python smart_agent.py audit verify-chain` and `python smart_agent.py audit export-receipt <audit_id>`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: full suite passed with 1723 tests in 162.19s; focused canonical runtime release-gate tests passed with 58 tests; focused docs/registry/maturity tests passed with 24 tests; command registry validation passed with 589 commands; startup policy and capability manifest validation passed via `make policy-check`; `./scripts/agent doctor` and `python smart_agent.py doctor` passed; `dogfood run all_safe --dry-run` passed with 8 skipped dry-run entries; prompt audit passed before mark-complete with active_count 1 for CANON-10.
+- Validation notes: `python smart_agent.py docs validate` is not a non-interactive docs validator in this repo; it prompted for pasted documentation. `python smart_agent.py eval run --safe --dry-run` is not a supported eval invocation. `python smart_agent.py backup restore-check` requires a `backup_id`, so no backup id was invented during the gate.
+- Safety notes: canonical state, dashboard, tracker sync, gateway/kernel status, durable records, recovery previews, self-improvement hashes/lints, surface lanes, and external review parity checks remain metadata/read-only/dry-run scoped. No personal-data tool, send/write path, live provider, server, background worker, package install, model download, policy relaxation, approval bypass, audit bypass, commit, or push was added.
+- Maturity changes: canonical runtime hardening is local-tested at `4 Tested` / local release-gate passed. It is not live-validated, not a replacement runtime gateway, and not broadly user-ready as an autonomous runtime.
+- Blockers: no CANON-10 blocker. Repo-level blockers remain a very large dirty worktree, need for clean release-candidate boundary review before commit/push, external secret scan gap, and live/manual validation gaps.
+
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening EXTREV-01
+
+- Scope confirmed: run EXTREV-01 external architecture review hardening parity checks as docs/tests/registry review only.
+- Non-goals confirmed: no major architecture rewrite, no runtime command implementation for audit receipts, no web server, no personal-data access, no provider calls, no package install, no commit, and no push.
+- prompt_id: `EXTREV-01`.
+- next_prompt_id: `CANON-10`.
+- Files created: `docs/reviews/EXTERNAL_ARCHITECTURE_REVIEW_FINDINGS.md`, `docs/reviews/EXTERNAL_REVIEW_HARDENING_PLAN.md`, `docs/reviews/EXTERNAL_REVIEW_PARITY_CHECKLIST.md`, and `tests/test_external_review_parity_docs.py`.
+- Files changed: `agent/ui/command_registry.py`, generated `docs/COMMAND_REGISTRY.md`, generated `docs/COMMAND_TEST_MATRIX.md`, prompt trackers, changelog, project state, feature registry, maturity, risk, threat, and release checklist.
+- Commands added: planned-only `python smart_agent.py audit verify-chain` and `python smart_agent.py audit export-receipt <audit_id>` command registry rows; no runtime implementation was added.
+- Tests and validation with `./.venv/bin/python` 3.12.13: external review parity docs and command registry tests passed with 9 tests; command registry validation passed with 589 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Blockers: audit receipt verifier/exporter are planned-only follow-ups.
+
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening CANON-09
+
+- Scope confirmed: implement CANON-09 tracker-to-canonical-state migration plan as read-only sync/conflict metadata, docs, tests, command tracking, and tracker updates.
+- Non-goals confirmed: no broad tracker rewrite, no automatic tracker overwrite, no prompt auto-run, no prompt completion without evidence, no runtime execution, no provider calls, no personal-data access, no file mutation from the preview commands, no web server, no background service, no package install, no commit, and no push.
+- prompt_id: `CANON-09`.
+- next_prompt_id: `EXTREV-01`.
+- Files created: `agent/runtime/tracker_sync.py`, `tests/runtime/test_tracker_canonical_state_sync.py`, `docs/runtime/TRACKER_TO_CANONICAL_STATE_MIGRATION.md`, `docs/runtime/CANONICAL_STATE_TRACKER_SYNC_POLICY.md`, and `docs/prompt_tracker/CANONICAL_STATE_INTEGRATION.md`.
+- Files changed: `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, generated command registry/test matrix docs, `CHANGELOG.md`, `docs/PROJECT_STATE.md`, `docs/FEATURE_REGISTRY.md`, `docs/FEATURE_MATURITY.md`, `docs/FEATURE_ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/RELEASE_CHECKLIST.md`, and prompt tracking files after mark-complete.
+- Commands added: `python smart_agent.py runtime tracker-sync-preview` and `python smart_agent.py runtime tracker-conflicts`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: tracker sync/canonical dashboard/canonical state tests passed with 15 tests; tracker-sync-preview and tracker-conflicts CLI smokes passed; command registry validation passed with 587 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Safety notes: canonical state is positioned as machine-readable active-work truth only; prompt ledger remains historical evidence, prompt queue remains planned-order view, prompt audit remains reconciliation view, project state remains human resume summary, completion report remains release evidence, and dashboard/handoff remain summaries. Preview commands write no files and do not mutate trackers.
+- Blockers: none for CANON-09. Continue EXTREV-01 external architecture review hardening parity checks.
+
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening CANON-08
+
+- Scope confirmed: implement CANON-08 canonical state dashboard and docs as read-only metadata aggregation, CLI status/handoff commands, docs, tests, command tracking, and tracker updates.
+- Non-goals confirmed: no web server, no Fastify/TypeScript gateway, no runtime rewrite, no CLI replacement, no file-writing handoff, no tracker mutation, no auto-resume, no tool execution, no provider calls, no personal-data access, no background service, no package install, no model download, no commit, and no push.
+- prompt_id: `CANON-08`.
+- next_prompt_id: `CANON-09`.
+- Files created: `agent/runtime/canonical_dashboard.py`, `tests/runtime/test_canonical_state_dashboard.py`, `docs/runtime/CANONICAL_STATE_DASHBOARD.md`, and `docs/runtime/CANONICAL_STATE_HANDOFF.md`.
+- Files changed: `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, generated command registry/test matrix docs, `CHANGELOG.md`, `docs/PROJECT_STATE.md`, `docs/FEATURE_REGISTRY.md`, `docs/FEATURE_MATURITY.md`, `docs/FEATURE_ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/RELEASE_CHECKLIST.md`, and prompt tracking files after mark-complete.
+- Commands added: `python smart_agent.py runtime canonical-dashboard` and `python smart_agent.py runtime handoff --for-chatgpt`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: targeted runtime canonical dashboard/canonical state/gateway/recovery/runtime CLI tests passed with 30 tests; `runtime canonical-dashboard` and `runtime handoff --for-chatgpt` CLI smokes passed; command registry validation passed with 585 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Safety notes: dashboard/handoff output is redacted metadata only; no tools are executed, no providers are called, no personal connectors are read, no files are written, no trackers are mutated, no server starts, and no recovery/resume action is triggered.
+- Blockers: none for CANON-08. Continue CANON-09 tracker-to-canonical-state migration plan.
+
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening CANON-07
+
+- Scope confirmed: implement CANON-07 backup roundtrip and restore hardening lane with brokered read-only guard commands, restore policy checks, docs, tests, command tracking, and tracker updates.
+- Non-goals confirmed: no real restore outside disposable test workspaces, no unapproved restore, no personal-data connector access, no send/write enablement, no live provider checks, no paid APIs, no package install, no model download, no web server, no background service, no runtime rewrite, no commit, and no push.
+- prompt_id: `CANON-07`.
+- next_prompt_id: `CANON-08`.
+- Files created: `tests/test_backup_roundtrip_policy.py`, `docs/backup/BACKUP_ROUNDTRIP_VALIDATION.md`, and `docs/backup/RESTORE_POLICY_WEAKENING_GUARDS.md`.
+- Files changed: `agent/tools/backup/backup_tools.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, generated command registry/test matrix docs, `README.md`, `CHANGELOG.md`, `docs/PROJECT_STATE.md`, `docs/FEATURE_REGISTRY.md`, `docs/FEATURE_MATURITY.md`, `docs/FEATURE_ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/RELEASE_CHECKLIST.md`, and prompt tracking files after mark-complete.
+- Commands added: `python smart_agent.py backup roundtrip --dry-run`, `python smart_agent.py backup policy-check`, and `python smart_agent.py backup restore-check <backup_id>`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: backup/restore and backup roundtrip policy tests passed with 15 tests; command registry/feature-maturity docs tests passed with 19 tests; backup roundtrip and policy-check CLI smokes passed; command registry validation passed with 583 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Safety notes: new commands route through ToolBroker, PolicyEngine, and AuditLogger; `roundtrip` is dry-run-only in v1; `restore-check` writes no restored files; `backup.restore` remains HIGH approval-gated; restore now rejects manifest/path traversal, unredacted secret material, CRITICAL approval reuse, and capability policy weakening before writing.
+- Blockers: none for CANON-07. Continue CANON-08 canonical state dashboard and docs.
+
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening CANON-06
+
+- Scope confirmed: implement CANON-06 surface regression lanes as static metadata, dry-run CLI previews, fixture-safe dogfood suites, docs, tests, and tracker updates.
+- Non-goals confirmed: no automatic lane execution, no live provider checks, no personal-data access, no HIGH/CRITICAL command execution, no background service, no server, no runtime rewrite, no commit, and no push.
+- prompt_id: `CANON-06`.
+- next_prompt_id: `CANON-07`.
+- Files created: `agent/qa/surface_lanes.py`, `tests/qa/test_surface_regression_lanes.py`, `docs/qa/SURFACE_REGRESSION_LANES.md`, `docs/qa/SURFACE_REGRESSION_MATRIX.md`, `dogfood_suites/surface_cli_core.yaml`, `dogfood_suites/surface_runtime_gateway.yaml`, `dogfood_suites/surface_promptops.yaml`, `dogfood_suites/surface_action_center.yaml`, `dogfood_suites/surface_app_bridge_contract.yaml`, and `dogfood_suites/surface_channels_status.yaml`.
+- Files changed: `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, generated command registry/test matrix docs, `CHANGELOG.md`, `docs/PROJECT_STATE.md`, `docs/FEATURE_REGISTRY.md`, `docs/FEATURE_MATURITY.md`, `docs/FEATURE_ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/RELEASE_CHECKLIST.md`, and prompt tracking files after mark-complete.
+- Commands added: `python smart_agent.py qa surfaces`, `python smart_agent.py qa surfaces run --dry-run`, and `python smart_agent.py qa surfaces matrix`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused surface lane tests passed with 5 tests; surface lane plus dogfood suite validation passed with 19 tests; command registry validation passed with 580 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Safety notes: default lane preview is dry-run-only with `executed_commands=[]`; personal-data, HIGH/CRITICAL, and live provider checks are excluded by default; future lane execution must remain explicit and safe-tier gated.
+- Blockers: none for CANON-06. Continue CANON-07 backup roundtrip and restore hardening lane.
+
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening CANON-05
+
+- Scope confirmed: implement only CANON-05 code-mode / self-heal artifact hash checks and safety lints as a read-only hardening milestone.
+- Non-goals confirmed: no web server, Fastify/TypeScript gateway, runtime rewrite, CLI replacement, background service, personal-data tools, send/write enablement, live providers, paid APIs, package installs, model downloads, commits, pushes, or self-heal patch execution.
+- prompt_id: `CANON-05`.
+- next_prompt_id: `CANON-06`.
+- Files created: `agent/self_improvement/__init__.py`, `agent/self_improvement/artifact_hashes.py`, `agent/self_improvement/safety_lints.py`, `tests/test_self_improvement_artifact_hashes.py`, `tests/test_self_improvement_safety_lints.py`, `docs/self_improvement/CODE_ARTIFACT_HASHES.md`, `docs/self_improvement/SELF_HEAL_SAFETY_LINTS.md`, and `docs/self_improvement/CODE_MODE_TRUTH_BOUNDARY.md`.
+- Files changed: `smart_agent.py`, `agent/ui/command_registry.py`, generated command registry/test matrix docs, `CHANGELOG.md`, `docs/PROJECT_STATE.md`, `docs/FEATURE_REGISTRY.md`, `docs/FEATURE_MATURITY.md`, `docs/FEATURE_ROADMAP.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, `docs/RELEASE_CHECKLIST.md`, and prompt tracking files after mark-complete.
+- Commands added: `python smart_agent.py improve lint-diff`, `python smart_agent.py improve artifact-hashes`, and `python smart_agent.py improve verify-artifacts`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: targeted self-improvement artifact/lint tests passed with 7 tests; command registry validation passed with 577 commands; startup policy and capability manifest validation passed via `make policy-check`; first full-suite run found two tracker-format failures, targeted docs fixes passed, and the final full suite passed with 1698 tests.
+- Safety notes: artifact hashes are deterministic and redacted; lint findings include hash-only evidence; high-risk lint findings block safe-only self-heal plans; commands do not patch, commit, push, install packages, run providers, start services, or execute queued prompts.
+- Blockers: none for CANON-05. Continue CANON-06 surface regression lanes.
+
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening CANON-04
+
+- Scope confirmed: implement durable checkpoint and recovery model contracts, read-only checkpoint/recovery commands, docs, tests, and tracking updates.
+- Non-goals confirmed: no automatic resume, rollback executor, checkpoint writer command, queued prompt execution, active approval bypass, CRITICAL approval reuse, raw secret/personal-data output, commit, or push.
+- prompt_id: `CANON-04`.
+- next_prompt_id: `CANON-05`.
+- Files created: `agent/runtime/checkpoints.py`, `agent/runtime/recovery.py`, `tests/runtime/test_resume_recovery_checkpoints.py`, `docs/runtime/RESUME_RECOVERY_CHECKPOINT_MODEL.md`, and `docs/runtime/RECOVERY_REPORTS.md`.
+- Files changed: `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, generated command registry/test matrix docs, changelog, feature registry, feature maturity, feature roadmap, risk register, threat model, release checklist, and completion report.
+- Commands added: `python smart_agent.py runtime recovery-preview`, `python smart_agent.py runtime checkpoints list`, and `python smart_agent.py runtime checkpoints show <checkpoint_id>`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: runtime recovery/gateway/execution/canonical/CLI tests passed with 32 tests; command registry validation passed with 574 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Safety summary: recovery preview is read-only and sets `auto_resume=false`; active approvals remain active; CRITICAL resumes require fresh approval; prompt-pack recovery depends on prompt tracker evidence.
+- Blockers: none for CANON-04. Continue CANON-05 Code Mode / self-heal artifact hash checks and safety lints.
+
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening CANON-03
+
+- Scope confirmed: define Agent Gateway / Runtime Kernel boundary as metadata contracts, read-only status commands, docs, tests, and tracking updates.
+- Non-goals confirmed: no Fastify/TypeScript gateway, local web server, Mac/iOS/Windows UI, listeners, Telegram/mobile channels, external tool exposure, CLI replacement, direct tool execution, approval bypass, policy/capability mutation, commit, or push.
+- prompt_id: `CANON-03`.
+- next_prompt_id: `CANON-04`.
+- Files created: `agent/runtime/gateway_state.py`, `agent/runtime/kernel_contract.py`, `tests/runtime/test_gateway_kernel_boundary.py`, `docs/runtime/AGENT_GATEWAY_RUNTIME_KERNEL.md`, `docs/runtime/GATEWAY_OWNED_EXECUTION_TRUTH.md`, `docs/runtime/FRONTEND_CHANNEL_STATE_BOUNDARY.md`, `docs/runtime/GATEWAY_API_CONTRACT.md`, and `docs/decisions/agent_gateway_runtime_kernel.md`.
+- Files changed: `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, generated command registry/test matrix docs, changelog, feature registry, feature maturity, feature roadmap, risk register, threat model, release checklist, and completion report.
+- Commands added: `python smart_agent.py runtime gateway-status`, `python smart_agent.py runtime kernel-status`, and `python smart_agent.py runtime frontend-contract`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: runtime gateway/execution/canonical/CLI tests passed with 27 tests; command registry validation passed with 571 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Safety summary: gateway request previews cannot execute tools directly, gateway cannot self-approve, payloads are redacted, no server/listener modules start, and CLI remains the first frontend.
+- Blockers: none for CANON-03. Continue CANON-04 resume, recovery, and checkpoint model.
+
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening CANON-02
+
+- Scope confirmed: implement durable execution record contracts for future gateway/kernel recovery and read-only inspection commands.
+- Non-goals confirmed: no queued prompt execution, job/workflow runner, command executor, background persistence, web server, runtime rewrite, tracker mutation, personal-data access, raw secret storage, commit, or push.
+- prompt_id: `CANON-02`.
+- next_prompt_id: `CANON-03`.
+- Files created: `agent/runtime/execution_records.py`, `tests/runtime/test_execution_records.py`, `docs/runtime/DURABLE_EXECUTION_RECORDS.md`, and `docs/runtime/JOB_WORKFLOW_PROMPT_RECORDS.md`.
+- Files changed: `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, generated command registry/test matrix docs, changelog, feature registry, feature maturity, feature roadmap, risk register, threat model, release checklist, and completion report.
+- Commands added: `python smart_agent.py runtime records list`, `python smart_agent.py runtime records show <record_id>`, `python smart_agent.py runtime records latest`, and `python smart_agent.py runtime records validate`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: runtime execution/canonical/CLI tests passed with 19 tests; command registry validation passed with 568 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Safety summary: record commands are read-only; records are redacted metadata contracts; HIGH/CRITICAL records require approval; no resume/execute/write behavior exists.
+- Blockers: none for CANON-02. Continue CANON-03 Agent Gateway / Runtime Kernel boundary.
+
+## Run: 2026-05-25 Canonical Runtime Gateway Hardening CANON-01
+
+- Scope confirmed: import and run the Canonical Runtime Gateway Hardening pack as a controlled batch; CANON-01 implements canonical runtime state metadata, source-of-truth hierarchy, docs, tests, command registry, and tracker updates only.
+- Non-goals confirmed: no web server, Fastify/TypeScript gateway, runtime rewrite, CLI replacement, background service, personal-data tools, sends/writes, live providers, paid APIs, package install, model download, commit, or push.
+- prompt_id: `CANON-01`.
+- next_prompt_id: `CANON-02`.
+- Files created: `agent/runtime/canonical_state.py`, `tests/runtime/test_canonical_runtime_state.py`, `docs/runtime/CANONICAL_RUNTIME_STATE_MODEL.md`, `docs/runtime/SOURCE_OF_TRUTH_HIERARCHY.md`, `docs/runtime/CANONICAL_STATE_BOUNDARIES.md`, and `docs/decisions/canonical_runtime_state.md`.
+- Files changed: `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, generated command registry/test matrix docs, changelog, project state, feature registry, feature maturity, feature roadmap, risk register, threat model, release checklist, and completion report.
+- Commands added: `python smart_agent.py runtime canonical-state`, `python smart_agent.py runtime source-of-truth`, and `python smart_agent.py runtime reconcile-preview`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: `tests/runtime/test_canonical_runtime_state.py` and `tests/runtime/test_runtime_cli.py` passed with 13 tests; command registry validation passed with 564 commands.
+- Safety summary: canonical state is read-only JSON metadata. It executes no tools, calls no providers, reads no personal connectors, starts no services, writes no memory, mutates no trackers, and redacts secret-like fields.
+- Blockers: none for CANON-01. Continue CANON-02 durable job, workflow, and prompt execution records.
+
+## Run: 2026-05-25 Handoff to ChatGPT
+
+- Scope confirmed: reporting-only handoff summary for ChatGPT.
+- Non-goals confirmed: no feature implementation, queued prompt execution, runtime behavior change, broad tracker rewrite, commit, or push.
+- Files created: `docs/HANDOFF_TO_CHATGPT.md`.
+- Files changed: `CHANGELOG.md`, `docs/PROJECT_STATE.md`, and `docs/COMPLETION_REPORT.md` for minimal run tracking.
+- Commands run: git state inspection, tracker/document inspection, report/artifact listing, and timestamp commands.
+- Tests run: none for this reporting-only pass. Last validated repo result remains PERF-11 full suite with 1665 passed using `./.venv/bin/python` 3.12.13.
+- Blockers: large dirty worktree remains; clean release-candidate boundary review still recommended before commit/push.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-11
+
+- Scope confirmed: run the Performance Scanner release gate with safe local validation, release-gate docs, maturity review, and tracker updates only.
+- Non-goals confirmed: no live providers, paid APIs, model downloads, personal-data access, package installs, background services, broad refactors, automatic patches, commits, pushes, or safety-policy weakening.
+- prompt_id: `PERF-11`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Files created: `docs/performance/PERFORMANCE_SCANNER_RELEASE_GATE.md` and `docs/performance/PERFORMANCE_SCANNER_MATURITY_REVIEW.md`.
+- Files changed: changelog, project state, feature registry, feature maturity, feature roadmap, prompt queue, prompt ledger, test plan, release checklist, risk register, threat model, and completion report.
+- Safe performance evidence refreshed: static scan inspected 200 Python files and found 49 heuristic findings; startup scan measured 3 commands and 3 imports; benchmark measured `python smart_agent.py commands validate` at 457.688 ms median; test profiler ran `tests/performance` with return code 0; recommendation generation produced one advisory LOW recommendation; baseline/regression comparison used `baseline_20260526T042849Z` and found no regressions; dashboard/status/next/trends returned read-only output with no commands executed.
+- Tests and validation with `./.venv/bin/python` 3.12.13: `tests/performance` passed with 49 tests; command registry validation passed with 561 commands; startup policy and capability manifest validation passed via `make policy-check`; feature maturity docs tests passed with 13 tests; prompt audit passed with PERF-11 active during the gate; full suite passed with 1665 tests.
+- Feature maturity: Performance Bottleneck Scanner moved to local `5 Hardened`, readiness 82. It is not live-validated, user-ready, or a mature reusable pattern yet.
+- Blockers: large dirty worktree, no live/manual validation, no real optimization follow-through, and clean release-candidate boundary still required before push.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-10
+
+- Scope confirmed: implement read-only performance dashboard/status/next-fix/trends summaries, QA-facing docs, brokered CLI commands, tests, and tracker updates.
+- Non-goals confirmed: dashboard/status/trends did not execute scans, tests, benchmarks, providers, patch plans, patches, package installs, commits, pushes, background services, or personal-data reads.
+- prompt_id: `PERF-10`.
+- next_prompt_id: `PERF-11`.
+- Files created: `agent/performance/dashboard.py`, `tests/performance/test_performance_dashboard.py`, and `docs/performance/PERFORMANCE_DASHBOARD.md`.
+- Files changed: `agent/tools/performance.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, command registry/test matrix, changelog, feature registry, feature maturity, feature roadmap, test plan, release checklist, and completion report.
+- Commands added/changed: activated brokered `python smart_agent.py perf dashboard`, `python smart_agent.py perf status`, `python smart_agent.py perf next-fix`, and `python smart_agent.py perf trends`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused performance tests passed with 49 tests; dashboard/status/next-fix/trends CLI smokes passed and reported `read_only=true` with `commands_executed=[]`; command registry validation passed with 561 commands; startup policy and capability manifest validation passed via `make policy-check`; feature maturity docs tests passed.
+- Dashboard status: v1 reads redacted local reports and summarizes latest scan, bottlenecks, slow commands/tests, regression warnings, baseline status, recommendations, patch plan candidates, feature maturity impact, and next safe action. It is designed for QA dashboard consumption but does not own QA command execution.
+- Feature maturity: Performance Bottleneck Scanner remains `4 Tested`, readiness 78, pending PERF-11 release gate and live/manual validation.
+- Blockers: none for PERF-10. Continue PERF-11 performance scanner release gate.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-09
+
+- Scope confirmed: implement metadata-only optimization patch planning from recommendation reports, safe/default blocked gating, brokered CLI, tests, docs, and tracker updates.
+- Non-goals confirmed: did not apply patches, alter safety controls, install packages, run live providers, download models, access personal data, start background services, commit, or push.
+- prompt_id: `PERF-09`.
+- next_prompt_id: `PERF-10`.
+- Files created: `agent/performance/patch_planner.py`, `tests/performance/test_performance_patch_planner.py`, and `docs/performance/PERFORMANCE_PATCH_PLANNER.md`.
+- Files changed: `agent/tools/performance.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, command registry/test matrix, changelog, feature registry, feature maturity, feature roadmap, test plan, release checklist, and completion report.
+- Commands added/changed: activated brokered `python smart_agent.py perf patch-plan`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused performance tests passed with 46 tests; `perf patch-plan` smoke wrote a redacted metadata-only patch-plan report with `applied_patches=0`; command registry validation passed with 557 commands; startup policy and capability manifest validation passed via `make policy-check`; feature maturity docs tests passed.
+- Patch planner status: v1 creates patch plans with recommendation id, allowed flag, reason, risk, expected files/behavior, required tests/docs, rollback, human-review flag, self-heal compatibility, and status. Broad refactors and safety-sensitive areas are blocked or human-review-required; the command never applies patches.
+- Feature maturity: Performance Bottleneck Scanner remains `4 Tested`, readiness 76, for static scanning, startup scanning, safe command benchmarks, test-suite profiling, advisory recommendations, baselines/regressions, and patch planning only.
+- Blockers: none for PERF-09. Continue PERF-10 performance dashboard and QA integration.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-08
+
+- Scope confirmed: implement redacted local baseline storage, regression comparison, baseline/regression CLI commands, tests, docs, and tracker updates.
+- Non-goals confirmed: did not run live providers or benchmarks by default, store raw prompts/provider content/command output/pytest output, access personal data, install packages, download models, start background services, apply patches, commit, or push.
+- prompt_id: `PERF-08`.
+- next_prompt_id: `PERF-09`.
+- Files created: `agent/performance/baselines.py`, `tests/performance/test_performance_baselines.py`, and `docs/performance/PERFORMANCE_BASELINES.md`.
+- Files changed: `agent/tools/performance.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, command registry/test matrix, changelog, feature registry, feature maturity, feature roadmap, test plan, release checklist, and completion report.
+- Commands added/changed: activated brokered `python smart_agent.py perf baseline create`, `python smart_agent.py perf baseline compare`, and `python smart_agent.py perf regressions`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused performance tests passed with 40 tests; baseline create/compare/regressions CLI smokes passed and wrote redacted local artifacts; command registry validation passed with 556 commands; startup policy and capability manifest validation passed via `make policy-check`; feature maturity docs tests passed.
+- Baseline/regression status: v1 baselines store timings, finding counts, branch, commit, Python version, platform, notes, and source report metadata under `reports/performance/baselines/`; comparison uses tolerance-based regression ranking and records no raw command, pytest, prompt, provider, secret, or personal content.
+- Feature maturity: Performance Bottleneck Scanner remains `4 Tested`, readiness 75, for static scanning, startup scanning, safe command benchmarks, test-suite profiling, advisory recommendations, and baselines/regressions only.
+- Blockers: none for PERF-08. Continue PERF-09 safe optimization patch planner.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-07
+
+- Scope confirmed: implement advisory optimization recommendation generation from redacted performance reports, category mapping, recommendation metadata fields, brokered CLI, tests, docs, and tracker updates.
+- Non-goals confirmed: did not apply patches, edit files for optimization, weaken safety controls, delete/skip/xfail tests, hide failures, install packages, run live providers, call paid APIs, download models, access personal data, start background services, commit, or push.
+- prompt_id: `PERF-07`.
+- next_prompt_id: `PERF-08`.
+- Files created: `agent/performance/recommendations.py`, `tests/performance/test_optimization_recommendations.py`, and `docs/performance/OPTIMIZATION_RECOMMENDATIONS.md`.
+- Files changed: `agent/performance/models.py`, `agent/tools/performance.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, command registry/test matrix, changelog, feature registry, feature maturity, feature roadmap, test plan, release checklist, and completion report.
+- Commands added/changed: activated brokered `python smart_agent.py perf suggest-fixes`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused performance tests passed with 35 tests; `perf suggest-fixes` smoke generated a redacted recommendation report from the latest test-profile report with `applied_patches=0`; command registry validation passed with 556 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Optimization recommendations: v1 maps redacted findings/profile evidence into advisory categories such as lazy imports, timeouts, bounded scans, cached config/registry, repeated glob, tracker hot paths, streaming/chunking, TTL cache, compiled regex, narrow test target, fixtures, deferred live provider checks, docs/UX, and architecture review. Recommendations include expected impact, effort, risk, patch area, required tests/docs, rollback, self-heal flag, human-review flag, status, and never apply patches.
+- Feature maturity: Performance Bottleneck Scanner remains `4 Tested`, readiness 73, for static scanning, startup scanning, safe command benchmarks, test-suite profiling, and advisory recommendations only.
+- Blockers: none for PERF-07. Continue PERF-08 performance baseline and regression tracking.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-06
+
+- Scope confirmed: implement local pytest duration profiling, parsed duration/module summaries, redacted report storage, brokered `perf tests` CLI, tests, docs, full-suite validation, and tracker updates.
+- Non-goals confirmed: did not delete, skip, xfail, or edit tests; did not hide failures, install packages, run live providers, call paid APIs, download models, access personal data, start background services, apply patches, commit, or push.
+- prompt_id: `PERF-06`.
+- next_prompt_id: `PERF-07`.
+- Files created: `agent/performance/test_profiler.py`, `tests/performance/test_test_profiler.py`, and `docs/performance/TEST_SUITE_PERFORMANCE.md`.
+- Files changed: `agent/performance/reports.py`, `agent/tools/performance.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, command registry/test matrix, changelog, feature registry, feature maturity, feature roadmap, test plan, release checklist, and completion report.
+- Commands added/changed: activated brokered `python smart_agent.py perf tests --durations 25`, `python smart_agent.py perf tests --target <path>`, and `python smart_agent.py perf tests report --last`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused performance tests passed with 29 tests; bounded test-profile smoke `perf tests --target tests/performance --durations 5 --timeout 60` wrote redacted JSON/Markdown/profile reports; `perf tests report --last` read the latest profile; command registry validation passed with 556 commands; startup policy and capability manifest validation passed via `make policy-check`; full suite passed with 1645 tests after fixing tracker table formatting.
+- Test profiler summary: v1 runs `pytest --durations=N -q` in a bounded subprocess for repo-local targets, defaults to `tests/performance`, requires `--full-suite` for broad targets, parses duration rows, summarizes slow modules, records return code/elapsed time/byte counts, and stores no raw pytest stdout/stderr.
+- Feature maturity: Performance Bottleneck Scanner remains `4 Tested`, readiness 71, for static scanning, startup scanning, safe command benchmarks, and test-suite profiling only.
+- Blockers: none for PERF-06. Continue PERF-07 optimization recommendation engine.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-05
+
+- Scope confirmed: implement the safe command benchmark runner, bounded subprocess timing, command-registry safety gating, redacted report storage, brokered `perf benchmark` CLI, tests, docs, and tracking updates.
+- Non-goals confirmed: did not benchmark HIGH/CRITICAL, approval-required, personal-data, mutating, live-provider, paid-provider, background, network/model, or placeholder commands; did not store raw stdout/stderr, install packages, call providers, download models, access personal data, apply patches, commit, or push.
+- prompt_id: `PERF-05`.
+- next_prompt_id: `PERF-06`.
+- Files created: `agent/performance/benchmark_runner.py`, `tests/performance/test_benchmark_runner.py`, and `docs/performance/SAFE_COMMAND_BENCHMARKS.md`.
+- Files changed: `agent/performance/models.py`, `agent/tools/performance.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, command registry/test matrix, changelog, feature registry, feature maturity, feature roadmap, test plan, release checklist, and completion report.
+- Commands added/changed: activated brokered `python smart_agent.py perf benchmark --safe`, `python smart_agent.py perf benchmark --group <group>`, and `python smart_agent.py perf benchmark --command "<registry_command>"`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused performance tests passed with 23 tests; bounded benchmark smoke `perf benchmark --command "python smart_agent.py commands validate" --iterations 1 --timeout 5` wrote a redacted report and measured the command at about 448 ms locally; command registry validation passed with 553 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Benchmark summary: v1 benchmarks only active SAFE/LOW read-only command registry records and records timing metadata, return code, and output byte counts. It denies unknown commands, placeholders, approval-required commands, HIGH/CRITICAL risk, personal-data, mutating, live-provider, paid-provider, background, network/model commands, and stores no raw command output.
+- Feature maturity: Performance Bottleneck Scanner moved to `4 Tested`, readiness 67, for static scanning, startup scanning, and safe command benchmarks only.
+- Blockers: none for PERF-05. Continue PERF-06 test suite performance profiler.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-04
+
+- Scope confirmed: implement safe startup/import overhead scanner, bounded subprocess timing, missing-command skip behavior, report storage, `perf scan --startup`, `perf startup`, tests, docs, and tracking updates.
+- Non-goals confirmed: did not call LM Studio chat/completions, live providers, personal-data commands, model loading/downloads, background services, package installs, full-suite runs, automatic patches, commits, or pushes.
+- prompt_id: `PERF-04`.
+- next_prompt_id: `PERF-05`.
+- Files created: `agent/performance/startup_scanner.py`, `tests/performance/test_startup_scanner.py`, and `docs/performance/STARTUP_OVERHEAD_SCANNER.md`.
+- Files changed: `agent/tools/performance.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, command registry/test matrix, changelog, feature registry, feature maturity, feature roadmap, release checklist, and completion report.
+- Commands added/changed: activated brokered `python smart_agent.py perf scan --startup`, `python smart_agent.py perf startup`, and `python smart_agent.py perf startup --json`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused performance tests passed with 17 tests; bounded startup smoke `perf startup --json --timeout 5 --max-commands 1 --max-imports 1` wrote a redacted report; command registry validation passed with 553 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Startup scan summary: measured `scripts/agent --help` at about 419 ms and `import smart_agent` at about 358 ms in the bounded smoke; these are local approximate timings, not release baselines.
+- Feature maturity: Performance Bottleneck Scanner remains `3 Implemented`, readiness 63, for static/startup scanning only.
+- Blockers: none for PERF-04. Continue PERF-05 safe command benchmark runner.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-03
+
+- Scope confirmed: implement a static bottleneck scanner, default exclusions, heuristic patterns, redacted report storage, brokered `perf scan` / `perf scan --static`, tests, docs, and tracking updates.
+- Non-goals confirmed: did not execute scanned code, import scanned modules, run benchmarks/tests from the scanner, call live providers, use paid APIs, download models, access personal data, start background services, apply patches, broadly refactor, commit, or push.
+- prompt_id: `PERF-03`.
+- next_prompt_id: `PERF-04`.
+- Files created: `agent/performance/static_scanner.py`, `agent/performance/patterns.py`, `tests/performance/test_static_bottleneck_scanner.py`, and `docs/performance/STATIC_BOTTLENECK_SCANNER.md`.
+- Files changed: `agent/tools/performance.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, command registry/test matrix, changelog, feature registry, feature maturity, feature roadmap, release checklist, and completion report.
+- Commands added/changed: activated brokered `python smart_agent.py perf scan` and `python smart_agent.py perf scan --static`, with optional `--max-files`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused performance tests passed with 13 tests; bounded static scan smoke `perf scan --static --max-files 5` wrote a redacted report and found 0 findings after false-positive tuning; command registry validation passed with 552 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Static scan summary: v1 scans Python source text only, excludes `.venv`, `.git`, `__pycache__`, `.pytest_cache`, `logs`, `reports`, `media_outputs`, and `.qa_workspace`, detects heuristic bottleneck candidates, and writes redacted JSON/Markdown reports.
+- Feature maturity: Performance Bottleneck Scanner moved to `3 Implemented`, readiness 58, for static scanning only. It is not a benchmark/profiler/dashboard/release-gated feature yet.
+- Blockers: none for PERF-03. Continue PERF-04 startup and import overhead scanner.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-02
+
+- Scope confirmed: implement performance finding/report models, redacted local report store, no-report handling, read-only report/finding CLI commands where practical, tests, docs, and tracking updates.
+- Non-goals confirmed: did not add scanners, benchmark execution, test profiling, optimization patching, package installs, live providers, paid APIs, model downloads, personal-data access, background services, broad refactors, commits, or pushes.
+- prompt_id: `PERF-02`.
+- next_prompt_id: `PERF-03`.
+- Files created: `agent/performance/__init__.py`, `agent/performance/models.py`, `agent/performance/reports.py`, `agent/performance/severity.py`, `agent/performance/errors.py`, `agent/tools/performance.py`, `tests/performance/test_performance_models_reports.py`, and `docs/performance/PERFORMANCE_REPORTS.md`.
+- Files changed: `agent/tools/registry.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, command registry/test matrix, changelog, feature registry, feature maturity, feature roadmap, and completion report.
+- Commands added/changed: activated brokered read-only `python smart_agent.py perf report --last` and `python smart_agent.py perf findings`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused performance tests passed with 8 tests; `perf report --last` and `perf findings` CLI smokes returned structured no-report states; command registry validation passed with 552 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Feature maturity: Performance Bottleneck Scanner moved from `1 Specified` to `2 Scaffolded`, readiness 49. It is not a runtime scanner/benchmark/profiler/dashboard or release-gated feature yet.
+- Blockers: none for PERF-02. Continue PERF-03 static bottleneck scanner.
+
+## Run: 2026-05-25 Performance Bottleneck Scanner PERF-01
+
+- Scope confirmed: import and run the Performance Bottleneck Scanner prompt pack as a controlled batch; current milestone is PERF-01 architecture, policy, command tracking, docs tests, and tracker updates.
+- Non-goals confirmed: did not install packages, run live providers, call paid APIs, download models, access personal data, start background services, broadly rewrite code, execute benchmarks, apply optimization patches, commit, or push.
+- prompt_id: `PERF-01`.
+- next_prompt_id: `PERF-02`.
+- Files created: `docs/performance/PERFORMANCE_SCANNER_TRACK.md`, `docs/performance/PERFORMANCE_BOTTLENECK_POLICY.md`, `docs/performance/PERFORMANCE_FINDING_SCHEMA.md`, `docs/performance/PERFORMANCE_OPTIMIZATION_POLICY.md`, `docs/performance/PERFORMANCE_BASELINE_STRATEGY.md`, `docs/decisions/performance_bottleneck_scanner.md`, `tests/performance/test_performance_docs.py`, and `reports/performance/.gitkeep`.
+- Files changed: `prompts/packs/performance-bottleneck-scanner-v1.promptpack.md`, prompt queue/active tracking, command registry/test matrix, changelog, project state, feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, release checklist, and completion report.
+- Commands added/changed: added planned/non-runnable command registry rows for `perf scan`, `perf scan --static`, `perf scan --startup`, `perf scan --commands`, `perf benchmark --safe`, `perf report --last`, `perf findings`, `perf suggest-fixes`, `perf regressions`, `perf baseline create`, and `perf baseline compare`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused PERF docs tests passed with 3 tests; command registry validation passed with 552 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Feature maturity: Performance Bottleneck Scanner added as `1 Specified`, readiness 39. It is not implemented, tested as runtime, live-validated, user-ready, or a release-gated pattern yet.
+- Blockers: none for PERF-01 so far; continue PERF-02 if focused tests and validation pass.
+
+## Run: 2026-05-25 Secrets and API Key Management SECRETS-08
+
+- Scope confirmed: validate the Secrets and API Key Management track, record release-gate evidence, and make conservative maturity/tracker updates.
+- Non-goals confirmed: did not store real secrets, print secret values, access real Keychain, call provider APIs, enable paid APIs, rewrite Git history, commit, or push.
+- prompt_id: `SECRETS-08`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Files created: `docs/secrets/SECRETS_RELEASE_GATE.md` and `docs/secrets/SECRETS_MATURITY_REVIEW.md`.
+- Files changed: changelog, project state, feature registry, feature maturity, feature roadmap, release checklist, risk register, threat model, prompt tracking, and completion report.
+- Commands added/changed: none in SECRETS-08. The batch added/changed `secrets list`, `secrets redaction-test`, `secrets policy`, `secrets sources`, `secrets doctor <provider>`, `secrets keychain status`, Keychain dry-run get/set, `secrets scan`, `secrets scan --staged`, `git preflight`, and `git preflight --staged`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: full suite passed with 1616 tests; `tests/secrets` passed with 31 tests; command registry validation passed with 541 commands; startup policy and capability manifest validation passed via `make policy-check`; tracked secret scan passed with 0 fail and 10 placeholder/test-fixture info findings; staged secret scan passed with 0 findings; tracked and staged Git preflight passed from the scanner perspective.
+- Secret scan result: no likely real tracked or staged secret was reported. The tracked scan reported placeholder/test-fixture info findings only, all redacted.
+- Provider doctor summary: provider doctors remain config-only and value-redacted for Reddit, SerpAPI, Brave, WeatherAPI, Telegram, Gmail, NewsAPI, Media Cloud, Microsoft, GitHub, media providers, LM Studio, Ollama, and llama.cpp. They do not call providers or enable paid APIs.
+- Keychain strategy: real Keychain reads/writes remain blocked/future. Current commands are status/dry-run metadata only.
+- Git preflight status: scanner perspective is safe, but the worktree is large and dirty from multiple prior batches and still requires a human clean release-candidate boundary before commit/push.
+- Feature maturity: Secrets and API Key Management is conservatively `5 Hardened`, readiness 82. It is not live credential validated and is not a substitute for dedicated external scanner coverage.
+- Blockers: no SECRETS-08 blocker. Remaining blockers are external scanner parity, real Keychain/live credential validation, and clean commit-boundary review.
+
+## Run: 2026-05-25 Secrets and API Key Management SECRETS-07
+
+- Scope confirmed: integrate secrets management into user-facing docs, provider setup guidance, command registry/test matrix references, and rotation/preflight guidance.
+- Non-goals confirmed: did not include real secrets, store tokens in docs, mark providers ready without evidence, change runtime behavior, call providers, enable paid APIs, commit, or push.
+- prompt_id: `SECRETS-07`.
+- next_prompt_id: `SECRETS-08`.
+- Files created: `docs/secrets/PROVIDER_SECRET_SETUP.md`.
+- Files changed: README, `docs/USER_GUIDE.md`, `docs/secrets/API_KEY_INVENTORY.md`, `docs/secrets/LOCAL_ENV_SETUP.md`, `docs/secrets/MACOS_KEYCHAIN_GUIDE.md`, `docs/secrets/SECRET_LEAK_SCANNING.md`, provider docs for Brave, SerpAPI, Reddit, GitHub, and media provider strategy, command registry/test matrix, tests, changelog, project state, feature registry/maturity, prompt tracking, and completion report.
+- Commands added/changed: none in runtime; docs now point to `secrets doctor`, provider-specific doctors, `secrets sources`, Keychain status/dry-run, `secrets scan`, and `git preflight`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: secrets docs/scanner tests passed with 11 tests; command registry validation passed with 541 commands; startup policy and capability manifest validation passed via `make policy-check`; `secrets doctor all` smoke passed with redacted/config-only output and no provider calls.
+- Docs validation: no separate deterministic docs validation command is available; validation came from docs-focused tests plus command registry validation.
+- Provider doctor summary: provider setup docs cover Reddit, SerpAPI, Brave, WeatherAPI, Telegram, Gmail, NewsAPI, Media Cloud, Microsoft Graph, GitHub, media providers, and local brain-runtime config checks.
+- Blockers: none for SECRETS-07. Continue SECRETS-08.
+
+## Run: 2026-05-25 Secrets and API Key Management SECRETS-06
+
+- Scope confirmed: build dependency-free secret leak scanner and Git preflight commands for tracked files and staged diffs.
+- Non-goals confirmed: did not install gitleaks/trufflehog, print raw secrets, rewrite Git history, commit, push, enable paid APIs, or weaken safety controls.
+- prompt_id: `SECRETS-06`.
+- next_prompt_id: `SECRETS-07`.
+- Files created: `agent/secrets/scanner.py`, `agent/secrets/git_preflight.py`, `tests/secrets/test_secret_scanner_git_preflight.py`, `docs/secrets/SECRET_LEAK_SCANNING.md`, and `docs/git/SAFE_GIT_PREFLIGHT.md`.
+- Files changed: `agent/tools/secrets.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, README, command registry/test matrix, changelog, project state, feature registry/maturity, prompt tracking, and completion report.
+- Commands added/changed: added brokered SAFE read-only commands `python smart_agent.py secrets scan`, `python smart_agent.py secrets scan --staged`, `python smart_agent.py git preflight`, and `python smart_agent.py git preflight --staged`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: scanner/preflight fixture tests passed with 7 tests; combined secrets tests passed with 19 tests; command registry validation passed with 541 commands; staged secret scan/preflight smokes passed with no findings; tracked secret scan/preflight passed after false-positive tuning with 0 fail, 10 placeholder/test-fixture info findings, and no raw values; startup policy and capability manifest validation passed via `make policy-check`.
+- Secret scan result: current tracked scan status is ok. Findings are placeholder/test-fixture info records only; no likely real tracked secret was reported by the new scanner.
+- Git preflight status: current tracked preflight reports `safe_to_commit=true`, but the worktree remains very large and dirty from prior batches and still needs human review before any commit/push.
+- Blockers: none for SECRETS-06. Continue SECRETS-07.
+
+## Run: 2026-05-25 Secrets and API Key Management SECRETS-05
+
+- Scope confirmed: build optional macOS Keychain strategy and dry-run/status adapter for local secret-storage guidance without real Keychain reads or writes.
+- Non-goals confirmed: did not write real secrets to Keychain, read real secrets in tests, prompt for Keychain access, require Keychain, store secrets in repo, install packages, enable paid APIs, commit, or push.
+- prompt_id: `SECRETS-05`.
+- next_prompt_id: `SECRETS-06`.
+- Files created: `tests/secrets/test_keychain_adapter.py` and `docs/secrets/MACOS_KEYCHAIN_INTEGRATION.md`.
+- Files changed: `agent/secrets/keychain.py`, `agent/tools/secrets.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, README, command registry/test matrix, changelog, project state, feature registry/maturity, prompt tracking, and completion report.
+- Commands added/changed: added brokered SAFE metadata/dry-run commands `python smart_agent.py secrets keychain status`, `python smart_agent.py secrets keychain get <secret_id> --dry-run`, and `python smart_agent.py secrets keychain set <secret_id> --dry-run`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: Keychain/resolver/registry/provider-doctor focused tests passed with 37 tests; `secrets keychain status`, dry-run get, and dry-run set smokes passed; command registry validation passed with 537 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Keychain strategy: adapter is optional, disabled for real access, mock/dry-run only, non-macOS unsupported, and returns `keychain_accessed=false`, `value_returned=false`, or `value_written=false`.
+- Blockers: none for SECRETS-05. Continue SECRETS-06.
+
+## Run: 2026-05-25 Secrets and API Key Management SECRETS-04
+
+- Scope confirmed: build provider-specific secret/config doctors for configured provider credentials without printing values, calling APIs, or enabling providers.
+- Non-goals confirmed: did not call live provider APIs, use paid APIs, enable providers, print values, read personal data, access Keychain, commit, or push.
+- prompt_id: `SECRETS-04`.
+- next_prompt_id: `SECRETS-05`.
+- Files created: `docs/secrets/PROVIDER_SECRET_DOCTORS.md`.
+- Files changed: `agent/connectors/secret_doctor.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, tests, README, command registry/test matrix, changelog, project state, feature registry/maturity, prompt tracking, and completion report.
+- Commands added/changed: extended `python smart_agent.py secrets doctor <provider>` and `python smart_agent.py secrets doctor all` for Reddit, SerpAPI, Brave, WeatherAPI, Telegram, Gmail, NewsAPI, Media Cloud, Microsoft, GitHub, media, LM Studio, Ollama, and llama.cpp.
+- Tests and validation with `./.venv/bin/python` 3.12.13: provider doctor/secrets tests passed with 34 tests; `secrets doctor github` smoke passed; command registry validation passed with 534 commands; startup policy and capability manifest validation passed via `make policy-check`; full suite initially failed on three scoped redaction/feature-registry regressions, targeted fixes passed, and full suite then passed with 1602 tests.
+- Provider doctor summary: provider doctors report configured/allowed/default/cost/setup metadata only. Gmail/Microsoft broad-scope risks and repo-local token paths are warnings. Media generation remains disabled/stubbed. LM Studio/Ollama/llama.cpp are local runtime config checks, not secret reads.
+- Blockers: none for SECRETS-04. Continue SECRETS-05.
+
+## Run: 2026-05-25 Secrets and API Key Management SECRETS-03
+
+- Scope confirmed: build safe secret source metadata, dependency-free local `.env` loading, and source resolver presence/status reporting.
+- Non-goals confirmed: did not require `python-dotenv`, install packages, access Keychain, print values, store values, call providers, enable paid APIs, commit, or push.
+- prompt_id: `SECRETS-03`.
+- next_prompt_id: `SECRETS-04`.
+- Files created: `agent/secrets/env_loader.py`, `agent/secrets/sources.py`, `agent/secrets/resolver.py`, `tests/secrets/test_secret_resolver_env_loader.py`, and `docs/secrets/SECRET_SOURCES.md`.
+- Files changed: `agent/tools/secrets.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, README, command registry/test matrix, changelog, project state, feature registry/maturity, prompt tracking, and completion report.
+- Commands added/changed: added brokered SAFE metadata command `python smart_agent.py secrets sources`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: resolver/env-loader/registry/doctor focused tests passed with 26 tests; `secrets sources` smoke passed; command registry validation passed with 533 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Safety notes: env vars override local `.env`; invalid `.env` lines warn without printing raw contents; `.env` tracked status can be reported; resolver returns presence/source/setup metadata only and Keychain is not accessed.
+- Blockers: none for SECRETS-03. Continue SECRETS-04.
+
+## Run: 2026-05-25 Secrets and API Key Management SECRETS-02
+
+- Scope confirmed: build the central secret registry and recursive redaction layer with fake-secret-only tests and safe metadata commands.
+- Non-goals confirmed: did not read real secrets except metadata-free static registry checks, print values, store secrets, access Keychain, install packages, enable paid providers, commit, or push.
+- prompt_id: `SECRETS-02`.
+- next_prompt_id: `SECRETS-03`.
+- Files created: `agent/secrets/__init__.py`, `agent/secrets/models.py`, `agent/secrets/registry.py`, `agent/secrets/redaction.py`, `agent/secrets/errors.py`, `agent/tools/secrets.py`, `tests/secrets/test_secret_registry_redaction.py`, and `docs/secrets/SECRET_REGISTRY.md`.
+- Files changed: `agent/safety/redaction.py`, `agent/tools/registry.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, `config/capabilities.yaml`, README, command registry/test matrix, changelog, project state, feature registry/maturity, prompt tracking, and completion report.
+- Commands added/changed: added brokered SAFE metadata commands `python smart_agent.py secrets list`, `python smart_agent.py secrets redaction-test`, and `python smart_agent.py secrets policy`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused secrets tests passed with 21 tests; `secrets redaction-test` smoke passed; command registry validation passed with 532 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Safety notes: registry commands read static metadata only; redaction-test uses fake values only; `SecretRedactor` now redacts known env names, key-like patterns, provider token patterns, nested dict/list structures, and provided known values without over-redacting status metadata.
+- Blockers: none for SECRETS-02. Continue SECRETS-03.
+
+## Run: 2026-05-25 Secrets and API Key Management SECRETS-01
+
+- Scope confirmed: create Secrets and API Key Management architecture/policy docs, secret inventory schema, placeholder env template, `.gitignore` protections, and conservative tracker updates only.
+- Non-goals confirmed: did not create a tracked secrets file, store/print real keys, access Keychain, call provider APIs, enable paid providers, install packages, commit, or push.
+- prompt_id: `SECRETS-01`.
+- next_prompt_id: `SECRETS-02`.
+- Files created: `docs/secrets/SECRETS_MANAGEMENT_POLICY.md`, `docs/secrets/API_KEY_INVENTORY.md`, `docs/secrets/LOCAL_ENV_SETUP.md`, `docs/secrets/MACOS_KEYCHAIN_GUIDE.md`, `docs/secrets/SECRET_REDACTION_POLICY.md`, `docs/decisions/secrets_management_architecture.md`, `docs/templates/env_template.example`, and `tests/secrets/test_secrets_policy_docs.py`.
+- Files changed: `.gitignore`, `.env.example`, `README.md`, `CHANGELOG.md`, `docs/PROJECT_STATE.md`, `docs/FEATURE_REGISTRY.md`, `docs/FEATURE_MATURITY.md`, `docs/RISK_REGISTER.md`, `docs/THREAT_MODEL.md`, prompt tracking, and completion report.
+- Tests and validation with `./.venv/bin/python` 3.12.13: `tests/secrets/test_secrets_policy_docs.py` passed with 3 tests. Best-effort tracked sensitive-path check found only `.env.example` and `reports/sessions/.gitkeep`; no tracked `.env`, token, private key, credential, raw audit log, or raw session report file was found.
+- Typo handling: the imported prompt body preserves `SECRET_REDATION_POLICY.md` as source text, but created docs use corrected `docs/secrets/SECRET_REDACTION_POLICY.md`.
+- Feature maturity: Secrets and API Key Management is now conservatively `1 Specified`; registry/redaction/resolver/provider-doctor/Keychain/scanner implementation prompts remain pending.
+- Blockers: none for SECRETS-01. Continue SECRETS-02.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-12
+
+- Scope confirmed: run the Creative Media Generation release gate and conservative maturity review only, with validation, docs, tracker updates, and small safe tracker fixes.
+- Non-goals confirmed: no real media generation/editing, provider API call, paid API, model install/download, upload/publish, voice cloning, real-person likeness workflow, personal-data access, safety-control bypass, commit, or push.
+- prompt_id: `MEDIA-12`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Files created: `docs/media/CREATIVE_MEDIA_RELEASE_GATE.md`, `docs/media/CREATIVE_MEDIA_MATURITY_REVIEW.md`.
+- Files changed: media track docs, changelog, project state, feature registry, feature maturity, feature roadmap, release checklist, prompt queue/ledger/audit, eval report, and completion report.
+- Commands added/changed: none in MEDIA-12; MEDIA-11 already added `python smart_agent.py eval run --media`, `python smart_agent.py eval report --media`, and media dogfood command registry rows.
+- Tests and validation with `./.venv/bin/python` 3.12.13: full suite passed with 1580 tests; focused media release suite passed with 77 tests; `dogfood show media_core`, `media_safety`, `media_image_planning`, and `media_video_audio_planning` passed; `eval run --media` passed with 6 pass, 0 fail, and 5 personal-data skips; `eval report --media` passed; `commands validate` passed with 529 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs validation: no deterministic docs validation command is available; `smart_agent.py docs validate` returned generic assistant guidance, so docs evidence comes from docs-focused tests, command registry validation, and the full suite.
+- Feature maturity: Creative Media Generation remains conservatively `4 Tested`, readiness 77. It is local/mock/fixture-tested and release-gated, not live-validated, user-ready for real generation, or a mature provider pattern.
+- Safe reliance boundary: safe for planning, provider metadata inspection, safety/license/consent preflight, bounded asset metadata, fixture dogfood/evals, and future provider design. Not safe for real generation/editing, real provider calls, model downloads, publishing, voice cloning, person-likeness workflows, or commercial-rights assurance.
+- Blockers: no MEDIA-12 blocker. Remaining broader blockers are no live provider validation, no manual media dogfood session, no consent-record system, no real provider implementation, and the large dirty worktree/clean release-candidate boundary gap.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-11
+
+- Scope confirmed: Build Creative Media dogfood and eval suite only: mock/fixture dogfood YAML, media eval fixtures, eval CLI flags, docs, tests, and tracking.
+- Non-goals confirmed: no real media generation/editing, provider API call, paid API, model install/download, media upload/publish, voice cloning, real-person likeness workflow, personal-data tools, safety-control bypass, commit, or push.
+- prompt_id: `MEDIA-11`.
+- next_prompt_id: `MEDIA-12`.
+- Files created: `dogfood_suites/media_core.yaml`, `dogfood_suites/media_safety.yaml`, `dogfood_suites/media_image_planning.yaml`, `dogfood_suites/media_video_audio_planning.yaml`, `eval_cases/media/creative_media.json`, `tests/media/test_media_dogfood_eval.py`, `docs/media/MEDIA_DOGFOOD_RUNBOOK.md`.
+- Files changed: `agent/ui/evals.py`, `agent/ui/cli_commands.py`, `agent/ui/command_registry.py`, command registry/test matrix, media docs, README/User Guide, changelog, feature/roadmap/maturity trackers, risk/threat docs, release checklist, project state, and completion report.
+- Commands added/changed: `python smart_agent.py eval run --media`, `python smart_agent.py eval report --media`, and command registry rows for `dogfood run media_core/media_safety/media_image_planning/media_video_audio_planning --session`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: `tests/media/test_media_dogfood_eval.py` passed 6 tests; focused media/dogfood/eval/docs/command-registry suite passed 109 tests; `dogfood show media_core` passed; `eval run --media` passed with 6 pass, 0 fail, and 5 personal-data skips; `eval report --media` passed; `commands validate` passed with 529 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs updated: media dogfood runbook, creative media track, README/User Guide pointers, command registry/test matrix, roadmap, feature registry/maturity, risk register, threat model, release checklist, changelog, project state.
+- Feature maturity: Creative Media Generation remains `4 Tested`, readiness score increased conservatively to 76, with local mock/fixture dogfood/eval coverage but no live provider validation or release gate yet.
+- Blockers: none for MEDIA-11. Continue MEDIA-12 release gate; do not run real provider generation or live media APIs.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-10
+
+- Scope confirmed: add media workflow command stubs/planners and natural-language routing hooks that make media requests discoverable without unsafe execution.
+- Non-goals confirmed: no real media generation/editing, provider calls, upload/post, unsafe prompt execution, personal-media reads, model installs/downloads, paid APIs, automatic natural-language execution, safety-control bypass, commit, or push.
+- prompt_id: `MEDIA-10`.
+- next_prompt_id: `MEDIA-11`.
+- Implementation: added `agent.media.workflow_planner` with target inference for thumbnail, creative image, image, video, image-to-video, audio, music, and TTS requests; safety preflight runs before target-specific planning; unsafe prompts return blocked plans; safe requests return exact dry-run command suggestions. Wired brokered `python smart_agent.py media plan "request"` through `media.plan`, added capability manifest metadata, command registry/test matrix rows, and deterministic NL `media.plan` parser/router/index hooks.
+- Safety behavior: `media plan` returns `provider_calls_performed=false`, `generated_media=false`, `asset_write_performed=false`, `upload_publish_enabled=false`, and `natural_language_safe_to_execute=false`; NL media requests produce preflight/planning suggestions only and do not execute mapped commands.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused MEDIA-10 media/NL/docs/command registry tests passed 105 tests; CLI smokes for `media plan`, unsafe `media plan`, and `nl "make me a thumbnail for this vlog"` passed with no generation/provider/upload side effects; command registry validation passed with 523 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs updated: `docs/media/MEDIA_WORKFLOW_COMMANDS_AND_NL_ROUTING.md`, README, USER_GUIDE, media track docs, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, changelog, project state, and completion report were updated.
+- Blockers: none for MEDIA-10. Continue MEDIA-11 as mock/fixture-first media dogfood and eval suite work; do not run real provider generation or live media APIs.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-09
+
+- Scope confirmed: add TTS and voice generation strategy scaffolding with voice category planning, provider candidate metadata, consent policy reporting, tests, docs, and tracker updates.
+- Non-goals confirmed: no TTS model installs, model downloads, real voice generation, voice cloning, public/private person voice imitation, personal voice sample use, upload/publish, consent record storage, paid API, personal-data access, commit, or push.
+- prompt_id: `MEDIA-09`.
+- next_prompt_id: `MEDIA-10`.
+- Implementation: added `agent.media.tts` with TTS/voice provider candidates, voice category classification, generic TTS planning, user-owned-voice consent-system requirements, blocked public/private person voice imitation, voice-clone denial/deferment, and voice consent policy metadata; wired brokered `python smart_agent.py media tts plan "text"`, `python smart_agent.py media voice consent-policy`, and `python smart_agent.py media voice providers`.
+- Safety behavior: TTS/voice provider candidates all report `real_generation_enabled=false`; voice cloning is not enabled; public figure, private person, cloning, and impersonation requests are denied/deferred; user-owned voice requests require a future explicit consent system; no real provider call, model download, generation, upload, publication, personal voice sample read, consent record storage, or memory write was added.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused MEDIA-09 media/docs/command registry tests passed 71 tests; CLI smokes for `media tts plan`, `media voice consent-policy`, and `media voice providers` passed with `real_generation=false`, `voice_cloning_enabled=false`, and no generated media; command registry validation passed with 522 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs updated: `docs/media/TTS_VOICE_GENERATION_STRATEGY.md`, `docs/media/VOICE_CONSENT_POLICY.md`, media track docs, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, changelog, project state, and completion report were updated.
+- Blockers: none for MEDIA-09. Continue MEDIA-10 as media workflow commands and natural-language routing only; do not let natural-language media requests bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-08
+
+- Scope confirmed: add audio, music, and sound generation strategy and scaffolding with provider candidates, dry-run planning, mock audio metadata, tests, docs, and tracker updates.
+- Non-goals confirmed: no audio/music model installs, model downloads, real audio generation, voice cloning, copyrighted song/artist imitation as commercial output, upload/publish, TTS runtime, paid API, personal-data access, commit, or push.
+- prompt_id: `MEDIA-08`.
+- next_prompt_id: `MEDIA-09`.
+- Implementation: added `agent.media.audio_generation` with audio/music provider candidates, dry-run audio/music plans, deterministic safety/license metadata, voice-cloning denial metadata, artist/track imitation flags, setup hints for unconfigured providers, and dry-run generation helpers; added `agent.media.providers.mock_audio` for tests/mock metadata only; wired brokered `python smart_agent.py media audio providers`, `python smart_agent.py media music plan "prompt"`, `python smart_agent.py media generate audio "prompt" --dry-run`, and `python smart_agent.py media generate music "prompt" --dry-run`.
+- Safety behavior: audio/music provider candidates all report `real_generation=false`; CLI audio/music generation requires `--dry-run`; voice cloning is denied/deferred; artist/track imitation is flagged and not allowed as commercial output; no real provider call, model download, generation, upload, publication, source-audio read, or memory write was added.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused MEDIA-08 media/docs/command registry tests passed 65 tests; CLI smokes for `media audio providers`, `media music plan`, `media generate audio --dry-run`, and `media generate music --dry-run` passed with `real_generation=false`, `voice_cloning_enabled=false`, and `generated_media=false`; command registry validation passed with 522 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs updated: `docs/media/AUDIO_MUSIC_GENERATION_STRATEGY.md`, `docs/media/providers/AUDIO_PROVIDER_CANDIDATES.md`, media track docs, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, changelog, project state, and completion report were updated.
+- Blockers: none for MEDIA-08. Continue MEDIA-09 as TTS and voice generation strategy only; keep voice cloning denied/deferred without an explicit consent workflow.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-07
+
+- Scope confirmed: add video generation provider strategy and scaffolding with provider candidates, dry-run planning, mock video metadata, tests, docs, and tracker updates.
+- Non-goals confirmed: no video model downloads, video generation dependency installs, real video generation, upload/post, real-person likeness video workflow, source-image/source-video input, paid API, personal-data access, commit, or push.
+- prompt_id: `MEDIA-07`.
+- next_prompt_id: `MEDIA-08`.
+- Implementation: added `agent.media.video_generation` with video provider candidates, resource warnings, dry-run video plans, deterministic safety/license metadata, setup hints for unconfigured providers, and `dry_run_generate_video`; added `agent.media.providers.mock_video` for tests/mock metadata only; wired brokered `python smart_agent.py media video providers`, `python smart_agent.py media video plan "prompt"`, and `python smart_agent.py media generate video "prompt" --dry-run`.
+- Safety behavior: video provider candidates all report `real_generation=false`; CLI video generation requires `--dry-run`; resource warnings report hardware review required and model downloads disabled; unsafe prompts return blocked plans; no real provider call, model download, generation, upload, publication, source-media read, or memory write was added.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused MEDIA-07 media/docs/command registry tests passed 57 tests; CLI smokes for `media video providers`, `media video plan`, and `media generate video --dry-run` passed with `real_generation=false`, `model_downloads_enabled=false`, and `generated_media=false`; command registry validation passed with 522 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs updated: `docs/media/VIDEO_GENERATION_STRATEGY.md`, `docs/media/providers/VIDEO_PROVIDER_CANDIDATES.md`, media track docs, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, changelog, project state, and completion report were updated.
+- Blockers: none for MEDIA-07. Continue MEDIA-08 as audio/music/sound generation strategy only; do not generate audio/music, install/download models, call paid APIs, upload/publish, implement voice cloning, or enable unclear commercial-license workflows.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-06
+
+- Scope confirmed: add image editing, thumbnail, and social creative workflow scaffolding with workflow definitions, dry-run planning, mock asset metadata support, docs, tests, and tracker updates.
+- Non-goals confirmed: no real user-image editing, media generation, upload/post, social publishing, real-person likeness edits, personal-image input, model install/download, provider SDK import, paid API, personal-data access, commit, or push.
+- prompt_id: `MEDIA-06`.
+- next_prompt_id: `MEDIA-07`.
+- Implementation: added `agent.media.creative_workflows` with 10 local workflow templates, aspect-ratio/output-size suggestions, dry-run creative/thumbnail plan builders, deterministic safety/license metadata, and an explicit mock workflow asset metadata helper for tests; wired brokered `python smart_agent.py media thumbnail "prompt" --dry-run`, `python smart_agent.py media creative plan "prompt"`, and `python smart_agent.py media creative templates`.
+- Safety behavior: CLI creative workflow commands are dry-run/metadata only, report `real_editing=false`, `real_generation=false`, and `upload_publish_enabled=false`, and do not write generated assets. The mock asset helper writes only fake test metadata under the controlled media workspace when called directly in tests.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused MEDIA-06 media/docs/command registry tests passed 49 tests; CLI smokes for `media creative templates`, `media creative plan`, and `media thumbnail --dry-run` passed; command registry validation passed with 522 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs updated: `docs/media/THUMBNAIL_SOCIAL_CREATIVE_WORKFLOWS.md`, media track docs, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, changelog, project state, and completion report were updated.
+- Blockers: none for MEDIA-06. Continue MEDIA-07 as video generation provider strategy only; do not download models, install runtimes, call paid APIs, generate/edit real media, upload/publish, or enable real-person likeness/voice workflows.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-05
+
+- Scope confirmed: add an image generation provider track with dry-run planning, mock image-provider metadata scaffolding, provider candidate docs, tests, and tracker updates.
+- Non-goals confirmed: no real image generation, model install/download, provider SDK import, paid API, asset write from the CLI, personal-photo input, upload/publish, voice cloning, real-person likeness workflow, personal-data access, commit, or push.
+- prompt_id: `MEDIA-05`.
+- next_prompt_id: `MEDIA-06`.
+- Implementation: added `agent.media.image_generation` with provider candidates, image dry-run plan records, deterministic safety/license metadata, setup hints for unconfigured providers, and `dry_run_generate_image`; added `agent.media.providers.mock_image` for tests/mock metadata only; wired brokered `python smart_agent.py media image providers`, `python smart_agent.py media image plan "prompt"`, and `python smart_agent.py media generate image "prompt" --dry-run`.
+- Safety behavior: image provider candidates all report `real_generation=false`; CLI generation requires `--dry-run`; unsafe prompts return blocked plans; paid APIs/model downloads are not enabled; no real provider call, generation, upload, publication, personal-media read, or memory write was added.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused MEDIA-05 media/docs/command registry tests passed 43 tests; CLI smokes for `media image providers`, `media image plan`, and `media generate image --dry-run` passed with `real_generation=false`/`generated_media=false`; command registry validation passed with 522 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs updated: `docs/media/IMAGE_GENERATION_STRATEGY.md`, `docs/media/providers/IMAGE_PROVIDER_CANDIDATES.md`, media track docs, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, changelog, project state, and completion report were updated.
+- Blockers: none for MEDIA-05. Continue MEDIA-06 as image editing, thumbnail, and social creative workflow scaffolding only; do not generate/edit real media, use personal photos, install/download models, call paid APIs, upload/publish, implement voice cloning, or enable real-person likeness workflows.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-04
+
+- Scope confirmed: add ComfyUI provider strategy/stub, safe config defaults, status/doctor/workflow-list metadata, mocked tests, docs, and trackers.
+- Non-goals confirmed: no ComfyUI install, server start, model download, workflow submission, custom-node execution, media generation, paid API, upload/publish, commit, or push.
+- prompt_id: `MEDIA-04`.
+- next_prompt_id: `MEDIA-05`.
+- Implementation: added `agent.media.providers.comfyui` with disabled-by-default `ComfyUIConfig`, provider status/doctor/list-workflows stubs, normalized provider errors, and workflow submission denial; wired brokered `python smart_agent.py media comfyui doctor` and `python smart_agent.py media workflows list --provider comfyui`.
+- Config defaults: `COMFYUI_ENABLED=false`, `COMFYUI_BASE_URL=http://127.0.0.1:8188`, `COMFYUI_TIMEOUT_SECONDS=120`, `COMFYUI_OUTPUT_DIR=`, `COMFYUI_ALLOW_WORKFLOW_SUBMIT=false`, `COMFYUI_ALLOW_CUSTOM_NODES=false`, and `COMFYUI_REQUIRE_SAFETY_PREFLIGHT=true`.
+- Tests and validation with `./.venv/bin/python`: focused media/ComfyUI/docs/command registry tests passed 35 tests; CLI smokes for ComfyUI doctor and workflow list passed; command registry validation passed with 522 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs updated: `docs/media/providers/COMFYUI_PROVIDER.md`, `docs/decisions/comfyui_provider_strategy.md`, and media tracker docs were updated.
+- Blockers: none for MEDIA-04. Continue MEDIA-05 with mock/local image-generation provider strategy only; do not generate media or install/download models.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-03
+
+- Scope confirmed: add media prompt/output safety, copyright, consent, and license policy with deterministic preflight and tests.
+- Non-goals confirmed: no media generation, external moderation API, provider call, voice cloning, real-person impersonation/likeness workflow, legal advice, personal-data access, commit, or push.
+- prompt_id: `MEDIA-03`.
+- next_prompt_id: `MEDIA-04`.
+- Implementation: added `agent.media.safety` deterministic prompt classifier and `agent.media.licenses` provider license metadata report; wired brokered `python smart_agent.py media safety-check "prompt"`, `python smart_agent.py media license report`, and `python smart_agent.py media consent policy`.
+- Safety behavior: safe generic prompts are allowed by preflight only; commercial/provider uncertainty requires license review; copyrighted/brand references require license review; real-person/private/celebrity likeness requires consent and/or human review; voice cloning, impersonation, illegal instructional, extremist/hate, explicit sexual, and graphic violence markers are denied.
+- Tests and validation with `./.venv/bin/python`: focused media safety/provider/asset/docs/command registry tests passed 27 tests; CLI smokes for safety, license, and consent commands passed.
+- Docs updated: `docs/media/MEDIA_PROMPT_SAFETY.md`, `docs/media/MEDIA_COPYRIGHT_AND_LICENSE_POLICY.md`, `docs/media/MEDIA_CONSENT_POLICY.md`, and media track/tracker docs were updated.
+- Blockers: none for MEDIA-03. Continue MEDIA-04 as ComfyUI strategy/stub only; do not install ComfyUI, start a server, download models, or generate media.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-02
+
+- Scope confirmed: create provider-neutral media models, static provider registry, controlled asset manager, safe metadata/dry-run CLI commands, tests, docs, and tracker updates.
+- Non-goals confirmed: no real media generation, provider install, model download, paid API, upload/publish, personal photo/video access, voice cloning, real-person likeness workflow, safety-control bypass, commit, or push.
+- prompt_id: `MEDIA-02`.
+- next_prompt_id: `MEDIA-03`.
+- Implementation: added `agent.media` models, provider registry, asset manager, redaction helpers, and `agent.tools.media` ToolBroker tools; wired `python smart_agent.py media providers`, `media doctor`, `media assets list`, `media assets show <asset_id>`, and `media assets cleanup --dry-run`.
+- Asset manager behavior: defaults to `workspace/media/`, allows only `workspace/media/` or `media_outputs/` under the project root, rejects absolute/path traversal escapes, writes `.media.json` metadata for fake/test assets, redacts prompt previews and secret-looking metadata, and supports dry-run cleanup only in MEDIA-02.
+- Provider registry behavior: metadata-only records for `mock`, `comfyui`, and `external_paid`; no SDK imports, provider calls, model downloads, paid APIs, uploads, or generation.
+- Tests and validation with `./.venv/bin/python`: media model/registry/asset tests passed 10 tests; focused media/docs/command registry tests passed 19 tests; CLI smokes for media providers/doctor/assets list/show/cleanup passed; command registry validation passed with 522 commands; startup policy and capability manifest validation passed via `make policy-check`; policy and ToolBroker tests passed 22 tests.
+- Docs updated: media provider registry and asset manager docs were added; media track/provider/asset docs, command registry/test matrix, capability manifest, feature registry, feature maturity, roadmap, risk register, threat model, changelog, project state, and completion report were updated.
+- Blockers: none for MEDIA-02. Continue MEDIA-03 as policy/docs/test work only; do not generate media or enable providers.
+
+## Run: 2026-05-25 Creative Media Generation MEDIA-01
+
+- Scope confirmed: create Creative Media Generation roadmap and risk model as documentation/tracking work only.
+- Non-goals confirmed: did not install ComfyUI or model dependencies, download models, call paid APIs, generate media, upload or publish media, enable social posting, implement voice cloning, implement real-person likeness workflows, enable personal-data tools, weaken ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger, commit, or push.
+- prompt_id: `MEDIA-01`.
+- next_prompt_id: `MEDIA-02`.
+- Pack import: validated and imported `prompts/packs/creative-media-generation-v1.promptpack.md` as `MEDIA-01` through `MEDIA-12`, preserving split prompt files under `prompts/queued/`.
+- Created: `docs/media/CREATIVE_MEDIA_GENERATION_TRACK.md`, `docs/media/MEDIA_PROVIDER_STRATEGY.md`, `docs/media/MEDIA_RISK_MODEL.md`, `docs/media/MEDIA_LICENSE_POLICY.md`, `docs/media/MEDIA_ASSET_POLICY.md`, `docs/media/MEDIA_SAFETY_POLICY.md`, `docs/decisions/creative_media_generation_architecture.md`, and `tests/test_creative_media_docs.py`.
+- Updated: CHANGELOG, project state, feature registry, feature maturity, feature roadmap, command registry, command test matrix, risk register, threat model, prompt tracking, and completion report.
+- Planned commands recorded as planned/stubbed: `media providers`, `media doctor`, `media assets list`, `media generate image`, `media generate video`, `media generate audio`, `media generate music`, `media thumbnail`, `media workflow list`, `media safety-check`, `media license report`, and `media dogfood`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: creative media docs tests passed with 3 passed; command registry validation passed with 522 commands; startup policy validation passed via `make policy-check`; capability manifest validation command completed via `make policy-check`. Dedicated docs validation command remains not available as a separate repo validator.
+- Maturity result: Creative Media Generation is `1 Specified`, readiness 39/100. It is docs-only and not implemented, tested with runtime behavior, live-validated, user-ready, or mature.
+- Blockers: none for MEDIA-01. Continue MEDIA-02 only as a mock/test provider registry and output asset manager milestone without model installs, downloads, paid APIs, real media generation, upload/publish, voice cloning, or real-person likeness workflows.
+
+## Run: 2026-05-25 SOURCE-TRUTH-RECONCILE-01 Source-of-Truth Reconciliation
+
+- Scope confirmed: audit and reconcile source-of-truth hierarchy, prompt trackers, feature/maturity records, command registry state, capability manifest status, docs wiring, artifact/git hygiene, QA/test/dogfood wiring, and clean release-candidate boundary.
+- Non-goals confirmed: did not implement runtime features, run queued feature prompts, access personal data, send messages/email, write calendar/contacts/tasks externally, install packages, download models, call paid APIs, start services, enable browser automation/MCP/media providers, run HIGH/CRITICAL commands, weaken ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger, commit, or push.
+- prompt_id: `SOURCE-TRUTH-RECONCILE-01`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Created: `docs/reconciliation/CURRENT_REPO_STATE_SNAPSHOT.md`, `SOURCE_OF_TRUTH_HIERARCHY.md`, `PROMPT_TRACKER_RECONCILIATION.md`, `FEATURE_AND_MATURITY_RECONCILIATION.md`, `COMMAND_REGISTRY_RECONCILIATION.md`, `CAPABILITY_MANIFEST_RECONCILIATION.md`, `DOCS_WIRING_RECONCILIATION.md`, `ARTIFACT_AND_GIT_HYGIENE_RECONCILIATION.md`, `QA_TEST_DOGFOOD_RECONCILIATION.md`, `CLEAN_RELEASE_CANDIDATE_BOUNDARY_PLAN.md`, and `SOURCE_TRUTH_RECONCILIATION_FINAL_REPORT.md`.
+- Tracker fixes: reconciled stale completed prompt rows for `SKILL-01` through `SKILL-10`, `CODEBUG-01` through `CODEBUG-08`, `NLCMD-01` through `NLCMD-10`, and `QA-01` through `QA-10`; changed recovered Creative Media and Secrets prompt-pack imports to `needs_review` because source files are now present but prompts were not imported/run.
+- Feature/maturity updates: added `SOURCE-TRUTH-RECONCILIATION` to the feature registry and maturity tracker as local tested productization/release-readiness work. No runtime feature was upgraded to live-validated or user-ready.
+- Validation with `./.venv/bin/python` 3.12.13: command registry validation passed with 522 commands; `make policy-check` passed startup policy and capability manifest validation; `./scripts/agent doctor` passed; full suite passed with 1493 passed, 1 skipped after two narrow tracker-format fixes; targeted tracker tests passed with 2 passed; `dogfood run all_safe --dry-run` passed; safe eval passed with 58 pass, 0 fail, 6 skipped. Dedicated docs validation command is not available; `smart_agent.py docs validate --help` falls through to generic chat, so docs validation evidence comes from docs-focused tests and the full suite.
+- Secret/artifact hygiene: tracked sensitive-path check found no tracked `.env`, token files, private keys, databases, raw logs, or raw reports beyond `.env.example`, secret-doctor source/tests, and `.gitkeep` placeholders. Best-effort pattern scan found many placeholder/test/doc/config matches and printed only paths/line numbers; no external scanner was installed/run.
+- Blockers: large dirty worktree, clean release-candidate boundary review before push, external secret scan gap, manual/live validation gaps, and stale queued prompt-file archival remain.
+
+## Run: 2026-05-25 QA-FE-BE-01 Command QA Frontend/Backend Boundary
+
+- Scope confirmed: add a reusable frontend/backend boundary for the Command QA Sandbox so future CLI, local dashboard, Mac app, Windows app, or iOS companion views can consume QA status/results through service methods instead of duplicating backend logic.
+- Non-goals confirmed: did not create a web server, GUI, Mac/iOS/Windows app, background persistence, new high-risk command execution, personal-data access, HIGH/CRITICAL command execution, message/email send, calendar/contact/task/file write behavior outside existing approved QA artifacts, safety-control bypass, commit, or push.
+- prompt_id: `QA-FE-BE-01`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Implemented: added `agent/qa/api_models.py` with JSON-serializable response envelopes and summary models; added `agent/qa/service.py` as the backend boundary for status, latest run, command coverage, failure summaries, bug summaries, regression coverage, safe batch selection, maturity impact, safe plan creation, bounded safe batch execution, bug/regression generation, and self-heal plan creation; refactored `agent/qa/dashboard.py` into a presentation adapter; routed QA plan/run/status and selected artifact commands through `QAService`; added frontend/backend boundary docs and dashboard API contract docs.
+- Safety notes: read-only service/dashboard methods do not execute commands; action methods enforce safe-only tier behavior, block unsupported tiers plus HIGH/CRITICAL/FORBIDDEN/personal-data candidates, delegate only to existing safe runner or local artifact generators, redact summaries, and write no memory.
+- Tests and validation with `./.venv/bin/python` 3.12.13: boundary/dashboard tests passed with 13 passed; all QA tests passed with 56 passed; full suite initially failed on a feature-registry yes/no column formatting issue, that tracker row was corrected, the targeted registry test passed, and full suite then passed with 1493 passed, 1 skipped; `qa dashboard` and `qa status` smokes passed; command registry validation passed with 522 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: `docs/qa/QA_FRONTEND_BACKEND_BOUNDARY.md`, `docs/qa/QA_DASHBOARD_API_CONTRACT.md`, `docs/qa/COMMAND_QA_DASHBOARD.md`, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, test plan, release checklist, project state, prompt tracking, changelog, and this completion report updated.
+- Blockers: none for this scoped boundary. Remaining broader blockers are live/manual command QA validation, historical run-age tracking, human conversion of generated regression scaffolds, and the missing Creative Media prompt pack source file from the prior request.
+
+## Run: 2026-05-25 Creative Media Generation Pack Import Attempt
+
+- Scope confirmed: confirm the requested prompt pack exists, avoid duplicate import, import `MEDIA-01` through `MEDIA-12` only from the exact pack source, then run the controlled batch if available.
+- Non-goals confirmed: did not reconstruct missing prompt bodies, did not install models or dependencies, did not download large models, did not call paid APIs, did not generate real media, did not upload or publish media, did not implement voice cloning, did not create real-person likeness or voice workflows, did not enable personal-data tools, did not weaken ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger, and did not commit or push.
+- prompt_id: `MEDIA-PACK-IMPORT`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Result: blocked before import because `prompts/packs/creative-media-generation-v1.promptpack.md` is missing.
+- Evidence: `test -f prompts/packs/creative-media-generation-v1.promptpack.md` returned missing; `find prompts/packs -maxdepth 1 -type f` listed no Creative Media pack; `rg` found no `MEDIA-*`, `creative-media-generation`, `Creative Media`, or `media generation` prompt tracking/import records in the searched prompt and tracker files.
+- Tests run: none for the missing pack; no implementation occurred.
+- Validations run: prompt pack existence check, prompt pack listing, prompt-tracking search, git status, and Python interpreter version check only.
+- Blocker: restore or provide the exact prompt pack file before running `MEDIA-01` through `MEDIA-12`.
+
+## Run: 2026-05-25 Secrets and API Key Management Pack Import Attempt
+
+- Scope confirmed: confirm the requested prompt pack exists, avoid duplicate import, import `SECRETS-01` through `SECRETS-08` only from the exact pack source, then run the controlled batch if available.
+- Non-goals confirmed: did not reconstruct missing prompt bodies, did not create tracked secrets files, did not store or print real secrets, did not access Keychain, did not install packages, did not enable paid APIs, did not weaken ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger, and did not commit or push.
+- prompt_id: `SECRETS-PACK-IMPORT`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Result: blocked before import because `prompts/packs/secrets-and-api-key-management-v1.promptpack.md` is missing.
+- Evidence: `test -f prompts/packs/secrets-and-api-key-management-v1.promptpack.md` returned missing; `rg` found no `SECRETS-*` prompt tracking rows or imported pack records. Existing command registry entries only cover older `secrets doctor` and `secrets status` commands.
+- Tests run: none for the missing pack; no implementation occurred.
+- Validations run: prompt pack existence check and prompt-tracking search only.
+- Blocker: restore or provide the exact prompt pack file before running `SECRETS-01` through `SECRETS-08`.
+
+## Run: 2026-05-25 Command QA Sandbox QA-01 through QA-10
+
+- Scope confirmed: imported and ran `command-qa-sandbox-self-heal-v1` as `QA-01` through `QA-10`, building the command QA sandbox, safe runner, disposable workspace, result triage, conservative self-heal planning, progressive dry-runs, dashboard, dogfood/eval fixtures, and release gate.
+- Non-goals confirmed: did not blindly run every command, run HIGH/CRITICAL automatically, access personal data, send emails/messages, write calendar/contacts/tasks, write outside the disposable QA workspace, commit, push, install packages, start background schedulers, or bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `QA-10`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Implemented: added `agent/qa` planner/runner/sandbox/analyzer/bug/regression/self-heal/progressive/dashboard modules, command QA docs under `docs/qa/`, dogfood suites, command QA eval cases, `eval run --command-qa`, command registry/test matrix rows, and release-gate/maturity review docs.
+- Validation with `./.venv/bin/python` 3.12.13: full suite passed with 1484 passed, 1 skipped; QA tests passed with 47 passed; command registry validation passed with 522 commands; startup policy and capability manifest validation passed via `make policy-check`; `eval run --command-qa` passed with 3 pass, 0 fail, 5 personal-data skips; command QA dogfood suites dry-ran successfully; Tier 0 QA run passed; constrained Tier 1 Command QA run passed 3/3.
+- Prompt tracking validation: post-QA-10 prompt audit passed with active_count 0, completed_count 235, completed_missing_evidence empty, queued_count 3, blocked_count 0, and next_prompt_id `news-provider-registry-status-commands`.
+- Docs validation: no dedicated docs validator is available; coverage comes from docs-focused tests, command registry validation, and full suite.
+- Maturity result: Command QA sandbox is `5 Hardened`, readiness 78/100 for local/mock-safe command QA. It is not live/manual validated and does not auto-apply fixes.
+- Blockers: historical oldest-untested selection is basic, generated regression scaffolds require human conversion, self-heal v1 writes plans/reports only, and broader clean release-candidate boundary remains project-level work.
+
+## Run: 2026-05-25 Natural-Language Command Understanding NLCMD-10
+
+- Scope confirmed: natural-language command understanding release-gate validation, maturity review, docs/tracker reconciliation, and small validation-driven updates only.
+- Non-goals confirmed: did not add autonomous natural-language execution, execute HIGH/CRITICAL actions, access personal data, send messages, write/delete user files, call providers, write memory, consume approvals, install packages, or bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `NLCMD-10`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Implemented: added `docs/natural_language/NL_COMMAND_RELEASE_GATE.md` and `docs/natural_language/NL_COMMAND_MATURITY_REVIEW.md`; updated README, USER_GUIDE, feature registry, feature maturity, roadmap, risk register, threat model, release checklist, project state, prompt tracking, changelog, and this completion report.
+- Validation results with `./.venv/bin/python` 3.12.13: full suite passed with 1437 passed, 1 skipped; startup policy and capability manifest validation passed via `make policy-check`; command registry validation passed with 498 commands; `eval run --natural-language --json` passed with 15 pass, 0 fail, 5 personal-data skips; `dogfood run natural_language_core` passed 8/8; `dogfood run natural_language_risky` passed 4/4; focused exact-command/NL tests passed with 20 passed; prompt audit passed with active_count 0 and completed_missing_evidence empty.
+- Docs validation: no dedicated repo docs validator is available. `smart_agent.py docs validate` falls through to chat, so docs validation evidence is from full suite docs/registry tests and focused tracker tests.
+- Maturity result: Natural-Language Command Understanding is `4 Tested`, readiness 74/100. It is safe to rely on as deterministic-first advisory UX and QA scaffolding, not as autonomous command execution.
+- Blockers: no NLCMD-10 blocker. Remaining project-level blockers are clean release-candidate boundary, broader prompt tracker reconciliation, dedicated docs validator gap, and longer real manual/live dogfood validation.
+
+## Run: 2026-05-25 Natural-Language Command Understanding NLCMD-09
+
+- Scope confirmed: natural-language feedback tags, redacted bug report creation, sanitized eval regression fixture generation, list command, tests, docs, command registry, and tracker updates.
+- Non-goals confirmed: did not fix all NL bugs, store personal data, run generated regressions automatically, execute mapped commands, call providers, write memory, consume approvals, or weaken ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `NLCMD-09`.
+- next_prompt_id: `NLCMD-10`.
+- Implemented: added `agent/natural_language/bug_feedback.py`, NL feedback tags, `feedback nl-bug --last --expected-intent <intent>`, `bugs create-nl-regression <bug_id>`, `nl regressions list`, `docs/natural_language/NL_BUG_TRIAGE.md`, `docs/templates/nl_regression_case_template.yaml`, and `tests/natural_language/test_nl_bug_feedback_loop.py`.
+- Safety notes: feedback attaches to redacted session command records. Bug reports and generated eval fixtures redact secrets, email addresses, phone numbers, and session output excerpts. Generated fixtures default to `should_execute=false` and remain local QA artifacts requiring human review.
+- Tests and validation with `./.venv/bin/python` 3.12.13: natural-language bug feedback tests passed with 4 passed; focused natural-language bug/dogfood/eval plus session feedback/bug regression tests passed with 43 passed; command registry validation passed with 498 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, changelog, command registry, command test matrix, feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, release checklist, project state, prompt tracking, and this completion report updated.
+- Blockers: none identified for the bug feedback loop milestone. Continue NLCMD-10 release gate.
+
+## Run: 2026-05-25 Natural-Language Command Understanding NLCMD-08
+
+- Scope confirmed: natural-language command dogfood suites, session feedback/runbook guidance, command registry/test matrix rows, tests, docs, and tracker updates.
+- Non-goals confirmed: did not execute mapped commands from natural language, call providers, access personal data, send messages, write/delete files, run prompt packs, consume approvals, write memory, or bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `NLCMD-08`.
+- next_prompt_id: `NLCMD-09`.
+- Implemented: added `dogfood_suites/natural_language_core.yaml`, `dogfood_suites/natural_language_risky.yaml`, `docs/natural_language/NL_DOGFOOD_RUNBOOK.md`, and `tests/natural_language/test_nl_dogfood_suites.py`; added command registry entries for `dogfood run natural_language_core --session` and `dogfood run natural_language_risky --session`; updated README and generated command docs.
+- Safety notes: the core suite uses advisory `nl` output and should state no commands were executed. The risky suite uses `nl preflight` only for send, email-read, file-delete, and prompt-pack requests. Suites require no personal data and do not call providers or directly invoke send/write/delete/approval/prompt execution commands.
+- Tests and validation with `./.venv/bin/python` 3.12.13: targeted dogfood/NL tests passed with 24 passed; `dogfood run natural_language_core --dry-run` and `dogfood run natural_language_risky --dry-run` passed; local non-session dogfood runs passed with 8/8 core commands and 4/4 risky commands; command registry validation passed with 495 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, changelog, command registry, command test matrix, feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, release checklist, project state, prompt tracking, and this completion report updated.
+- Blockers: none identified for the dogfood suite milestone. Continue NLCMD-09.
+
+## Run: 2026-05-25 Natural-Language Command Understanding NLCMD-07
+
+- Scope confirmed: natural-language command understanding eval fixtures, eval command flags/report alias, tests, docs, command registry, and tracker updates.
+- Non-goals confirmed: did not execute mapped commands, call tools/providers, read personal data, send/write anything, write memory, consume approvals, call paid APIs, or bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `NLCMD-07`.
+- next_prompt_id: `NLCMD-08`.
+- Implemented: added `eval_cases/natural_language/command_understanding.json`, `tests/natural_language/test_nl_eval_fixtures.py`, and `docs/natural_language/NL_EVALS.md`; added `eval run --natural-language` and `eval report --natural-language`; updated README, command registry structured records, and generated command docs.
+- Safety notes: evals inspect `route_request` and preflight metadata only. They verify safe cases, risky no-execution, ambiguity clarification, unsupported/missing-intent behavior, personal-data approval metadata, send/write approval metadata, and audit previews with no tools or commands executed.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused NLCMD eval fixture/CLI UX/preflight/clarification/parser/router/docs/intent-index tests passed with 42 passed; `eval run --natural-language --json` passed with 15 pass, 0 fail, 5 personal-data skips; `eval report --natural-language` smoke passed; command registry validation passed with 493 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, changelog, command registry, command test matrix, feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, release checklist, project state, prompt tracking, and this completion report updated.
+- Blockers: none identified for the eval fixture milestone. Continue NLCMD-08.
+
+## Run: 2026-05-25 Natural-Language Command Understanding NLCMD-06
+
+- Scope confirmed: conversational CLI UX for natural-language command handling, help text, tests, command registry, docs, and tracker updates.
+- Non-goals confirmed: did not break exact commands, require natural-language mode, call LM Studio for suggestions, execute risky actions, call tools/providers, access personal data, write memory, consume approvals, or bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `NLCMD-06`.
+- next_prompt_id: `NLCMD-07`.
+- Implemented: added `agent/natural_language/cli_ux.py`, `tests/natural_language/test_nl_cli_ux.py`, and `docs/natural_language/NL_CLI_UX.md`; added `python smart_agent.py nl "<request>"` and `python smart_agent.py ask "<request>"`; updated `nl --help`, README, command registry structured records, and generated command docs.
+- Safety notes: conversational output explains understood intent, matched command, safety flags, extracted args, provider/setup requirements, missing requirements, and next safe step. It explicitly states that no commands were executed and provides no auto-execution mode.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused NLCMD CLI UX/preflight/clarification/parser/router/docs/intent-index tests passed with 36 passed; CLI smokes for `nl "<request>"` and `ask "<request>"` passed; full suite initially failed on tracker-format rows only, those rows were corrected, targeted feature maturity docs tests passed with 13 passed, and full suite then passed with 1423 passed, 1 skipped; command registry validation passed with 491 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, changelog, command registry, command test matrix, feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, release checklist, project state, prompt tracking, and this completion report updated.
+- Blockers: none identified for the conversational CLI UX milestone. Continue NLCMD-07.
+
+## Run: 2026-05-25 Natural-Language Command Understanding NLCMD-05
+
+- Scope confirmed: safe execution planner, natural-language preflight display, metadata-only CLI commands, tests, docs, command registry, and tracker updates.
+- Non-goals confirmed: did not execute HIGH/CRITICAL actions, auto-run personal-data commands, call tools/providers, write files from preflight, write memory, consume approvals, add send/write behavior, or bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `NLCMD-05`.
+- next_prompt_id: `NLCMD-06`.
+- Implemented: added `agent/natural_language/execution_plan.py`, `agent/natural_language/preflight.py`, `tests/natural_language/test_nl_execution_plan_preflight.py`, and `docs/natural_language/NL_PREFLIGHT.md`; added `python smart_agent.py nl preflight "<request>"`, `nl explain "<request>"`, and `nl suggest "<request>"`; updated command registry structured records and generated command docs.
+- Safety notes: preflight plans are advisory metadata only. `safe_to_execute` can be true only for SAFE/LOW no-approval/no-dry-run/no-missing-requirement plans. HIGH/CRITICAL, personal-data, write, unknown, ambiguous, missing-provider, deprecated, and stubbed plans are not safe to execute from natural language.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused NLCMD preflight/clarification/parser/router/docs/intent-index tests passed with 29 passed; CLI smokes for `nl preflight`, `nl explain`, and `nl suggest` passed; command registry validation passed with 489 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, changelog, command registry, command test matrix, feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, release checklist, project state, prompt tracking, and this completion report updated.
+- Blockers: none identified so far for the preflight milestone.
+
+## Run: 2026-05-25 Natural-Language Command Understanding NLCMD-04
+
+- Scope confirmed: clarification and confirmation flow for natural-language route decisions, redacted previews, focused tests, docs, and tracker updates.
+- Non-goals confirmed: did not execute commands, call tools/providers, access personal data, write memory, add new ToolBroker tools, add send/write behavior, use LLM-only safety decisions, or bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `NLCMD-04`.
+- next_prompt_id: `NLCMD-05`.
+- Implemented: added `agent/natural_language/clarification.py`, `agent/natural_language/preview.py`, `tests/natural_language/test_clarification_flow.py`, and `docs/natural_language/CLARIFICATION_FLOW.md`; extended route decisions with clarification type, choices, command examples, setup hints, dry-run/approval flags, and replacement metadata.
+- Safety notes: clarification/previews are planning metadata only. Missing arguments, ambiguous matches, provider/setup hints, deprecated/stubbed commands, unsupported intents, personal-data requests, and risky send/write requests ask for clarification or safe next steps; previews redact secrets and state that no commands were executed.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused NLCMD clarification/parser/router/docs/intent-index tests passed with 22 passed; command registry validation passed with 486 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: changelog, feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, release checklist, project state, prompt tracking, and this completion report updated.
+- Blockers: none identified so far for the clarification flow milestone.
+
+## Run: 2026-05-25 Natural-Language Command Understanding NLCMD-03
+
+- Scope confirmed: deterministic natural-language request parser/router, structured models, safety outcome mapping, tests, docs, and tracker updates.
+- Non-goals confirmed: did not execute commands, call tools/providers, access personal data, write memory, add new ToolBroker tools, replace the existing exact command path, use LLM-only safety decisions, or bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `NLCMD-03`.
+- next_prompt_id: `NLCMD-04`.
+- Implemented: added `agent/natural_language/__init__.py`, `models.py`, `parser.py`, `router.py`, `safety.py`, `errors.py`, `tests/natural_language/test_nl_parser_router.py`, and `docs/natural_language/NL_PARSER_ROUTER.md`.
+- Safety notes: parser/router decisions are planning metadata only. No-tools mode returns no suggestions; exact commands are recognized and left to the normal command path; ambiguous requests ask clarification; personal-data and send/write requests return approval/preflight flags and are not executable from natural language.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused NLCMD parser/router, docs, and command intent index tests passed with 16 passed; command registry validation passed with 486 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: changelog, feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, release checklist, project state, prompt tracking, and this completion report updated.
+- Blockers: none identified so far for the parser/router milestone.
+
+## Run: 2026-05-25 Natural-Language Command Understanding NLCMD-02
+
+- Scope confirmed: command registry intent indexing, alias/trigger metadata, read-only suggestion commands, tests, docs, command registry/test matrix, and tracker updates.
+- Non-goals confirmed: did not execute suggested commands, add a parser/router/preflight execution path, use LLM-only routing, access personal data, call providers, write memory, silently run HIGH/CRITICAL actions, or bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `NLCMD-02`.
+- next_prompt_id: `NLCMD-03`.
+- Implemented: added `agent/commands/__init__.py`, `agent/commands/models.py`, `agent/commands/intent_index.py`, `tests/commands/test_command_intent_index.py`, and `docs/natural_language/COMMAND_INTENT_INDEX.md`; added read-only `commands intents` and `commands suggest "<natural_language_request>"` CLI commands.
+- Safety notes: the index is metadata-only and deterministic. Planned/stubbed/deprecated commands are not primary active suggestions; HIGH/CRITICAL/FORBIDDEN or approval-required commands are not marked `safe_to_run_directly`; provider/connector requirements produce setup hints.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused command intent index plus NLCMD docs tests passed with 7 passed; CLI smokes for `commands suggest` and `commands intents` passed; command registry docs were regenerated from structured metadata; command registry validation passed with 486 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, changelog, command registry, command test matrix, feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, release checklist, project state, prompt tracking, and this completion report updated.
+- Blockers: none identified so far for the metadata-only intent index milestone.
+
+## Run: 2026-05-25 Natural-Language Command Understanding NLCMD-01
+
+- Scope confirmed: architecture docs, intent taxonomy, safety policy, decision record, roadmap/tracker updates, and docs regression coverage only.
+- Non-goals confirmed: did not implement a natural-language parser/router/preflight/CLI execution path, did not replace exact commands, did not add personal-data access, did not execute risky actions, did not add send/write/delete behavior, and did not bypass ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger.
+- prompt_id: `NLCMD-01`.
+- next_prompt_id: `NLCMD-02`.
+- Implemented: created `docs/natural_language/NL_COMMAND_UNDERSTANDING_TRACK.md`, `docs/natural_language/NL_INTENT_TAXONOMY.md`, `docs/natural_language/NL_COMMAND_SAFETY_POLICY.md`, `docs/decisions/natural_language_command_understanding.md`, and `tests/natural_language/test_nl_docs.py`.
+- Safety notes: natural-language interpretation is specified as advisory UX only. Deterministic rules plus command-registry metadata are the first layer; LLM interpretation may suggest intent but cannot be the safety mechanism; future execution must still go through existing command/capability IDs and safety-control authorities.
+- Tests and validation with `./.venv/bin/python` 3.12.13: initial focused docs test failed because the taxonomy doc did not explicitly name the safety-control boundary; the doc was corrected and focused docs tests passed with 2 passed. Command registry validation passed with 484 commands. Startup policy and capability manifest validation passed via `make policy-check`. Dedicated docs validation command is not available as a repo docs validator.
+- Docs/tracker updates: changelog, project state, feature registry, feature maturity, feature roadmap, risk register, threat model, test plan, release checklist, prompt tracking, and this completion report updated.
+- Blockers: none identified for the docs-only architecture milestone so far.
+
+## Run: 2026-05-25 Full Feature Status, Maturity, and Prompt-Tracker Audit MATURITY-AUDIT-01
+
+- Scope confirmed: audit/review/planning only for feature maturity, command groups, support systems, platform tracks, prompt tracker state, dogfood/eval evidence, release blockers, and next maturity/feature queues.
+- Non-goals confirmed: did not implement runtime features, add connectors, enable personal-data tools, run queued prompts, install packages, start services, use paid APIs, send/write messages/email/calendar/contacts, or weaken ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- prompt_id: `MATURITY-AUDIT-01`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Implemented: created `docs/productization/FULL_FEATURE_STATUS_AND_MATURITY_AUDIT.md`, `FEATURE_MATURITY_SCORECARD.md`, `PROMPT_TRACKER_MISSED_PROMPTS_AUDIT.md`, `NEXT_MATURITY_QUEUE.md`, `NEXT_FEATURE_EXPANSION_CANDIDATES.md`, and `MANUAL_VALIDATION_PLAN.md`; added `tests/test_productization_audit_docs.py`; updated project state, feature registry, feature maturity, feature roadmap, prompt audit, prompt queue/ledger, test plan, release checklist, changelog, and this completion report.
+- Maturity summary: safety control plane, command registry, PromptOps, weather/web local scaffolds, workspace/memory, native skills, and safe autonomy metadata are strongest; News runtime, platform real behavior, live/manual validation, clean release boundary, and tracker reconciliation remain weaker.
+- Prompt tracker summary: final prompt audit passed with active_count 0, completed_count 207, queued_count 3, and no completed prompts missing evidence. The productization audit records stale SKILL queue rows, stale queued Reddit OAuth/config doctor file, missing queued prompt files for some planned prompts, and older stale `news-capability-manifest-provider-policy` references.
+- Tests and validation with `./.venv/bin/python` 3.12.13: productization docs tests passed with 6 passed; focused registry/productization docs tests passed with 7 passed; full suite passed with 1386 passed, 1 skipped; command registry validation passed with 484 commands; startup policy and capability manifest validation passed via `make policy-check`; safe eval passed with 40 pass, 0 fail, 6 skipped; all_safe dogfood dry-run passed as preview-only with 8 skipped dry-run commands. Dedicated `smart_agent.py docs validate` is not available as a repo docs validator and returned generic chat output.
+- Blockers: no verified P0. P1/P2 blockers remain: clean release-candidate boundary, prompt tracker reconciliation, generated artifact hygiene, static safety bypass scan, and broader live/manual validation.
+- Next recommendation: run a prompt tracker reconciliation pass before broad feature expansion, or proceed with `news-provider-registry-status-commands` if the user wants to continue the News track with no live provider calls.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-13
+
+- Scope confirmed: validation, maturity review, release-gate docs, conservative tracker updates, and small release-hardening fixes only.
+- Non-goals confirmed: did not implement high-risk autonomy, background persistence, unattended HIGH/CRITICAL workflows, cross-platform messaging sends, subagent write permissions, browser automation, CAPTCHA/anti-bot/login/paywall bypass, cloud/server private-data access, personal-data tools, send/write actions, or safety-control bypass.
+- prompt_id: `HERMES-13`.
+- next_prompt_id: `news-provider-registry-status-commands`.
+- Implemented: added `docs/autonomy/HERMES_INSPIRED_RELEASE_GATE.md` and `docs/autonomy/HERMES_INSPIRED_MATURITY_REVIEW.md`; reconciled safe autonomy release checklist, feature registry, feature maturity, roadmap, risk register, threat model, project state, tracker dashboard, changelog, and command registry docs.
+- Small fix: corrected `CMD-BRAIN-007` docs link from the autonomy doc path to `docs/brain/MODEL_ROUTING_POLICY.md` so Brain command registry validation and docs tests stay consistent.
+- Safety notes: safe autonomy remains local-tested groundwork only. Gateway/channel, Telegram/mobile, skill proposal, skill improvement, scheduler UX, subagent, sandbox, model switching, memory continuity, authorized web boundary, and dogfood/eval surfaces remain metadata/proposal/dry-run/mock/fixture/docs-first.
+- Tests and validation with `./.venv/bin/python` 3.12.13: full suite passed with 1380 passed, 1 skipped after the docs-link fix; focused HERMES release-gate tests passed with 74 passed; safe autonomy eval passed with 4 pass, 0 fail, 5 personal-data skips; safe autonomy dogfood dry-run passed; command registry validation passed with 484 commands; startup policy and capability manifest validation passed via `make policy-check`; docs/tracker validation passed.
+- Maturity result: overall safe autonomy track remains `4 Tested`, readiness score 70/100. No live validation or user-ready autonomy claim.
+- Blockers: no HERMES-13 blocker. Remaining project-level blockers are the large dirty working tree, clean release-candidate boundary, and broader live/manual validation.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-12
+
+- Scope confirmed: mock-first safe autonomy dogfood suites, fixture-backed eval category, runbook docs, command registry/test matrix, tests, and tracker updates.
+- Non-goals confirmed: did not run live risky autonomy, start channels/bots/webhooks/listeners, create background persistence, access personal data, execute external scripts, run browser automation, launch real subagents, execute sandbox commands, call paid/cloud providers, require live network/providers, run HIGH/CRITICAL actions, or bypass ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- prompt_id: `HERMES-12`.
+- next_prompt_id: `HERMES-13`.
+- Implemented: added safe autonomy dogfood suites for core, channel gateway, Telegram/mobile scaffolding, skill proposals, subagent isolation, sandbox abstraction, memory continuity, and authorized web boundary; added `eval_cases/safe_autonomy/core.json`; added `eval run --safe-autonomy`, `eval report --safe-autonomy`, and command tracking for `dogfood run safe_autonomy_core --session`.
+- Safety notes: dogfood suites delegate to existing CLI commands; fixture evals do not call providers or execute tools directly; validation artifacts contain no personal data, no external script execution, no network requirement, no background persistence, and no HIGH/CRITICAL action execution.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused safe autonomy dogfood/eval tests passed with 32 passed; fixture-backed safe autonomy eval passed; safe autonomy dogfood dry-run passed; command registry validation passed with 484 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: `docs/autonomy/SAFE_AUTONOMY_DOGFOOD_RUNBOOK.md`, command registry/test matrix, feature registry, feature maturity, roadmap, risk register, threat model, test plan, release checklist, project state, tracker dashboard, changelog, prompt tracking, and this completion report updated.
+- Blockers: none for HERMES-12. Continue HERMES-13 as release-gate validation and conservative maturity review only.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-11
+
+- Scope confirmed: authorized web automation boundary docs, future deep-scan gates, blocked-source policy, planned command tracking, tests, and tracker updates.
+- Non-goals confirmed: did not implement browser automation, CAPTCHA/Cloudflare/anti-bot bypass, proxy/rate-limit evasion, login-wall/paywall bypass, cookie/session scraping, human impersonation, stealth automation, live deep scanning, personal-data access, send/write behavior, or safety-control bypass.
+- prompt_id: `HERMES-11`.
+- next_prompt_id: `HERMES-12`.
+- Implemented: added authorized web automation decision/policy docs, first-party testing policy, blocked-source policy, deep-scan policy, docs tests, and planned command registry rows for future `web deep-scan`, `web source-map`, and `web blocked-report`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused authorized web automation docs, feature maturity docs, and command registry tests passed with 24 passed; command registry validation passed with 484 commands after generated docs refresh; startup policy and capability manifest validation passed via `make policy-check`.
+- Blockers: none. Runtime web automation remains deferred to separate approval-gated prompts.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-10
+
+- Scope confirmed: long-term memory search and cross-session continuity helpers, brokered memory commands, docs, capability manifest entries, command registry/test matrix, tests, and tracker updates.
+- Non-goals confirmed: did not add cloud embeddings, automatic prompt injection, a separate persistent continuity profile, personal-memory inclusion by default, query-history storage, memory writes, provider calls, or safety-control bypass.
+- prompt_id: `HERMES-10`.
+- next_prompt_id: `HERMES-11`.
+- Implemented: added `agent.memory.continuity`, brokered `memory.continuity_status`, `memory.continuity_build_summary`, `memory.continuity_clear`, and `memory.context_preview`; added `memory continuity status`, `memory continuity build-summary`, `memory continuity clear`, and `memory context-preview`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: cross-session continuity plus existing memory tests passed with 20 passed; CLI smokes passed; command registry validation passed with 478 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Blockers: none. Automatic/personal cross-session memory injection remains deferred.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-09
+
+- Scope confirmed: model switching/session continuity metadata, provider compatibility checks, rollback records, redacted continuity status/export/clear, docs, command registry/test matrix, tests, and tracker updates.
+- Non-goals confirmed: did not change the default provider, persist provider/default config, generate text, execute tools, call paid/cloud APIs, migrate context, carry personal data, write memory, start listeners, install/download runtimes or models, or bypass safety controls.
+- prompt_id: `HERMES-09`.
+- next_prompt_id: `HERMES-10`.
+- Implemented: added metadata-only model switch previews and session-continuity helpers; added dry-run-only `brain switch <provider>` behavior and `session continuity status/export --redacted/clear` commands.
+- Tests and validation with `./.venv/bin/python` 3.12.13: model switching/session-continuity and provider-router tests passed with 19 passed; CLI smokes passed; command registry validation passed with 474 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Blockers: none. Real provider switching remains deferred to a future approved gateway prompt.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-08
+
+- Scope confirmed: sandbox backend interface, backend metadata registry, mock backend, policy validation, brokered dry-run commands, docs, command registry/test matrix, capability manifest entries, tests, and tracker updates.
+- Non-goals confirmed: did not install Docker or sandbox tools, execute arbitrary code, run untrusted scripts, run browser automation, enable networked sandboxing, grant broad filesystem access, access personal data, run plugin runtimes, create background persistence, or bypass ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- prompt_id: `HERMES-08`.
+- next_prompt_id: `HERMES-09`.
+- Implemented: added `agent.sandbox` models, backend interface, registry, mock backend, planned backend records, policy helpers, brokered `sandbox.backends`, `sandbox.policy`, and `sandbox.dry_run` tools, and `sandbox backends`, `sandbox policy`, and `sandbox dry-run` CLI commands.
+- Safety notes: mock backend is the only default backend; planned Docker/rootless, macOS sandbox, Firecracker, browser, and cloud backends are stubbed/planned/deferred; dry-run reports `command_executed=false`, no network use, no filesystem access, no personal-data access, and no sandbox startup.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused sandbox abstraction tests passed with 10 passed; combined sandbox abstraction plus feature maturity docs tests passed with 23 passed; `sandbox backends` and blocked `sandbox dry-run --network` CLI smokes passed; command registry validation passed with 471 commands; startup policy and capability manifest validation passed via `make policy-check`; prompt audit passed with no completed prompts missing evidence; full suite passed with 1349 passed, 1 skipped.
+- Docs/tracker updates: README, changelog, project state, tracker dashboard, feature registry, feature maturity, feature roadmap, command registry, command test matrix, risk register, threat model, release checklist, prompt tracking, and this completion report updated.
+- Blockers: none for HERMES-08. Continue to HERMES-09 only if model switching/session continuity remains metadata/dry-run, preserves LM Studio defaults, and does not install/download runtimes or call paid/cloud APIs.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-07
+
+- Scope confirmed: subagent profile metadata, isolation policy, mock dry-run command, docs, command registry/test matrix, tests, and tracker updates.
+- Non-goals confirmed: did not launch real subagents, run parallel workflows, grant write permissions, call tools directly, access personal data, execute CRITICAL actions, approve actions, create background persistence, install packages, execute scripts, or bypass ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- prompt_id: `HERMES-07`.
+- next_prompt_id: `HERMES-08`.
+- Implemented: added `agent.autonomy.subagents` and `subagents list`, `subagents show <profile>`, `subagents policy`, and `subagents dry-run <profile> "task"`.
+- Safety notes: all profiles are stubbed/disabled metadata; `dry-run` reports `execution_enabled=false`, `tools_executed=[]`, `direct_tool_calls_allowed=false`, `approval_bypass_allowed=false`, `output_trust_level=MODEL_OUTPUT`, and no write/personal/critical permissions.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused subagent isolation tests passed with 9 passed; command registry validation passed with 468 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, changelog, project state, tracker dashboard, feature registry, feature maturity, feature roadmap, command registry, command test matrix, risk register, threat model, release checklist, prompt tracking, and this completion report updated.
+- Blockers: none for HERMES-07. Continue to HERMES-08 only if sandbox backend abstraction remains metadata/policy and executes no arbitrary scripts.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-06
+
+- Scope confirmed: scheduler UX/metadata commands, dry-run/manual-review behavior, docs, command registry/test matrix, tests, and tracker updates.
+- Non-goals confirmed: did not create cron, LaunchAgent, login item, daemon, background runner, polling loop, automatic schedule execution, unattended HIGH/CRITICAL workflows, message/email sends, calendar/contact writes, personal-data default enablement, OS persistence, or safety-control bypass.
+- prompt_id: `HERMES-06`.
+- next_prompt_id: `HERMES-07`.
+- Implemented: added `agent.autonomy.scheduler_ux` and `schedule explain`, `schedule templates`, `schedule preview <workflow_id>`, `schedule dry-run <workflow_id>`, `schedule risks <workflow_id>`, and `schedule review`.
+- Safety notes: scheduler UX commands are metadata-only. `schedule dry-run` reports `workflow_executed=false`, `would_execute_tools=false`, and `tools_executed=[]`; HIGH/personal-data workflows return approval-required guidance; CRITICAL send/write workflows are blocked from auto-run; dry-run creates no Action Center item.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused scheduler UX plus existing scheduler policy tests passed with 21 passed; command registry validation passed with 464 commands; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, changelog, project state, tracker dashboard, feature registry, feature maturity, feature roadmap, command registry, command test matrix, risk register, threat model, release checklist, prompt tracking, and this completion report updated.
+- Blockers: none for HERMES-06. Continue to HERMES-07 only if subagent isolation remains metadata/isolation groundwork and does not give subagents write permissions by default.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-05
+
+- Scope confirmed: skill improvement proposal logic from redacted bug/dogfood evidence, redacted report storage, brokered CLI commands, tests, docs, command registry/test matrix, capability manifest, and tracker updates.
+- Non-goals confirmed: did not modify native skill files, update lockfiles, import skills, enable skills, execute skill scripts, install packages, run plugin runtimes, use personal-data evidence by default, read raw session/bug content, bypass human review, raise maturity automatically, add background persistence, or weaken ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- prompt_id: `HERMES-05`.
+- next_prompt_id: `HERMES-06`.
+- Implemented: added `agent.autonomy.skill_improvements`, brokered `native_skills.improve_propose`, `native_skills.improve_from_bugs`, `native_skills.improve_from_dogfood`, `native_skills.improvements_list`, and `native_skills.improvements_show` tools, CLI commands `skills improve-propose`, `skills improve-from-bugs`, `skills improve-from-dogfood`, `skills improvements list`, and `skills improvements show`.
+- Safety notes: improvement proposals use redacted bug/dogfood metadata only, skip unredacted and personal-data evidence by default, include required tests/docs/rollback/lockfile-impact fields, mark HIGH proposals as human-review-required, and write only redacted local proposal reports under gitignored `reports/autonomy/`.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused skill improvement tests passed with 9 passed; combined HERMES/channel/Telegram/mobile/skill-proposal/skill-improvement/maturity docs tests passed with 50 passed; command registry validation passed with 458 commands after regenerating command docs/test matrix; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, changelog, project state, tracker dashboard, feature registry, feature maturity, feature roadmap, command registry, command test matrix, risk register, threat model, release checklist, prompt tracking, and this completion report updated.
+- Blockers: none for HERMES-05. Continue to HERMES-06 only if scheduler UX remains dry-run/manual-run and adds no hidden background runner or unattended HIGH/CRITICAL workflow.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-04
+
+- Scope confirmed: repeated-task skill creation proposal logic, redacted report storage, brokered CLI commands, tests, docs, command registry/test matrix, capability manifest, generated artifact hygiene, and tracker updates.
+- Non-goals confirmed: did not auto-create skills, import skills, enable skills, execute external skill scripts, install packages, run plugin runtimes, read personal content by default, inspect private session content by default, add write/send skills, bypass skill vetting, add background persistence, or weaken ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- prompt_id: `HERMES-04`.
+- next_prompt_id: `HERMES-05`.
+- Implemented: added `agent.autonomy.skill_proposals`, brokered `native_skills.propose_from_commands`, `native_skills.propose_from_sessions`, `native_skills.proposals_list`, `native_skills.proposals_show`, and `native_skills.proposals_approve_dry_run` tools, CLI commands `skills propose-from-sessions`, `skills propose-from-commands`, `skills proposals list`, `skills proposals show`, and dry-run-only `skills proposals approve`.
+- Safety notes: proposals use redacted command/session metadata only, skip personal-data patterns by default, mark HIGH/CRITICAL non-personal candidates as review-required, write only redacted local proposal reports under gitignored `reports/autonomy/`, and include suggested manifest/test/doc metadata without creating enabled skills.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused skill proposal tests passed with 8 passed; combined HERMES/channel/Telegram/mobile/skill-proposal/maturity docs tests passed with 41 passed; command registry validation passed with 453 commands; `skills propose-from-commands` and `skills proposals list` CLI smokes passed with `SKILL_PROPOSAL_STORE_PATH=/tmp/hermes_skill_proposals.json`; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, `.gitignore`, changelog, project state, tracker dashboard, feature registry, feature maturity, feature roadmap, command registry, command test matrix, risk register, threat model, release checklist, prompt tracking, and this completion report updated.
+- Blockers: none for HERMES-04. Continue to HERMES-05 only if it remains proposal-only and cannot self-modify, create, enable, install, or execute skills.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-03
+
+- Scope confirmed: Telegram doctor/config status, mobile channel status models, allowlisted chat policy metadata, safe config defaults, tests, docs, command registry/test matrix, capability manifest, and tracker updates.
+- Non-goals confirmed: did not start a Telegram bot, send Telegram messages, poll Telegram, create a webhook server, expose a public listener, enable personal-data tools, accept remote commands that can run tools, pair a mobile companion, enable mobile approvals, create background persistence, or bypass ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- prompt_id: `HERMES-03`.
+- next_prompt_id: `HERMES-04`.
+- Implemented: added `agent.channels.telegram` and `agent.channels.mobile` status/config helpers; extended brokered channel tools with `telegram.doctor`, `telegram.status`, `mobile.status`, and `mobile.pairing_status`; converted `telegram doctor/status` CLI commands to brokered SAFE metadata tools; added `mobile status` and `mobile pairing-status` commands.
+- Safety notes: `TELEGRAM_ENABLED=false`, `TELEGRAM_ALLOW_SEND=false`, `TELEGRAM_ALLOW_POLLING=false`, `TELEGRAM_ALLOW_WEBHOOK=false`, `MOBILE_COMPANION_ENABLED=false`, and `MOBILE_APPROVALS_ENABLED=false` are documented defaults. Token values are never printed; allowlisted chat IDs are required before any future send-capable connector can even be considered; future mobile approvals must still use ApprovalManager.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused Telegram/mobile tests passed with 8 passed after one redaction-key adjustment; combined channel/Telegram/mobile/secret-doctor/docs tests passed with 45 passed; command registry validation passed with 448 commands; `telegram status` and `mobile status` CLI smokes passed; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, `.env.example`, changelog, project state, feature registry, feature maturity, feature roadmap, command registry, command test matrix, risk register, threat model, release checklist, prompt tracking, and this completion report updated.
+- Blockers: none for HERMES-03. Live Telegram/mobile access remains intentionally deferred to future approval-gated prompts.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-02
+
+- Scope confirmed: gateway/channel models, static registry, safe gateway guards, metadata redaction, read-only status commands, tests, docs, command registry/test matrix, capability manifest, and tracker updates.
+- Non-goals confirmed: did not implement Telegram, Slack, Discord, WhatsApp, Signal, email, iOS companion, Mac app, Windows app, or local web dashboard connections; did not expose a remote server, send messages, enable personal-data tools, approve actions, execute tools from the gateway, create background persistence, add browser automation, or bypass ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- prompt_id: `HERMES-02`.
+- next_prompt_id: `HERMES-03`.
+- Implemented: added `agent.channels` models, registry, security helpers, gateway submission guards, and `agent.tools.channels`; added brokered `channels.list`, `channels.status`, and `channels.show` capabilities plus CLI commands `channels list`, `channels status`, and `channels show <channel_id>`.
+- Safety notes: remote channels are disabled by default, all channels have `can_send=false`, unknown channels are denied, gateway submissions require correlation ids, metadata secrets are redacted, and gateway methods fail closed for direct tool execution and self-approval.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused channel tests passed with 10 passed; combined channel/feature-maturity/Hermes docs tests passed with 25 passed; command registry validation passed with 446 commands; `channels status` and `channels show telegram` CLI smokes passed; startup policy and capability manifest validation passed via `make policy-check`.
+- Docs/tracker updates: README, changelog, project state, feature registry, feature maturity, feature roadmap, command registry, command test matrix, risk register, threat model, release checklist, prompt tracking, and this completion report updated.
+- Blockers: none for HERMES-02. External channel implementation remains intentionally deferred to future prompts.
+
+## Run: 2026-05-25 Hermes-Inspired Safe Autonomy HERMES-01
+
+- Scope confirmed: documentation, roadmap, safe autonomy policy, high-risk autonomy gates, unauthorized bypass boundary, tests, and tracker updates for Hermes-inspired safe autonomy architecture.
+- Non-goals confirmed: did not implement unattended high-risk workflows, arbitrary browser automation, background persistence, send/write behavior, personal-data tools, anti-bot/CAPTCHA/Cloudflare/proxy/login-wall/paywall bypass, human impersonation, cloud/server private-data execution, subagent write permissions, or any runtime autonomy.
+- prompt_id: `HERMES-01`.
+- next_prompt_id: `HERMES-02`.
+- Implemented: created `docs/decisions/hermes_inspired_safe_autonomy.md`, `docs/autonomy/SAFE_AUTONOMY_ROADMAP.md`, `docs/autonomy/AUTONOMY_RISK_MODEL.md`, `docs/autonomy/HIGH_RISK_AUTONOMY_GATES.md`, `docs/autonomy/HERMES_FEATURE_COMPARISON.md`, and `docs/autonomy/UNAUTHORIZED_BYPASS_POLICY.md`; added docs regression coverage in `tests/test_hermes_safe_autonomy_docs.py`.
+- Safety notes: all future gateway/channel, Telegram/mobile, skill proposal, scheduler UX, subagent, sandbox, model switching, memory search, cross-session continuity, and web automation work remains disabled-by-default/proposal-first until later prompts add brokered, tested, audited behavior.
+- Tests and validation with `./.venv/bin/python` 3.12.13: initial focused test failed because two docs did not explicitly name the safety control plane; docs were corrected; focused Hermes docs tests passed with 2 passed; focused tracking/docs tests passed with 15 passed; command registry validation passed with 443 commands; startup policy and capability manifest validation passed via `make policy-check`; prompt audit reported one active prompt during HERMES-01 execution as expected.
+- Docs/tracker updates: changelog, project state, feature registry, feature maturity, feature roadmap, risk register, threat model, release checklist, prompt tracking, and this completion report updated.
+- Blockers: none for HERMES-01.
+
+## Run: 2026-05-25 Brain Runtime Independence BRAIN-11
+
+- Scope confirmed: Brain Runtime Independence release gate, conservative maturity review, release-gate docs, validation, and tracker reconciliation.
+- Non-goals confirmed: did not remove LM Studio, change the default provider, install or download model runtimes, call paid/cloud APIs, enable MCP server/client runtime, start network listeners, enable personal-data tools, change ToolBroker semantics, weaken PolicyEngine/PermissionManager/ApprovalManager/AuditLogger, or execute high-risk tools.
+- prompt_id: `BRAIN-11`.
+- next_prompt_id: `news-provider-registry-status-commands` by standing queue, with an optional future Brain Runtime Gateway wiring prompt recommended if the user wants to continue this track.
+- Implemented: added `docs/brain/BRAIN_RUNTIME_RELEASE_GATE.md` and `docs/brain/BRAIN_RUNTIME_MATURITY_REVIEW.md`; updated README, changelog, feature registry, feature maturity, roadmap, risk register, threat model, release checklist, project state, tracker dashboard, prompt audit, and docs regression coverage.
+- Provider status: `lmstudio` remains the default compatibility provider. `llama_cpp_server`, `ollama`, `llama_cpp_inprocess`, and `mlx` remain disabled-by-default scaffolds/stubs. `mock` remains test-only for safe benchmark/eval fixtures.
+- MCP decision: MCP remains optional interoperability, not the brain runtime. MCP server/client stubs are disabled by default, start no listener, make no external connection, and expose no tools or personal tools.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused BRAIN/MCP/docs/command tests passed with 97 passed; docs/feature-maturity/command registry regression tests passed with 20 passed; full suite passed with 1285 passed and 1 skipped; startup policy and capability manifest validation passed via `make policy-check`; command registry validation passed with 443 commands; `brain providers`, `brain status`, `brain doctor`, `brain health --provider lmstudio`, `brain benchmark --safe`, `brain eval --safe`, `brain report --last`, `brain fallback-status`, `brain route "hello" --no-tools`, `brain mcp-decision`, `mcp status`, `mcp doctor`, `mcp server --dry-run`, and `mcp clients` smokes passed; `smart_agent` import loaded no checked optional runtime modules.
+- Safety notes: fallback remains disabled by default, cloud/paid fallback remains disabled, `brain switch` remains dry-run only, safe evals use deterministic mock fixtures, no provider grants tools or approvals, and no MCP package/server/listener/tool exposure is enabled.
+- Maturity result: local scaffold is `Tested` with readiness score 74/100. LM Studio dependency is now partially optional, not fully optional, because normal live chat still uses the existing LM Studio-compatible path until future gateway wiring and live validation.
+- Blockers: no BRAIN-11 blocker so far. Remaining release-level blockers are clean release-candidate boundary, broader live/manual validation, and future approved gateway wiring.
+
+## Run: 2026-05-25 Brain Runtime Independence BRAIN-07
+
+- Scope confirmed: MLX provider strategy/stub, safe config defaults, Apple Silicon detection metadata, provider-specific health/doctor diagnostics, decision/provider docs, tests, command registry, and tracker updates.
+- Non-goals confirmed: did not install MLX or MLX-LM, did not download models, did not start an MLX server, did not import native MLX modules at startup, did not load a model, did not generate text, did not remove LM Studio, did not change the default provider, did not call cloud providers, did not enable MCP, did not start listeners, did not write memory, and did not change ToolBroker execution semantics.
+- prompt_id: `BRAIN-07`.
+- next_prompt_id: `BRAIN-08`.
+- Implemented: added `agent.brain.providers.mlx.MLXBrainProvider`, `MLX_*` config defaults, lazy registry listing as `disabled` unless enabled, Apple Silicon detection metadata, setup-required diagnostics for unsupported platform/missing model/stubbed implementation, and provider-specific `brain doctor --provider mlx` plus `brain health --provider mlx` diagnostics.
+- Provider status: LM Studio remains the default provider. `llama_cpp_server`, `ollama`, `llama_cpp_inprocess`, and `mlx` are available only as explicitly enabled/configured user-managed local providers or stubs; cloud providers, MCP adapters, fallback routing, benchmark/eval commands, and default-provider switching remain future work.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused MLX/model-registry tests passed with 15 passed; broader brain/docs/feature-maturity/command-registry tests passed with 73 passed; `brain providers`, `brain health --provider mlx`, and `brain doctor --provider mlx` CLI smokes passed; startup policy and capability manifest validation passed via `make policy-check`; command registry validation passed with 437 commands.
+- Safety notes: MLX diagnostics are metadata/config checks and never generate model text, execute tools, import native MLX modules, load a model, install a dependency, download a model, start a server/listener, grant permissions, approve actions, write memory, or bypass ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- Blockers: none for the local stub. Real MLX implementation, live Apple Silicon validation, provider benchmarks/evals, fallback/router, MCP decision/adapters, and the release gate remain future work.
+
+## Run: 2026-05-25 Brain Runtime Independence BRAIN-06
+
+- Scope confirmed: disabled-by-default optional llama-cpp-python in-process BrainProvider scaffold, dependency detection without startup import, safe config defaults, lazy explicit model loading, provider-specific health/doctor diagnostics, docs, tests, command registry, and tracker updates.
+- Non-goals confirmed: did not install llama-cpp-python, did not download GGUF models, did not load a real model in tests, did not load a model during provider listing/status/health, did not remove LM Studio, did not change the default provider, did not call cloud providers, did not enable MCP, did not start listeners, did not write memory, and did not change ToolBroker execution semantics.
+- prompt_id: `BRAIN-06`.
+- next_prompt_id: `BRAIN-07`.
+- Implemented: added `agent.brain.providers.llama_cpp_inprocess.LlamaCppInProcessBrainProvider`, `LLAMA_CPP_INPROCESS_*` config defaults, lazy registry listing as `disabled` unless enabled, setup-required diagnostics for missing dependency/model path, fake-backend chat testing, and provider-specific `brain doctor --provider llama_cpp_inprocess` plus `brain health --provider llama_cpp_inprocess` diagnostics.
+- Provider status: LM Studio remains the default provider. `llama_cpp_server`, `ollama`, and `llama_cpp_inprocess` are available only as explicitly enabled/configured user-managed local providers; MLX, cloud providers, MCP adapters, fallback routing, benchmark/eval commands, and default-provider switching remain future work.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused llama-cpp-python/model-registry tests passed with 17 passed; broader brain/docs/feature-maturity/command-registry tests passed with 66 passed; `brain providers`, `brain health --provider llama_cpp_inprocess`, and `brain doctor --provider llama_cpp_inprocess` CLI smokes passed; startup policy and capability manifest validation passed via `make policy-check`; command registry validation passed with 437 commands.
+- Safety notes: provider health/status diagnostics are metadata/config checks and never generate model text, execute tools, load a model, install a dependency, download a model, start a listener, grant permissions, approve actions, write memory, or bypass ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- Blockers: none for the local scaffold. Live in-process model validation remains opt-in and setup-dependent, in-process process isolation risk remains documented, and runtime independence remains partial until MLX strategy, health/benchmark/evals, fallback/router, MCP decision/adapters, and the release gate land.
+
+## Run: 2026-05-25 Brain Runtime Independence BRAIN-05
+
+- Scope confirmed: disabled-by-default Ollama BrainProvider adapter, safe config defaults, provider-specific health/doctor diagnostics, docs, tests, command registry, and tracker updates.
+- Non-goals confirmed: did not install Ollama, did not pull models, did not start the Ollama daemon, did not remove LM Studio, did not change the default provider, did not assume tool-call support by default, did not call cloud providers, did not enable MCP, did not start listeners, did not write memory, and did not change ToolBroker execution semantics.
+- prompt_id: `BRAIN-05`.
+- next_prompt_id: `BRAIN-06`.
+- Implemented: added `agent.brain.providers.ollama.OllamaBrainProvider`, `OLLAMA_*` config defaults, lazy registry listing as `disabled` unless enabled, mocked OpenAI-compatible `/chat/completions` handling, native `/api/tags` health checks, and provider-specific `brain doctor --provider ollama` plus `brain health --provider ollama` diagnostics.
+- Provider status: LM Studio remains the default provider. `llama_cpp_server` and `ollama` are available only as explicitly enabled/configured user-managed local providers; llama-cpp-python, MLX, cloud providers, MCP adapters, fallback routing, benchmark/eval commands, and default-provider switching remain future work.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused Ollama/model-registry tests passed with 16 passed; `brain providers`, `brain health --provider ollama`, and `brain doctor --provider ollama` CLI smokes passed. Final policy, command registry, and focused tracker validation are recorded in the prompt status when marked complete.
+- Safety notes: provider health/status diagnostics are metadata/config checks and mocked HTTP in tests only; the provider never starts a daemon, installs a runtime, pulls/downloads a model, assumes tool-call support, executes tools, grants permissions, approves actions, writes memory, or bypasses ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- Blockers: none for the local scaffold so far. Live Ollama validation remains opt-in and setup-dependent, and runtime independence remains partial until in-process/MLX strategy, fallback/router, evals, and the release gate land.
+
+## Run: 2026-05-25 Brain Runtime Independence BRAIN-04
+
+- Scope confirmed: disabled-by-default llama.cpp server BrainProvider adapter, safe config defaults, provider-specific health/doctor diagnostics, docs, tests, command registry, and tracker updates.
+- Non-goals confirmed: did not install llama.cpp, did not download models, did not start `llama-server`, did not remove LM Studio, did not change the default provider, did not enable tool-call support by default, did not call paid/cloud providers, did not enable MCP, did not start listeners, did not write memory, and did not change ToolBroker execution semantics.
+- prompt_id: `BRAIN-04`.
+- next_prompt_id: `BRAIN-05`.
+- Implemented: added `agent.brain.providers.llama_cpp_server.LlamaCppServerBrainProvider`, `LLAMA_CPP_SERVER_*` config defaults, lazy registry listing as `disabled` unless enabled, mocked OpenAI-compatible `/chat/completions` and `/models` handling, and provider-specific `brain doctor --provider llama_cpp_server` plus `brain health --provider llama_cpp_server` diagnostics.
+- Provider status: LM Studio remains the default provider. `llama_cpp_server` is available only as an explicitly enabled/configured user-managed local server provider; Ollama, llama-cpp-python, MLX, cloud providers, MCP adapters, fallback routing, benchmark/eval commands, and default-provider switching remain future work.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused brain/llama.cpp server/docs/command-registry tests passed with 49 passed; `brain providers`, `brain health --provider llama_cpp_server`, and `brain doctor --provider llama_cpp_server` CLI smokes passed; startup policy and capability manifest validation passed via `make policy-check`; command registry validation passed with 437 commands.
+- Safety notes: provider health/status diagnostics are metadata/config checks and mocked HTTP in tests only; the provider never starts a server, installs a runtime, downloads a model, assumes tool-call support, executes tools, grants permissions, approves actions, writes memory, or bypasses ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- Blockers: none for the local scaffold so far. Live llama.cpp server validation remains opt-in and setup-dependent, and runtime independence remains partial until additional providers, fallback/router, and the release gate land.
+
+## Run: 2026-05-25 Brain Runtime Independence BRAIN-03
+
+- Scope confirmed: LM Studio provider adapter, orchestrator compatibility, metadata-only brain provider/status/doctor commands, tests, command registry, docs, and tracker updates.
+- Non-goals confirmed: did not remove LM Studio, did not add llama.cpp/Ollama/MLX providers, did not call paid/cloud providers, did not download models, did not install runtimes, did not enable MCP, did not start listeners, did not change no-tools behavior, and did not change ToolBroker execution semantics.
+- prompt_id: `BRAIN-03`.
+- next_prompt_id: `BRAIN-04`.
+- Implemented: added `agent.brain.providers.lmstudio.LMStudioBrainProvider`, lazy LM Studio default registration, `brain_response_to_openai`, orchestrator handling for `BrainChatResponse`, and metadata-only `brain providers`, `brain status`, and `brain doctor` CLI commands.
+- Compatibility status: `LMStudioClient` remains available and preserves payload construction and user-facing errors; existing `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL`, generation settings, no-tools mode, reasoning-content cleanup, and ToolBroker tool-call loop remain compatible.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused brain/LM Studio tests passed with 37 passed; broader brain/docs/command-registry tests passed with 55 passed; brain provider CLI smokes passed; startup policy and capability manifest validation passed via `make policy-check`; command registry validation passed with 437 commands; full suite passed with 1228 passed and 1 skipped.
+- Safety notes: brain status commands are metadata-only and do not generate model text, execute tools, start runtimes, start MCP, start listeners, download models, write memory, or bypass ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- Blockers: none for the local compatibility refactor so far. Live LM Studio validation remains opt-in, and runtime independence remains partial until non-LM providers/fallback/router release gates land.
+
+## Run: 2026-05-25 Brain Runtime Independence BRAIN-02
+
+- Scope confirmed: provider-neutral BrainProvider interface, shared brain runtime models, lazy model provider registry, deterministic mock provider, docs, tests, and tracker updates only.
+- Non-goals confirmed: did not remove LM Studio, did not migrate the current LM Studio/Qwopus path, did not implement llama.cpp/Ollama/MLX, did not call external/cloud providers, did not download models, did not enable MCP, did not start listeners, and did not change tool execution semantics.
+- prompt_id: `BRAIN-02`.
+- next_prompt_id: `BRAIN-03`.
+- Implemented: added `agent.brain` models, base provider contract, safe config defaults, normalized provider errors, lazy provider registration/status, explicit health summary, and deterministic `MockBrainProvider` with no-tool and mock tool-call responses.
+- Provider status: LM Studio remains the current real runtime path; mock provider is test-only; llama.cpp server, Ollama, llama-cpp-python, MLX, MCP adapters, and cloud providers are not implemented or enabled.
+- Tests and validation with `./.venv/bin/python` 3.12.13: targeted brain tests passed with 13 passed; focused brain/docs/feature-maturity tests passed with 28 passed; startup policy and capability manifest validation passed via `make policy-check`; command registry validation passed with 437 commands; full suite passed with 1220 passed and 1 skipped.
+- Safety notes: providers return model output and provider-neutral tool-call data only; they do not execute tools, grant permissions, approve actions, write memory, start runtimes, download models, call paid/cloud APIs, or bypass ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger.
+- Blockers: none for the interface/registry scaffold so far. Runtime independence remains partial: real chat still depends on the existing LM Studio path until BRAIN-03.
+
+## Run: 2026-05-25 Brain Runtime Independence BRAIN-01
+
+- Scope confirmed: documentation, roadmap, architecture decision, provider strategy, LM Studio decoupling plan, MCP interop decision, planned command registry rows, tests, and tracker updates for Brain Runtime Independence.
+- Non-goals confirmed: no LM Studio removal, no provider implementation, no model runtime installation, no model download, no paid/cloud API default, no MCP requirement or server enablement, no network listener, no ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger weakening, no personal-data tool enablement, and no normal chat behavior change.
+- prompt_id: `BRAIN-01`.
+- next_prompt_id: `BRAIN-02`.
+- Implemented: created `docs/decisions/brain_runtime_independence.md`, `docs/brain/BRAIN_RUNTIME_STRATEGY.md`, `docs/brain/MODEL_PROVIDER_STRATEGY.md`, `docs/brain/LM_STUDIO_DECOUPLING_PLAN.md`, `docs/brain/MODEL_PROVIDER_REQUIREMENTS.md`, and `docs/brain/MCP_INTEROP_DECISION.md`; added conservative planned `CMD-BRAIN-*` command registry rows and regenerated command docs.
+- Provider status: LM Studio remains the current supported/default runtime when configured; llama.cpp server, Ollama, llama-cpp-python, MLX, cloud API, and mock/test providers are specified/planned only and not implemented.
+- MCP decision: MCP is optional future tool interoperability, not brain runtime, and no MCP server or dependency was enabled.
+- Tests and validation with `./.venv/bin/python` 3.12.13: focused BRAIN docs/command registry tests passed with 7 passed; docs/registry tracker tests passed with 20 passed; startup policy and capability manifest validation passed via `make policy-check`; command registry validation passed with 437 commands; full suite passed with 1207 passed and 1 skipped.
+- Docs/tracker updates: README, CHANGELOG, feature registry, feature maturity, roadmap, risk register, threat model, project state, command registry/test matrix, and this completion report updated.
+- Blockers: none for `BRAIN-01`. LM Studio dependency is still required for real chat until later BRAIN prompts implement the gateway/refactor; no runtime independence is claimed yet.
+
 ## Run: 2026-05-25 Native Skill System Hardening SKILL-10
 
 - Scope confirmed: validation, conservative maturity review, release-gate docs, and small tracker updates for the native skill system after `SKILL-01` through `SKILL-09`.
@@ -8696,3 +9708,80 @@ Do not disable audit logging."
 - Prompt tracking:
   - `SESSION-LOGGING-REPLAY` marked completed.
   - Next prompt: `DOGFOOD-COMMAND-SUITES`.
+
+## Run: 2026-05-25 Codebase Bug Review and Hardening Pack
+
+- Scope confirmed: imported and ran `codebase-bug-review-and-hardening-v1` as CODEBUG-01 through CODEBUG-08 in a controlled batch, fixing only safe/scoped bugs and otherwise documenting blockers.
+- Non-goals confirmed: no major features, package installs, deleted tests, hidden failures, safety-control weakening, personal-data enablement, commit, or push.
+- Implemented:
+  - Created focused bug-review docs under `docs/bugfix/`.
+  - Fixed a `BrokenPipeError` traceback when `smart_agent.py commands list` output is piped to a closed consumer such as `head`.
+  - Added a regression test for closed-pipe command output.
+  - Reconciled CODEBUG prompt queue rows with anchored tracker edits.
+  - Recorded static-scan findings, deferred non-scoped cleanups, and final release-gate evidence.
+- Files changed for this task:
+  - `smart_agent.py`
+  - `tests/test_command_registry.py`
+  - `docs/bugfix/CODEBASE_BUG_REVIEW_BASELINE.md`
+  - `docs/bugfix/CODEBASE_BUG_HOTSPOTS.md`
+  - `docs/bugfix/CODEBASE_BUG_FIX_QUEUE.md`
+  - `docs/bugfix/SAFETY_CONTROL_PLANE_REVIEW.md`
+  - `docs/bugfix/CLI_COMMAND_REVIEW.md`
+  - `docs/bugfix/CORE_RUNTIME_REVIEW.md`
+  - `docs/bugfix/CONNECTOR_WORKFLOW_REVIEW.md`
+  - `docs/bugfix/TRACKER_DOCS_REVIEW.md`
+  - `docs/bugfix/STATIC_BUG_SCAN_REPORT.md`
+  - `docs/bugfix/CODEBASE_BUG_REVIEW_RELEASE_GATE.md`
+  - `docs/bugfix/CODEBASE_BUG_REVIEW_SUMMARY.md`
+  - `CHANGELOG.md`
+  - `docs/PROJECT_STATE.md`
+  - `docs/FEATURE_REGISTRY.md`
+  - `docs/FEATURE_MATURITY.md`
+  - `docs/FEATURE_ROADMAP.md`
+  - `docs/COMPLETION_REPORT.md`
+  - `docs/RISK_REGISTER.md`
+  - `docs/THREAT_MODEL.md`
+  - `docs/TEST_PLAN.md`
+  - `docs/RELEASE_CHECKLIST.md`
+  - `docs/PROMPT_QUEUE.md`
+  - `docs/PROMPT_AUDIT.md`
+  - `docs/TRACKER_CONSISTENCY_REPORT.md`
+- Commands run:
+  - Pack import and prompt marking commands for CODEBUG-01 through CODEBUG-08.
+  - `./.venv/bin/python --version`
+  - `./scripts/agent setup`
+  - `./.venv/bin/python smart_agent.py commands validate`
+  - `make policy-check`
+  - `./.venv/bin/python smart_agent.py prompts audit`
+  - `./.venv/bin/python smart_agent.py eval list`
+  - `./.venv/bin/python smart_agent.py eval run --safe`
+  - `./.venv/bin/python smart_agent.py dogfood run all_safe --dry-run`
+  - Focused `pytest` suites for safety, commands, runtime/brain, connectors/workflows, prompt/tracker/docs, and final docs validation.
+  - Whole-codebase static scans with `rg` and best-effort secret pattern scan with `git grep`.
+  - Full test suite.
+- Test results:
+  - Safety-control focused tests: 61 passed.
+  - Command registry focused tests after the closed-pipe fix: 6 passed.
+  - Runtime/brain focused tests: 148 passed.
+  - Connector/workflow focused tests: 440 passed.
+  - Prompt/tracker/docs focused tests: 66 passed.
+  - Final docs-focused tests: 43 passed.
+  - Full suite: 1387 passed, 1 skipped.
+  - Safe eval: 40 pass, 0 fail, 6 skipped.
+  - all_safe dogfood dry-run: ok, preview-only.
+  - Startup policy and capability manifest validation: passed via `make policy-check`.
+  - Command registry validation: passed with 484 commands.
+- Safety notes:
+  - No ToolBroker, PolicyEngine, PermissionManager, ApprovalManager, or AuditLogger behavior was weakened.
+  - No personal-data tools, send/write behavior, package installs, commits, or pushes were added.
+  - Static scans found no scoped P0/P1 bug fix to apply immediately; subprocess/deletion allowlist review remains a follow-up hardening item.
+- Feature maturity changes:
+  - Added Codebase Bug Review and Hardening at `4 Tested`, readiness 75.
+- Blockers:
+  - Clean release-candidate boundary remains open.
+  - Broader prompt tracker reconciliation remains open.
+  - Dedicated docs validation command is still not available.
+  - Subprocess/file-deletion allowlist review remains deferred.
+- Prompt tracking:
+  - CODEBUG-01 through CODEBUG-08 marked completed.
+  - Next prompt: `clean-release-candidate-boundary-and-prompt-tracker-reconciliation`.

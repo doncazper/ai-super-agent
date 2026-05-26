@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Iterable
 
+from agent.safety.redaction import SecretRedactor
 from agent.memory.permissions import MemoryCategory, parse_category
 from agent.memory.persistent_memory import MemoryRecord, PersistentMemoryStore
 from agent.safety.trust import TrustLevel
@@ -17,6 +19,7 @@ PERSONAL_TRUST_LEVELS = {
     TrustLevel.LOCAL_PRIVATE_DATA.value,
     TrustLevel.UNTRUSTED_EMAIL.value,
     TrustLevel.UNTRUSTED_MESSAGE.value,
+    TrustLevel.UNTRUSTED_DOCUMENT.value,
 }
 
 
@@ -56,7 +59,7 @@ class MemoryContextBuilder:
         budget = max(1, min(max_chars, 8000))
         truncated = False
         for record in usable:
-            line = f"- ({record.category}) {record.content}"
+            line = f"- ({record.category}) {_redact_context_text(record.content)}"
             projected = "\n".join([*lines, line])
             if len(projected) > budget:
                 truncated = True
@@ -93,3 +96,10 @@ def _record_summary(record: MemoryRecord) -> dict[str, object]:
         "source_trust": record.source_trust,
         "created_at": record.created_at,
     }
+
+
+def _redact_context_text(value: str) -> str:
+    redacted = SecretRedactor().redact_text(value)
+    redacted = re.sub(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", "[REDACTED_EMAIL]", redacted, flags=re.IGNORECASE)
+    redacted = re.sub(r"(?<!\d)(?:\+?\d[\d .()\-]{7,}\d)(?!\d)", "[REDACTED_PHONE]", redacted)
+    return redacted

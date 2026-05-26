@@ -13,7 +13,7 @@ imported_at: 2026-05-25T09:50:27+00:00
 source_pack: prompts/packs/native-skill-system-hardening-v1.md
 trust_level: UNTRUSTED_DOCUMENT
 started_at: 2026-05-25T11:04:54+00:00
-completed_at: 2026-05-25T11:09:29+00:00
+completed_at: 2026-05-25T22:00:04+00:00
 branch:
 commit_hash:
 related_feature_ids: []
@@ -22,7 +22,7 @@ files_expected:
 files_changed:
 tests_expected:
 tests_run:
-test_result: full suite passed with 1205 passed, 1 skipped; startup policy and capability manifest validation passed via make policy-check; docs/prompt/release artifact tests passed with 11 passed; command registry validation passed with 428 commands; native skill manifest validation passed with 3 valid; lock verify returned expected requires_setup for missing reviewed real lockfile records without writing; conflicts passed with 0 conflicts; docs-check passed with current catalog and 0 missing docs; native_skills_core dogfood passed 3/3; native_skill_vetting dogfood passed 3/3 in redacted session sess_20260525T110516Z_c5539999; eval run --native-skills passed 3 native-skill checks and skipped 5 personal-data checks by default
+test_result: completed prompt file and prompt audit evidence verified during SOURCE-TRUTH-RECONCILE-01
 docs_updated: yes
 changelog_updated:
 feature_registry_updated:
@@ -34,7 +34,7 @@ blockers:
 next_prompt_id:
 supersedes:
 superseded_by:
-notes: Completed Native Skill System Hardening release gate. Added release-gate and maturity-review docs and tracker updates. Native skill system is safe to rely on for metadata-only discovery, vetting, profile/compatibility/conflict diagnostics, docs generation, and release evidence; it is not approved for external skill installation, marketplace enablement, external skill/script execution, plugin runtime execution, personal-data skill enablement, dependency installation, or safety-control bypass. Reviewed real native_skills.lock and pinning workflow remain future work.
+notes: Reconciled stale imported row from completed prompt file and prompt audit evidence; no prompt was run by this reconciliation.
 ---
 
 # Prompt

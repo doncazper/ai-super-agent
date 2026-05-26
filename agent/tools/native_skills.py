@@ -3,6 +3,20 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from agent.autonomy.skill_proposals import (
+    approve_proposal_dry_run,
+    list_proposals,
+    propose_from_command_registry,
+    propose_from_sessions,
+    show_proposal,
+)
+from agent.autonomy.skill_improvements import (
+    list_improvements,
+    propose_from_all,
+    propose_from_bugs,
+    propose_from_dogfood,
+    show_improvement,
+)
 from agent.native_skills.finder import find_native_skills
 from agent.native_skills.vetter import inspect_candidate, last_report, score_candidate as score_native_skill_candidate, vet_candidate
 from agent.tools.errors import ToolError
@@ -76,6 +90,100 @@ def make_native_skill_tools(project_root: str | Path) -> dict[str, Any]:
     def find_skill(query: str, max_results: int = 5) -> dict[str, Any]:
         return find_native_skills(query, project_root=root, max_results=max_results)
 
+    def propose_from_commands() -> dict[str, Any]:
+        report = propose_from_command_registry(root)
+        return {
+            **report,
+            "_audit": {
+                "files_read": ["agent/ui/command_registry.py"],
+                "files_written": [report["report_path"]] if report.get("report_path") else [],
+                "result_summary": f"Skill proposals from command metadata: proposals={report.get('proposal_count', 0)}",
+            },
+        }
+
+    def propose_sessions() -> dict[str, Any]:
+        report = propose_from_sessions(root)
+        return {
+            **report,
+            "_audit": {
+                "files_read": ["reports/sessions redacted metadata only"],
+                "files_written": [report["report_path"]] if report.get("report_path") else [],
+                "result_summary": f"Skill proposals from redacted sessions: proposals={report.get('proposal_count', 0)}",
+            },
+        }
+
+    def proposals_list() -> dict[str, Any]:
+        report = list_proposals(root)
+        return {
+            **report,
+            "_audit": {
+                "files_read": [report.get("store_path", "reports/autonomy/skill_proposals.json")],
+                "result_summary": f"Skill proposal list: proposals={report.get('proposal_count', 0)}",
+            },
+        }
+
+    def proposals_show(proposal_id: str) -> dict[str, Any]:
+        report = show_proposal(proposal_id, project_root=root)
+        return {
+            **report,
+            "_audit": {
+                "files_read": [str(root / "reports/autonomy/skill_proposals.json")],
+                "result_summary": f"Skill proposal show: status={report.get('status')}; proposal_id={proposal_id}",
+            },
+        }
+
+    def proposals_approve_dry_run(proposal_id: str) -> dict[str, Any]:
+        report = approve_proposal_dry_run(proposal_id, project_root=root)
+        return {
+            **report,
+            "_audit": {
+                "files_read": [str(root / "reports/autonomy/skill_proposals.json")],
+                "result_summary": f"Skill proposal approval dry-run: status={report.get('status')}; proposal_id={proposal_id}",
+            },
+        }
+
+    def improve_propose(skill_id: str) -> dict[str, Any]:
+        report = propose_from_all(skill_id, project_root=root)
+        return _improvement_tool_response(report, f"Skill improvement proposal: skill_id={skill_id}; proposals={report.get('proposal_count', 0)}")
+
+    def improve_from_bugs(skill_id: str) -> dict[str, Any]:
+        report = propose_from_bugs(skill_id, project_root=root)
+        return _improvement_tool_response(report, f"Skill improvement from bugs: skill_id={skill_id}; proposals={report.get('proposal_count', 0)}")
+
+    def improve_from_dogfood(skill_id: str) -> dict[str, Any]:
+        report = propose_from_dogfood(skill_id, project_root=root)
+        return _improvement_tool_response(report, f"Skill improvement from dogfood: skill_id={skill_id}; proposals={report.get('proposal_count', 0)}")
+
+    def improvements_list() -> dict[str, Any]:
+        report = list_improvements(root)
+        return {
+            **report,
+            "_audit": {
+                "files_read": [report.get("store_path", "reports/autonomy/skill_improvements.json")],
+                "result_summary": f"Skill improvements list: improvements={report.get('improvement_count', 0)}",
+            },
+        }
+
+    def improvements_show(improvement_id: str) -> dict[str, Any]:
+        report = show_improvement(improvement_id, project_root=root)
+        return {
+            **report,
+            "_audit": {
+                "files_read": [str(root / "reports/autonomy/skill_improvements.json")],
+                "result_summary": f"Skill improvement show: status={report.get('status')}; improvement_id={improvement_id}",
+            },
+        }
+
+    def _improvement_tool_response(report: dict[str, Any], summary: str) -> dict[str, Any]:
+        return {
+            **report,
+            "_audit": {
+                "files_read": ["bugs/*.json redacted metadata", "reports/sessions redacted dogfood metadata"],
+                "files_written": [report["report_path"]] if report.get("report_path") else [],
+                "result_summary": summary,
+            },
+        }
+
     return {
         "native_skills.inspect_skill": inspect_skill,
         "native_skills.vet_skill_file": vet_skill_file,
@@ -83,6 +191,16 @@ def make_native_skill_tools(project_root: str | Path) -> dict[str, Any]:
         "native_skills.score_candidate": score_candidate,
         "native_skills.report_last": report_last,
         "native_skills.find_skill": find_skill,
+        "native_skills.propose_from_commands": propose_from_commands,
+        "native_skills.propose_from_sessions": propose_sessions,
+        "native_skills.proposals_list": proposals_list,
+        "native_skills.proposals_show": proposals_show,
+        "native_skills.proposals_approve_dry_run": proposals_approve_dry_run,
+        "native_skills.improve_propose": improve_propose,
+        "native_skills.improve_from_bugs": improve_from_bugs,
+        "native_skills.improve_from_dogfood": improve_from_dogfood,
+        "native_skills.improvements_list": improvements_list,
+        "native_skills.improvements_show": improvements_show,
     }
 
 
@@ -396,6 +514,116 @@ NATIVE_SKILL_SCHEMAS = {
                     "max_results": {"type": "integer", "minimum": 1, "maximum": 20},
                 },
                 "required": ["query"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "native_skills.propose_from_commands": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.propose_from_commands",
+            "description": "Create redacted candidate skill proposals from command metadata only; never creates, imports, enables, or executes skills.",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+    },
+    "native_skills.propose_from_sessions": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.propose_from_sessions",
+            "description": "Create redacted candidate skill proposals from redacted session metadata only; skips unredacted or personal data by default.",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+    },
+    "native_skills.proposals_list": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.proposals_list",
+            "description": "List local skill proposal metadata without creating or enabling skills.",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+    },
+    "native_skills.proposals_show": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.proposals_show",
+            "description": "Show one local skill proposal by id without importing or enabling it.",
+            "parameters": {
+                "type": "object",
+                "properties": {"proposal_id": {"type": "string"}},
+                "required": ["proposal_id"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "native_skills.proposals_approve_dry_run": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.proposals_approve_dry_run",
+            "description": "Preview proposal approval next steps without approving, importing, enabling, or executing a skill.",
+            "parameters": {
+                "type": "object",
+                "properties": {"proposal_id": {"type": "string"}},
+                "required": ["proposal_id"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "native_skills.improve_propose": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.improve_propose",
+            "description": "Create an evidence-backed native skill improvement proposal without modifying skills or lockfiles.",
+            "parameters": {
+                "type": "object",
+                "properties": {"skill_id": {"type": "string"}},
+                "required": ["skill_id"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "native_skills.improve_from_bugs": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.improve_from_bugs",
+            "description": "Create a native skill improvement proposal from redacted bug evidence without modifying files.",
+            "parameters": {
+                "type": "object",
+                "properties": {"skill_id": {"type": "string"}},
+                "required": ["skill_id"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "native_skills.improve_from_dogfood": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.improve_from_dogfood",
+            "description": "Create a native skill improvement proposal from redacted dogfood failure evidence without modifying files.",
+            "parameters": {
+                "type": "object",
+                "properties": {"skill_id": {"type": "string"}},
+                "required": ["skill_id"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "native_skills.improvements_list": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.improvements_list",
+            "description": "List local native skill improvement proposals.",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+    },
+    "native_skills.improvements_show": {
+        "type": "function",
+        "function": {
+            "name": "native_skills.improvements_show",
+            "description": "Show one native skill improvement proposal by id.",
+            "parameters": {
+                "type": "object",
+                "properties": {"improvement_id": {"type": "string"}},
+                "required": ["improvement_id"],
                 "additionalProperties": False,
             },
         },

@@ -8,10 +8,26 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from agent.connectors.cost_policy import ProviderCostConfig, select_provider, weather_provider_candidates, web_provider_candidates
+from agent.channels.telegram import telegram_access_status
 from agent.safety.redaction import SecretRedactor
 
 
-SECRET_STATUS_PROVIDERS = ("serpapi", "weatherapi", "gmail", "telegram")
+SECRET_STATUS_PROVIDERS = (
+    "reddit",
+    "serpapi",
+    "brave",
+    "weatherapi",
+    "telegram",
+    "gmail",
+    "newsapi",
+    "mediacloud",
+    "microsoft",
+    "github",
+    "media",
+    "lmstudio",
+    "ollama",
+    "llama_cpp",
+)
 SECRET_ENV_VARS = (
     "SERPAPI_API_KEY",
     "WEATHERAPI_API_KEY",
@@ -24,6 +40,10 @@ SECRET_ENV_VARS = (
     "TELEGRAM_BOT_TOKEN",
     "TELEGRAM_DEFAULT_CHAT_ID",
     "TELEGRAM_ALLOWED_CHAT_IDS",
+    "TELEGRAM_ENABLED",
+    "TELEGRAM_ALLOW_SEND",
+    "TELEGRAM_ALLOW_POLLING",
+    "TELEGRAM_ALLOW_WEBHOOK",
     "REDDIT_CLIENT_ID",
     "REDDIT_CLIENT_SECRET",
     "REDDIT_REFRESH_TOKEN",
@@ -81,10 +101,14 @@ def secrets_doctor(
     *,
     project_root: str | Path = ".",
     environ: Mapping[str, str] | None = None,
+    provider: str | None = None,
 ) -> dict[str, Any]:
     root = Path(project_root).resolve()
     env = environ or os.environ
-    providers = [provider_status(name, project_root=root, environ=env) for name in SECRET_STATUS_PROVIDERS]
+    provider_names = SECRET_STATUS_PROVIDERS
+    if provider and provider != "all":
+        provider_names = (provider,)
+    providers = [provider_status(name, project_root=root, environ=env) for name in provider_names]
     warnings = _repo_warnings(root, env)
     return SecretRedactor().redact(
         {
@@ -130,12 +154,73 @@ def provider_status(
         return _serpapi_status(env)
     if normalized == "weatherapi":
         return _weatherapi_status(env)
+    if normalized == "brave":
+        return _simple_api_key_status(
+            env,
+            name="brave",
+            required=["BRAVE_SEARCH_API_KEY"],
+            enabled_env="BRAVE_SEARCH_ENABLED",
+            paid_or_quota_limited=True,
+            setup_hint="Set BRAVE_SEARCH_API_KEY and BRAVE_SEARCH_ENABLED=true, then explicitly allow quota/paid provider use before live search.",
+        )
     if normalized == "gmail":
         return _gmail_status(env, Path(project_root).resolve())
     if normalized == "telegram":
         return _telegram_status(env)
     if normalized == "reddit":
         return _reddit_status(env, Path(project_root).resolve())
+    if normalized == "newsapi":
+        return _simple_api_key_status(
+            env,
+            name="newsapi",
+            required=["NEWSAPI_API_KEY"],
+            enabled_env="NEWS_NEWSAPI_ENABLED",
+            paid_or_quota_limited=True,
+            setup_hint="Set NEWSAPI_API_KEY and NEWS_NEWSAPI_ENABLED=true only for optional/fallback NewsAPI use; paid providers are skipped by default.",
+        )
+    if normalized == "mediacloud":
+        return _simple_api_key_status(
+            env,
+            name="mediacloud",
+            required=["MEDIACLOUD_API_KEY"],
+            enabled_env="NEWS_MEDIACLOUD_ENABLED",
+            paid_or_quota_limited=False,
+            setup_hint="Set MEDIACLOUD_API_KEY and NEWS_MEDIACLOUD_ENABLED=true for optional Media Cloud use.",
+        )
+    if normalized == "microsoft":
+        return _microsoft_status(env)
+    if normalized == "github":
+        return _simple_api_key_status(
+            env,
+            name="github",
+            required=["GITHUB_TOKEN"],
+            enabled_env="GITHUB_OFFICIAL_API_ENABLED",
+            paid_or_quota_limited=False,
+            setup_hint="Set GITHUB_TOKEN only for future explicit GitHub API workflows; keep scopes minimal.",
+        )
+    if normalized == "media":
+        return _media_status(env)
+    if normalized == "lmstudio":
+        return _non_secret_config_status(
+            env,
+            name="lmstudio",
+            required=["LMSTUDIO_BASE_URL", "LMSTUDIO_MODEL"],
+            setup_hint="Set LMSTUDIO_BASE_URL and LMSTUDIO_MODEL for local LM Studio-compatible brain runtime.",
+        )
+    if normalized == "ollama":
+        return _non_secret_config_status(
+            env,
+            name="ollama",
+            required=["OLLAMA_BASE_URL", "OLLAMA_MODEL"],
+            setup_hint="Set OLLAMA_ENABLED=true plus OLLAMA_BASE_URL/OLLAMA_MODEL for future explicit local Ollama provider use.",
+        )
+    if normalized in {"llama_cpp", "llama.cpp", "llamacpp"}:
+        return _non_secret_config_status(
+            env,
+            name="llama_cpp",
+            required=["LLAMA_CPP_SERVER_BASE_URL", "LLAMA_CPP_SERVER_MODEL"],
+            setup_hint="Set LLAMA_CPP_SERVER_ENABLED=true plus server URL/model for future explicit llama.cpp server provider use.",
+        )
     raise ValueError(f"unknown secret provider: {name}")
 
 
@@ -213,6 +298,7 @@ def telegram_doctor(
 ) -> dict[str, Any]:
     env = environ or os.environ
     status = provider_status("telegram", environ=env).to_dict()
+    access_policy = telegram_access_status(env)
     warnings: list[dict[str, Any]] = []
     if not _present(env, "TELEGRAM_DEFAULT_CHAT_ID"):
         warnings.append(
@@ -235,11 +321,15 @@ def telegram_doctor(
             "connector": "telegram",
             "status": "warn" if warnings or status["missing_env"] else "ok",
             "configured": status["configured"],
-            "enabled": False,
+            "enabled": access_policy["enabled"],
             "no_api_calls_made": True,
             "no_chat_reads": True,
             "no_messages_sent": True,
+            "polling_started": False,
+            "webhook_server_started": False,
+            "no_background_service": True,
             "credential_status": status,
+            "access_policy": access_policy,
             "send_capability": _send_safety_summary("telegram"),
             "warnings": warnings,
             "setup_hint": status["setup_hint"],
@@ -254,14 +344,21 @@ def telegram_status(*, environ: Mapping[str, str] | None = None) -> dict[str, An
         "connector": "telegram",
         "status": doctor["status"],
         "configured": doctor["configured"],
-        "enabled": False,
+        "enabled": doctor["enabled"],
         "no_api_calls_made": True,
         "no_chat_reads": True,
         "no_messages_sent": True,
+        "polling_started": False,
+        "webhook_server_started": False,
+        "no_background_service": True,
         "present_env": doctor["credential_status"]["present_env"],
         "missing_env": doctor["credential_status"]["missing_env"],
         "default_chat_configured": doctor["credential_status"]["metadata"]["default_chat_configured"],
         "allowed_chat_ids_configured": doctor["credential_status"]["metadata"]["allowed_chat_ids_configured"],
+        "allow_send": doctor["access_policy"]["allow_send"],
+        "allow_polling": doctor["access_policy"]["allow_polling"],
+        "allow_webhook": doctor["access_policy"]["allow_webhook"],
+        "future_send_ready": doctor["access_policy"]["future_send_ready"],
         "send_capability": doctor["send_capability"],
         "warnings": doctor["warnings"],
         "setup_hint": doctor["setup_hint"],
@@ -371,7 +468,18 @@ def _telegram_status(env: Mapping[str, str]) -> ProviderCredentialStatus:
         disabled_by_cost_policy=False,
         setup_hint="Set TELEGRAM_BOT_TOKEN plus allowed/default chat ids for future config checks only; this doctor sends no messages.",
         required_env=[*required, "TELEGRAM_DEFAULT_CHAT_ID or TELEGRAM_ALLOWED_CHAT_IDS"],
-        present_env=_present_keys(env, ["TELEGRAM_BOT_TOKEN", "TELEGRAM_DEFAULT_CHAT_ID", "TELEGRAM_ALLOWED_CHAT_IDS"]),
+        present_env=_present_keys(
+            env,
+            [
+                "TELEGRAM_ENABLED",
+                "TELEGRAM_BOT_TOKEN",
+                "TELEGRAM_DEFAULT_CHAT_ID",
+                "TELEGRAM_ALLOWED_CHAT_IDS",
+                "TELEGRAM_ALLOW_SEND",
+                "TELEGRAM_ALLOW_POLLING",
+                "TELEGRAM_ALLOW_WEBHOOK",
+            ],
+        ),
         missing_env=[] if configured else _telegram_missing(env),
         metadata={
             "default_chat_configured": _present(env, "TELEGRAM_DEFAULT_CHAT_ID"),
@@ -382,6 +490,10 @@ def _telegram_status(env: Mapping[str, str]) -> ProviderCredentialStatus:
             "connector_enabled_by_default": False,
             "send_risk_level": "CRITICAL",
             "send_default_enabled": False,
+            "enabled_by_config": _present(env, "TELEGRAM_ENABLED") and (env.get("TELEGRAM_ENABLED") or "").strip().casefold() in {"1", "true", "yes", "on"},
+            "allow_send": _present(env, "TELEGRAM_ALLOW_SEND") and (env.get("TELEGRAM_ALLOW_SEND") or "").strip().casefold() in {"1", "true", "yes", "on"},
+            "allow_polling": _present(env, "TELEGRAM_ALLOW_POLLING") and (env.get("TELEGRAM_ALLOW_POLLING") or "").strip().casefold() in {"1", "true", "yes", "on"},
+            "allow_webhook": _present(env, "TELEGRAM_ALLOW_WEBHOOK") and (env.get("TELEGRAM_ALLOW_WEBHOOK") or "").strip().casefold() in {"1", "true", "yes", "on"},
         },
     )
 
@@ -439,6 +551,124 @@ def _reddit_status(env: Mapping[str, str], project_root: Path) -> ProviderCreden
             "post_comment_vote_dm_capabilities_enabled": False,
             "no_api_calls_made": True,
             "no_post_comment_content_fetched": True,
+        },
+    )
+
+
+def _simple_api_key_status(
+    env: Mapping[str, str],
+    *,
+    name: str,
+    required: list[str],
+    enabled_env: str,
+    paid_or_quota_limited: bool,
+    setup_hint: str,
+) -> ProviderCredentialStatus:
+    configured = all(_present(env, key) for key in required)
+    enabled = (env.get(enabled_env) or "").strip().casefold() in {"1", "true", "yes", "on"}
+    config = ProviderCostConfig.from_env(env)
+    paid_allowed = config.allow_paid_apis and config.max_paid_api_calls_per_day > 0
+    allowed = configured and enabled and (paid_allowed if paid_or_quota_limited else True)
+    return ProviderCredentialStatus(
+        name=name,
+        configured=configured,
+        allowed=allowed,
+        default=False,
+        paid_or_quota_limited=paid_or_quota_limited,
+        disabled_by_cost_policy=configured and paid_or_quota_limited and not paid_allowed,
+        setup_hint=setup_hint,
+        required_env=required,
+        present_env=_present_keys(env, [enabled_env, *required]),
+        missing_env=_missing_keys(env, required),
+        metadata={
+            "enabled_env": enabled_env,
+            "enabled_by_config": enabled,
+            "paid_or_quota_limited": paid_or_quota_limited,
+            "paid_provider_allowed_by_policy": paid_allowed,
+            "no_api_calls_made": True,
+            "values_returned": False,
+        },
+    )
+
+
+def _microsoft_status(env: Mapping[str, str]) -> ProviderCredentialStatus:
+    required = ["MICROSOFT_CLIENT_ID", "MICROSOFT_TENANT_ID", "MICROSOFT_CLIENT_SECRET"]
+    configured = all(_present(env, key) for key in required)
+    scopes = _parse_scopes(env.get("MICROSOFT_SCOPES", ""))
+    broad_scope = any(scope.casefold() in {"mail.readwrite", "mail.send", "calendars.readwrite", "contacts.readwrite"} for scope in scopes)
+    return ProviderCredentialStatus(
+        name="microsoft",
+        configured=configured,
+        allowed=False,
+        default=False,
+        paid_or_quota_limited=False,
+        disabled_by_cost_policy=False,
+        setup_hint="Set Microsoft OAuth app metadata only for future explicit Microsoft Graph work; broad scopes require separate approval.",
+        required_env=required,
+        present_env=_present_keys(env, [*required, "MICROSOFT_SCOPES"]),
+        missing_env=_missing_keys(env, required),
+        metadata={
+            "enabled_by_config": False,
+            "broad_scope_warning": broad_scope,
+            "scope_count": len(scopes),
+            "reads_mail_calendar_contacts": False,
+            "writes_or_sends": False,
+            "future_write_risk": "CRITICAL",
+            "no_api_calls_made": True,
+        },
+    )
+
+
+def _media_status(env: Mapping[str, str]) -> ProviderCredentialStatus:
+    required = ["MEDIA_PROVIDER_API_KEY"]
+    configured = _present(env, "MEDIA_PROVIDER_API_KEY")
+    comfyui_url_configured = _present(env, "COMFYUI_BASE_URL")
+    comfyui_enabled = (env.get("COMFYUI_ENABLED") or "").strip().casefold() in {"1", "true", "yes", "on"}
+    return ProviderCredentialStatus(
+        name="media",
+        configured=configured or comfyui_url_configured,
+        allowed=False,
+        default=False,
+        paid_or_quota_limited=True,
+        disabled_by_cost_policy=configured,
+        setup_hint="Media generation providers remain disabled/stubbed; keep API keys in Keychain/env and do not enable paid providers by default.",
+        required_env=required,
+        present_env=_present_keys(env, [*required, "COMFYUI_BASE_URL", "COMFYUI_ENABLED"]),
+        missing_env=[] if configured else required,
+        metadata={
+            "comfyui_base_url_configured": comfyui_url_configured,
+            "comfyui_enabled": comfyui_enabled,
+            "comfyui_base_url_is_secret": False,
+            "real_generation_enabled": False,
+            "provider_calls_enabled": False,
+            "no_api_calls_made": True,
+        },
+    )
+
+
+def _non_secret_config_status(
+    env: Mapping[str, str],
+    *,
+    name: str,
+    required: list[str],
+    setup_hint: str,
+) -> ProviderCredentialStatus:
+    configured = all(_present(env, key) for key in required)
+    return ProviderCredentialStatus(
+        name=name,
+        configured=configured,
+        allowed=configured,
+        default=False,
+        paid_or_quota_limited=False,
+        disabled_by_cost_policy=False,
+        setup_hint=setup_hint,
+        required_env=required,
+        present_env=_present_keys(env, required),
+        missing_env=_missing_keys(env, required),
+        metadata={
+            "contains_secret_material": False,
+            "no_api_calls_made": True,
+            "local_provider_only": True,
         },
     )
 

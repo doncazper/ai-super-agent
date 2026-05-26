@@ -12,10 +12,12 @@ from agent.core.tool_broker import ToolBroker
 from agent.safety.audit import AuditLogger
 from agent.safety.policy import Capability, PolicyEngine, RiskLevel
 from agent.tools.registry import default_registry
+from agent.brain.providers.lmstudio import LMStudioBrainProvider
 
 
 class FakeClient:
     def __init__(self, responses: list[dict[str, Any]]) -> None:
+        self.config = LMStudioConfig(model="q")
         self.responses = responses
         self.calls: list[dict[str, Any]] = []
 
@@ -129,6 +131,17 @@ def test_no_tool_mode_attaches_no_tools_and_preserves_user_message(tmp_path) -> 
         "role": "user",
         "content": "Explain RCS vs iMessage",
     }
+
+
+def test_no_tool_mode_still_attaches_no_tools_through_lmstudio_provider(tmp_path) -> None:
+    fake = FakeClient([response({"role": "assistant", "content": "No tools attached."})])
+    provider = LMStudioBrainProvider(client=fake)
+    orchestrator = make_orchestrator(provider, tmp_path)
+
+    result = orchestrator.run("Explain RCS vs iMessage", no_tools=True)
+
+    assert result.content == "No tools attached."
+    assert fake.calls[0]["tools"] is None
 
 
 def test_no_tool_mode_attaches_no_tools_for_weather_request(tmp_path) -> None:

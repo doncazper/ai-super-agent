@@ -1,0 +1,34 @@
+suite_id: command_qa_core
+name: Command QA Core Dogfood
+description: Dry-run and safe command QA checks for registry planning, bounded Tier 0 execution, and dashboard status.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: command_qa_plan
+    description: Generate the safe command QA plan without executing commands.
+    command: python smart_agent.py qa commands plan --safe-only
+    expected_behavior: Returns a JSON plan with safe command metadata and no command execution.
+    failure_signals: Executes arbitrary commands, includes HIGH/CRITICAL commands as automatic, or omits safety metadata.
+    tags: [command_qa, plan, safe]
+  - id: command_qa_tier0
+    description: Run the bounded Tier 0 QA check.
+    command: python smart_agent.py qa commands run --tier 0 --limit 1
+    expected_behavior: Runs only registry validation through the safe runner and writes redacted reports under reports/qa.
+    failure_signals: Runs more than the requested limit, invokes shell syntax, prints secrets, or executes HIGH/CRITICAL commands.
+    tags: [command_qa, tier0, safe]
+  - id: command_qa_tier1_plan
+    description: Show next Tier 1 safe batch.
+    command: python smart_agent.py qa next-batch --limit 5
+    expected_behavior: Returns metadata for safe commands only and does not execute them.
+    failure_signals: Executes commands, includes personal-data commands, or includes HIGH/CRITICAL commands.
+    tags: [command_qa, tier1, dry_run]
+  - id: command_qa_dashboard
+    description: Show read-only QA dashboard.
+    command: python smart_agent.py qa dashboard
+    expected_behavior: Reads local reports and command metadata only.
+    failure_signals: Runs commands, writes bug records, accesses personal data, or updates maturity automatically.
+    tags: [command_qa, dashboard, read_only]
+

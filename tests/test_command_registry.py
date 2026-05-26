@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import shlex
+import subprocess
+import sys
 from pathlib import Path
 
 from agent.ui import cli_commands
@@ -68,6 +71,19 @@ def test_command_registry_cli_validate_and_qa_plan(capsys) -> None:
     assert plan["commands"]
 
 
+def test_command_registry_list_handles_closed_pipe_without_traceback() -> None:
+    command = f"set -o pipefail; {shlex.quote(sys.executable)} smart_agent.py commands list | head -5"
+    result = subprocess.run(
+        ["bash", "-lc", command],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "BrokenPipeError" not in result.stderr
+
+
 def test_command_qa_run_prints_only_safe_low_active_commands() -> None:
     commands = qa_run("Weather")
     assert commands
@@ -76,4 +92,3 @@ def test_command_qa_run_prints_only_safe_low_active_commands() -> None:
         assert record is not None
         assert record.status == "active"
         assert record.risk_level in {"SAFE", "LOW"}
-

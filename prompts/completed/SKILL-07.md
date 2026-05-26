@@ -13,7 +13,7 @@ imported_at: 2026-05-25T09:50:27+00:00
 source_pack: prompts/packs/native-skill-system-hardening-v1.md
 trust_level: UNTRUSTED_DOCUMENT
 started_at: 2026-05-25T10:39:08+00:00
-completed_at: 2026-05-25T10:46:57+00:00
+completed_at: 2026-05-25T22:00:03+00:00
 branch:
 commit_hash:
 related_feature_ids: []
@@ -22,7 +22,7 @@ files_expected:
 files_changed:
 tests_expected:
 tests_run:
-test_result: focused conflict detector tests 12 passed; broader conflict/compatibility/profile/manifest/command-registry tests 42 passed; docs/prompt/release artifact tests 21 passed; startup policy and capability manifest validation passed via make policy-check; command registry validation passed with 418 commands; native skill manifest validation passed with 3 valid; CLI smokes passed for skills conflicts, skills conflicts --json, and fail-closed skills explain-conflict missing; full suite passed with 1187 passed, 1 skipped
+test_result: completed prompt file and prompt audit evidence verified during SOURCE-TRUTH-RECONCILE-01
 docs_updated: yes
 changelog_updated:
 feature_registry_updated:
@@ -34,7 +34,7 @@ blockers:
 next_prompt_id:
 supersedes:
 superseded_by:
-notes: Completed metadata-only native skill conflict detector. Added conflict records, registry methods, read-only conflict/explain commands, docs, command registry rows, and tracker updates. No auto-resolution, skill execution, external script execution, provider call, dependency install, plugin runtime execution, skill enable/disable, personal-data access, permission grant, or safety bypass added.
+notes: Reconciled stale imported row from completed prompt file and prompt audit evidence; no prompt was run by this reconciliation.
 ---
 
 # Prompt

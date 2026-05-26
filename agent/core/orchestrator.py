@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import uuid4
 
+from agent.brain.models import BrainChatResponse
+from agent.brain.providers.lmstudio import brain_response_to_openai
 from agent.core.lmstudio_client import LMStudioClient
 from agent.core.messages import MINIMAL_SYSTEM_PROMPT, clean_assistant_message, initial_messages
 from agent.core.router import RouteDecision, Router
@@ -66,7 +68,7 @@ class Orchestrator:
             },
         ]
 
-        response = self.client.chat(messages, tools=tools)
+        response = self._chat(messages, tools=tools)
         debug_events.append(self._response_debug("initial_model_response", response))
         assistant_message = self._assistant_message(response)
         messages.append(assistant_message)
@@ -106,7 +108,7 @@ class Orchestrator:
                 messages.append(tool_message)
                 tool_results.append(tool_message)
 
-            response = self.client.chat(messages, tools=tools)
+            response = self._chat(messages, tools=tools)
             debug_events.append(self._response_debug("final_model_response", response))
             assistant_message = self._assistant_message(response)
             messages.append(assistant_message)
@@ -121,6 +123,14 @@ class Orchestrator:
     def _assistant_message(self, response: dict[str, Any]) -> dict[str, Any]:
         message = response["choices"][0]["message"]
         return clean_assistant_message(message)
+
+    def _chat(self, messages: list[dict[str, Any]], *, tools: list[dict[str, Any]] | None) -> dict[str, Any]:
+        response = self.client.chat(messages, tools=tools)
+        if isinstance(response, BrainChatResponse):
+            if response.error is not None:
+                raise response.error
+            return brain_response_to_openai(response)
+        return response
 
     def _response_debug(self, event: str, response: dict[str, Any]) -> dict[str, Any]:
         choice = response.get("choices", [{}])[0]

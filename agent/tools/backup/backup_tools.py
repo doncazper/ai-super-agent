@@ -52,6 +52,9 @@ def make_backup_tools(project_root: str | Path) -> dict[str, Any]:
         "backup.list": manager.list_backups,
         "backup.inspect": manager.inspect,
         "backup.verify": manager.verify,
+        "backup.roundtrip": manager.roundtrip,
+        "backup.policy_check": manager.policy_check,
+        "backup.restore_check": manager.restore_check,
         "backup.export": manager.export,
         "backup.restore": manager.restore,
     }
@@ -222,6 +225,93 @@ class BackupManager:
             "problems": problems,
             "integrity_hash": manifest.get("integrity_hash"),
             "_audit": {"files_read": [str(archive / "manifest.json")], "result_summary": f"Verified backup {backup_id}."},
+        }
+
+    def roundtrip(self, *, backup_dir: str = "", dry_run: bool = True) -> dict[str, Any]:
+        if not dry_run:
+            raise ToolError("backup roundtrip currently supports --dry-run only; run restore only inside a disposable workspace")
+        root = self._backup_root(backup_dir)
+        steps = [
+            {
+                "step": "create",
+                "tool": "backup.create",
+                "mode": "planned",
+                "writes": "redacted backup archive under backup_dir",
+            },
+            {"step": "verify", "tool": "backup.verify", "mode": "planned", "checks": "manifest and stored file hashes"},
+            {"step": "restore_check", "tool": "backup.restore_check", "mode": "planned", "checks": "policy guards before restore"},
+            {
+                "step": "restore_smoke",
+                "tool": "backup.restore",
+                "mode": "manual-disposable-workspace-only",
+                "approval_required": True,
+            },
+        ]
+        return {
+            "status": "ok",
+            "dry_run": True,
+            "backup_dir": str(root),
+            "would_create_backup": False,
+            "would_restore": False,
+            "disposable_workspace_required": True,
+            "steps": steps,
+            "limitations": [
+                "Dry-run does not create or restore an archive.",
+                "Live restore smoke must use a disposable copy and explicit backup.restore approval.",
+            ],
+            "_audit": {"files_read": [str(root)], "result_summary": "Prepared backup roundtrip dry-run plan."},
+        }
+
+    def policy_check(self) -> dict[str, Any]:
+        path = self.project_root / "config" / "capabilities.yaml"
+        problems: list[str] = []
+        if not path.exists():
+            problems.append("config/capabilities.yaml is missing")
+        else:
+            try:
+                validate_capabilities_config(load_yaml(path))
+            except Exception as exc:
+                problems.append(f"current capabilities manifest fails policy validation: {exc}")
+        guards = [
+            "restore verifies manifest integrity before writing",
+            "restore verifies stored file hashes before writing",
+            "restore creates pre-restore file copies for overwritten files",
+            "restore rejects personal-data tools enabled by default",
+            "restore rejects CRITICAL approval reuse",
+            "restore rejects bypass/skip policy/audit markers",
+            "restore rejects unredacted secret material",
+            "restore rejects path traversal",
+            "backup.restore remains approval-gated",
+        ]
+        return {
+            "status": "ok" if not problems else "error",
+            "valid": not problems,
+            "guards": guards,
+            "problems": problems,
+            "approval_gated_restore": True,
+            "live_smoke_recommendation": "Run restore only inside a disposable project copy.",
+            "_audit": {"files_read": [str(path)], "result_summary": "Checked backup restore policy guards."},
+        }
+
+    def restore_check(self, *, backup_id: str, backup_dir: str = "") -> dict[str, Any]:
+        archive = self._archive_path(backup_id, backup_dir)
+        manifest = self._require_manifest(archive)
+        problems = self._verify_manifest(archive, manifest)
+        files_read = [str(archive / "manifest.json")]
+        if not problems:
+            try:
+                self._validate_restore_policy(archive, manifest)
+            except ToolError as exc:
+                problems.append(str(exc))
+        return {
+            "status": "ok" if not problems else "error",
+            "backup_id": backup_id,
+            "valid": not problems,
+            "would_restore": False,
+            "approval_required_for_restore": True,
+            "problems": problems,
+            "restore_preview": [] if problems else self._restore_preview(archive, manifest),
+            "_audit": {"files_read": files_read, "result_summary": f"Checked restore readiness for {backup_id}."},
         }
 
     def restore(self, *, backup_id: str, backup_dir: str = "") -> dict[str, Any]:
@@ -457,21 +547,43 @@ class BackupManager:
 
     def _verify_manifest(self, archive: Path, manifest: dict[str, Any]) -> list[str]:
         problems = []
+        if not bool(manifest.get("redacted", True)):
+            problems.append("backup manifest is not marked redacted")
         expected_integrity = manifest.get("integrity_hash")
         actual_integrity = _manifest_integrity_hash(manifest)
         if expected_integrity != actual_integrity:
             problems.append("manifest integrity hash mismatch")
         for entry in manifest.get("files", []):
-            stored = archive / str(entry.get("stored_path", ""))
+            source_path = str(entry.get("source_path", ""))
+            if not _safe_relative_path(source_path):
+                problems.append(f"path traversal source path: {source_path}")
+                continue
+            stored_rel = str(entry.get("stored_path", ""))
+            if not _safe_relative_path(stored_rel):
+                problems.append(f"path traversal stored file: {stored_rel}")
+                continue
+            stored = archive / stored_rel
             if not stored.exists():
                 problems.append(f"missing stored file: {entry.get('stored_path')}")
                 continue
             if _sha256_file(stored) != entry.get("sha256"):
                 problems.append(f"hash mismatch: {entry.get('stored_path')}")
+            if self._file_contains_unredacted_secret(stored):
+                problems.append(f"unredacted secret material: {entry.get('stored_path')}")
         for entry in manifest.get("data_exports", []):
-            stored = archive / str(entry.get("stored_path", ""))
+            stored_rel = str(entry.get("stored_path", ""))
+            if not _safe_relative_path(stored_rel):
+                problems.append(f"path traversal data export: {stored_rel}")
+                continue
+            restore_target = str(entry.get("restore_target", ""))
+            if restore_target and not _safe_relative_path(restore_target):
+                problems.append(f"path traversal restore target: {restore_target}")
+                continue
+            stored = archive / stored_rel
             if not stored.exists():
                 problems.append(f"missing data export: {entry.get('stored_path')}")
+            elif self._file_contains_unredacted_secret(stored):
+                problems.append(f"unredacted secret material: {entry.get('stored_path')}")
         return problems
 
     def _manifest_summary(self, manifest: dict[str, Any]) -> dict[str, Any]:
@@ -522,6 +634,13 @@ class BackupManager:
                 validate_capabilities_config(load_yaml(stored))
             except Exception as exc:
                 raise ToolError(f"restore blocked: backed-up capabilities manifest would weaken or violate policy ({exc})") from exc
+
+    def _file_contains_unredacted_secret(self, path: Path) -> bool:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return False
+        return self.redactor.redact_text(text) != text
 
     def _restore_allowed(self, rel: str) -> bool:
         return (
@@ -580,6 +699,13 @@ def _relative_to(path: Path, root: Path) -> str:
         return path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
         return path.name
+
+
+def _safe_relative_path(value: str) -> bool:
+    if not value:
+        return False
+    path = Path(value)
+    return not path.is_absolute() and ".." not in path.parts
 
 
 def _sha256_file(path: Path) -> str:
@@ -652,6 +778,39 @@ BACKUP_SCHEMAS = {
         "function": {
             "name": "backup.verify",
             "description": "Verify backup manifest and file hashes.",
+            "parameters": {
+                "type": "object",
+                "properties": {"backup_id": {"type": "string"}, "backup_dir": {"type": "string"}},
+                "required": ["backup_id"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "backup.roundtrip": {
+        "type": "function",
+        "function": {
+            "name": "backup.roundtrip",
+            "description": "Prepare a dry-run backup roundtrip plan without creating or restoring archives.",
+            "parameters": {
+                "type": "object",
+                "properties": {"backup_dir": {"type": "string"}, "dry_run": {"type": "boolean"}},
+                "additionalProperties": False,
+            },
+        },
+    },
+    "backup.policy_check": {
+        "type": "function",
+        "function": {
+            "name": "backup.policy_check",
+            "description": "Check backup restore policy guards without restoring data.",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": False},
+        },
+    },
+    "backup.restore_check": {
+        "type": "function",
+        "function": {
+            "name": "backup.restore_check",
+            "description": "Verify one backup and restore policy readiness without writing restored files.",
             "parameters": {
                 "type": "object",
                 "properties": {"backup_id": {"type": "string"}, "backup_dir": {"type": "string"}},

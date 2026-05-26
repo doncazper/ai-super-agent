@@ -1,0 +1,22 @@
+suite_id: surface_runtime_gateway
+name: Surface Runtime Gateway
+description: Safe surface-lane checks for canonical runtime, records, gateway, and kernel metadata.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: surface_runtime_canonical
+    description: Inspect canonical runtime state.
+    command: python smart_agent.py runtime canonical-state
+    expected_behavior: Returns redacted local runtime/tracker metadata only.
+    failure_signals: Tool execution, provider call, raw secret, or tracker mutation.
+    tags: [surface, runtime, canonical]
+  - id: surface_gateway_status
+    description: Inspect Agent Gateway status.
+    command: python smart_agent.py runtime gateway-status
+    expected_behavior: Shows no server/listener/tool-execution gateway.
+    failure_signals: Listener startup, external tool exposure, or approval bypass.
+    tags: [surface, gateway, safe]
+

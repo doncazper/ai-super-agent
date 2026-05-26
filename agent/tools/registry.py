@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from agent.tools.backup import BACKUP_SCHEMAS, make_backup_tools
+from agent.tools.channels import CHANNEL_SCHEMAS, make_channel_tools
 from agent.tools.low_risk.git_tools import GIT_SCHEMAS, make_git_tools
 from agent.tools.low_risk.test_runner import TEST_RUNNER_SCHEMAS, make_test_tools
 from agent.tools.low_risk.time_tool import OPENAI_TOOL_SCHEMA, TOOL_NAME, get_current_time
@@ -19,8 +20,12 @@ from agent.tools.leads import LEAD_SCHEMAS, make_lead_tools
 from agent.tools.language import LANGUAGE_SCHEMAS, make_language_tools
 from agent.messaging.channels import MESSAGING_SCHEMAS, make_messaging_tools
 from agent.memory.tools import MEMORY_SCHEMAS, make_memory_tools
+from agent.tools.media import MEDIA_SCHEMAS, make_media_tools
 from agent.tools.native_skills import NATIVE_SKILL_SCHEMAS, make_native_skill_tools
+from agent.tools.performance import PERFORMANCE_SCHEMAS, make_performance_tools
 from agent.tools.platform import PLATFORM_SCHEMAS, make_platform_tools
+from agent.tools.sandbox import SANDBOX_SCHEMAS, make_sandbox_tools
+from agent.tools.secrets import SECRETS_SCHEMAS, make_secret_tools
 from agent.tools.personal.calendar import CalendarConnector
 from agent.tools.personal.contacts import ContactsConnector
 from agent.tools.personal.email import EmailConnector
@@ -208,6 +213,16 @@ def default_registry(
         registry.register(ToolSpec(name=name, capability=name, schema=LANGUAGE_SCHEMAS[name], handler=handler))
     for name, handler in make_platform_tools().items():
         registry.register(ToolSpec(name=name, capability=name, schema=PLATFORM_SCHEMAS[name], handler=handler))
+    for name, handler in make_channel_tools().items():
+        registry.register(ToolSpec(name=name, capability=name, schema=CHANNEL_SCHEMAS[name], handler=handler))
+    for name, handler in make_media_tools(project_root=str(root)).items():
+        registry.register(ToolSpec(name=name, capability=name, schema=MEDIA_SCHEMAS[name], handler=handler))
+    for name, handler in make_performance_tools(project_root=root).items():
+        registry.register(ToolSpec(name=name, capability=name, schema=PERFORMANCE_SCHEMAS[name], handler=handler))
+    for name, handler in make_sandbox_tools().items():
+        registry.register(ToolSpec(name=name, capability=name, schema=SANDBOX_SCHEMAS[name], handler=handler))
+    for name, handler in make_secret_tools(project_root=root).items():
+        registry.register(ToolSpec(name=name, capability=name, schema=SECRETS_SCHEMAS[name], handler=handler))
     for name, handler in make_weather_tools(weather_provider).items():
         registry.register(ToolSpec(name=name, capability=name, schema=WEATHER_SCHEMAS[name], handler=handler))
     for name, handler in make_memory_tools(memory_path).items():

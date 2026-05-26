@@ -10,6 +10,9 @@ python smart_agent.py backup create --include-captures --include-audit-metadata
 python smart_agent.py backup list
 python smart_agent.py backup inspect <backup_id>
 python smart_agent.py backup verify <backup_id>
+python smart_agent.py backup roundtrip --dry-run
+python smart_agent.py backup policy-check
+python smart_agent.py backup restore-check <backup_id>
 python smart_agent.py backup export --redacted
 python smart_agent.py backup restore <backup_id>
 ```
@@ -41,7 +44,7 @@ Excluded:
 
 ## Restore Safety
 
-`backup.restore` is HIGH risk and approval-gated. Restore verifies the manifest integrity hash and stored file hashes before applying changes. It rejects backed-up capability manifests that fail current startup validation, enable personal connectors by default, allow CRITICAL approval reuse, or include bypass-style flags. Restore creates pre-restore file copies under `.agent_restore_backups/<backup_id>` when replacing existing files.
+`backup.roundtrip --dry-run`, `backup.policy-check`, and `backup.restore-check` are read-only guard commands. `backup.restore` is HIGH risk and approval-gated. Restore verifies the manifest integrity hash and stored file hashes before applying changes. It rejects backed-up capability manifests that fail current startup validation, enable personal connectors by default, weaken HIGH approval requirements, allow CRITICAL approval reuse, include bypass-style flags, expose unredacted secret-looking material, or traverse paths. Restore creates pre-restore file copies under `.agent_restore_backups/<backup_id>` when replacing existing files.
 
 V1 restores redacted memory/action/capture/audit exports as JSON artifacts. It does not silently reconstruct raw personal memory, provider data, or private app state.
 

@@ -93,19 +93,35 @@ export LMSTUDIO_MODEL="qwopus3.6-35b-a3b-v1@q5_k_m"
 python smart_agent.py doctor
 ```
 
-### 3.4 Try clean no-tool chat
+### 3.4 Plan creative media safely
+
+Creative media support is currently planning-only. Use these commands to inspect safe dry-run plans:
+
+```bash
+python smart_agent.py media plan "make me a thumbnail for this vlog"
+python smart_agent.py media thumbnail "make me a thumbnail for this vlog" --dry-run
+python smart_agent.py media generate image "a product sketch" --dry-run
+python smart_agent.py media generate video "a 10-second intro animation" --dry-run
+python smart_agent.py media generate audio "soft notification chime" --dry-run
+python smart_agent.py media generate music "short lo-fi bed" --dry-run
+python smart_agent.py eval run --media
+```
+
+These commands do not generate media, call providers, upload, publish, read personal media, store request history, or bypass safety gates. Natural-language media requests can suggest `media plan`, but they remain dry-run/preflight only. The `eval run --media` fixture checks are local and validate no-generation, unsafe-prompt denial, voice-clone denial/deferment, license warning, and workspace-bound asset behavior.
+
+### 3.5 Try clean no-tool chat
 
 ```bash
 python smart_agent.py --no-tools "Explain RCS vs iMessage in simple terms."
 ```
 
-### 3.5 Try a debug tool call
+### 3.6 Try a debug tool call
 
 ```bash
 python smart_agent.py --debug "What time is it?"
 ```
 
-### 3.6 Use interactive mode
+### 3.7 Use interactive mode
 
 ```bash
 python smart_agent.py --interactive
@@ -185,6 +201,21 @@ Common command groups include:
 - self-improvement
 - dashboard
 - platform bridge
+
+Natural-language command help is advisory. Use it to discover commands or build preflight plans, not to bypass exact commands:
+
+```bash
+python smart_agent.py nl "what's the weather in Phoenix"
+python smart_agent.py nl preflight "send this message"
+python smart_agent.py ask "what commands do I have for Reddit"
+```
+
+If a natural-language request is misunderstood during a session, attach redacted feedback:
+
+```bash
+python smart_agent.py feedback nl-bug --last --expected-intent weather.current
+python smart_agent.py bugs create-nl-regression BUG-0001
+```
 
 ---
 
@@ -565,7 +596,39 @@ Current likely limitations:
 
 ---
 
-## 21. Where to Look Next
+## 21. Secrets And API Keys
+
+Real API keys, OAuth tokens, private keys, and credential files must stay out of git.
+
+Use this order:
+
+1. Password manager or macOS Keychain for long-lived storage.
+2. Process environment variables for runtime use.
+3. Local `.env` only when it is ignored by git.
+4. `.env.example` and templates for placeholders only.
+
+Useful checks:
+
+```bash
+python smart_agent.py secrets doctor
+python smart_agent.py secrets doctor github
+python smart_agent.py secrets sources
+python smart_agent.py secrets keychain status
+python smart_agent.py secrets scan
+python smart_agent.py secrets scan --staged
+python smart_agent.py git preflight
+python smart_agent.py git preflight --staged
+```
+
+Provider doctors report present/missing/setup metadata only. They do not call provider APIs, print values, enable paid providers, or mark a provider ready without configuration evidence.
+
+If a key is exposed, stop, revoke or rotate it in the provider dashboard, remove/redact the local file, update `.gitignore` if needed, rerun `python smart_agent.py secrets scan`, and only then continue.
+
+See `docs/secrets/SECRETS_MANAGEMENT_POLICY.md`, `docs/secrets/API_KEY_INVENTORY.md`, `docs/secrets/PROVIDER_SECRET_SETUP.md`, and `docs/git/SAFE_GIT_PREFLIGHT.md`.
+
+---
+
+## 22. Where to Look Next
 
 | Need | File |
 |---|---|

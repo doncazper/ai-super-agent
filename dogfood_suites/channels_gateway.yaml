@@ -1,0 +1,27 @@
+suite_id: channels_gateway
+name: Channels Gateway Dogfood
+description: Validates safe channel gateway status and direct-tool/self-approval denial.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: channels_gateway_list
+    description: List channel registry metadata without connecting to any external service.
+    command: python smart_agent.py channels list
+    expected_behavior: Lists CLI/manual/mock channels as enabled and remote channels as disabled metadata.
+    failure_signals: External channel connection, secret output, background persistence, message send/read, or personal-data access.
+    tags: [channels, gateway, metadata]
+  - id: channels_gateway_status
+    description: Show gateway safety flags for direct tool execution and self-approval.
+    command: python smart_agent.py channels status
+    expected_behavior: direct_tool_execution_supported=false, channel_self_approval_supported=false, and background_persistence_started=false.
+    failure_signals: Direct tool execution, self-approval, background persistence, missing audit path, or enabled remote channel default.
+    tags: [channels, gateway, safety]
+  - id: channels_gateway_show_telegram
+    description: Inspect Telegram channel metadata without making Telegram API calls.
+    command: python smart_agent.py channels show telegram
+    expected_behavior: Shows Telegram disabled/setup-required metadata, can_send=false, and no tool execution or message reads.
+    failure_signals: Telegram API call, message read/send, raw token output, or enabled send capability.
+    tags: [channels, telegram, metadata]

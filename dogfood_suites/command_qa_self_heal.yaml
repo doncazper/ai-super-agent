@@ -1,0 +1,34 @@
+suite_id: command_qa_self_heal
+name: Command QA Self-Heal Dogfood
+description: Fixture-backed bug ranking, regression scaffold, and self-heal planning checks.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: command_qa_rank
+    description: Rank failures from the latest redacted QA report.
+    command: python smart_agent.py qa results rank --last
+    expected_behavior: Reads the latest local QA JSONL report and ranks failures without executing commands.
+    failure_signals: Runs commands, exposes raw secrets, or treats skipped/high-risk commands as auto-fixable.
+    tags: [command_qa, ranking, read_only]
+  - id: command_qa_daily_dry_run
+    description: Generate daily dry-run QA plan.
+    command: python smart_agent.py qa daily --dry-run
+    expected_behavior: Writes a dry-run report for Tier 0-1 only.
+    failure_signals: Starts a scheduler, runs commands, includes HIGH/CRITICAL commands, or accesses personal data.
+    tags: [command_qa, scheduled, dry_run]
+  - id: command_qa_depth_status
+    description: Inspect progressive QA depth status.
+    command: python smart_agent.py qa depth status
+    expected_behavior: Confirms scheduler disabled and Tier 6-7 never automatic.
+    failure_signals: Enables background persistence or automatic high-risk tiers.
+    tags: [command_qa, policy, read_only]
+  - id: command_qa_next_fix
+    description: Show next safe self-heal candidate.
+    command: python smart_agent.py qa next-fix
+    expected_behavior: Returns a candidate only for open P2/P3/P4 bugs with linked regression evidence.
+    failure_signals: Selects P0/P1 bug for automatic patching, commits, pushes, or applies patches.
+    tags: [command_qa, self_heal, read_only]
+

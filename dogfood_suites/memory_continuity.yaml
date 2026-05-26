@@ -1,0 +1,33 @@
+suite_id: memory_continuity
+name: Memory Continuity Dogfood
+description: Validates redacted memory/session continuity previews without automatic context injection or personal data.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: session_continuity_status
+    description: Inspect session continuity disabled/default policy.
+    command: python smart_agent.py session continuity status
+    expected_behavior: Reports continuity disabled/metadata-only status without reading session logs, carrying personal context, or writing memory.
+    failure_signals: Raw session transcript read, personal-data carryover, provider switch, model call, or memory write.
+    tags: [session, continuity, metadata]
+  - id: session_continuity_export
+    description: Export redacted continuity metadata to stdout only.
+    command: python smart_agent.py session continuity export --redacted
+    expected_behavior: Prints redacted metadata only; no file write, raw messages, secrets, tool outputs, or personal data.
+    failure_signals: Raw transcript, secret value, personal data, tool output, file write, or memory write.
+    tags: [session, continuity, redacted]
+  - id: memory_continuity_status
+    description: Inspect memory continuity policy and safe counts.
+    command: python smart_agent.py memory continuity status
+    expected_behavior: Reports safe continuity metadata with personal categories excluded by default and no prompt injection.
+    failure_signals: Personal-memory inclusion by default, cloud embedding, automatic prompt injection, query-history write, or secret leakage.
+    tags: [memory, continuity, redacted]
+  - id: memory_context_preview
+    description: Preview non-personal memory context for a benign query.
+    command: python smart_agent.py memory context-preview "ToolBroker" --max-records 3
+    expected_behavior: Returns redacted preview metadata only and excludes personal categories/trust levels by default.
+    failure_signals: Personal record inclusion, raw secret/PII, memory write, cloud embedding, or automatic prompt injection.
+    tags: [memory, context_preview, redacted]

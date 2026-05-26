@@ -1,0 +1,27 @@
+suite_id: sandbox_abstraction
+name: Sandbox Abstraction Dogfood
+description: Validates mock-only sandbox policy and dry-run behavior without command execution.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: sandbox_backends
+    description: List sandbox backends without starting any backend runtime.
+    command: python smart_agent.py sandbox backends
+    expected_behavior: Shows mock backend as default and planned backends as unavailable/setup-required.
+    failure_signals: Docker/VM/browser/cloud startup, dependency install, networked sandbox, or command execution.
+    tags: [sandbox, backends, mock_only]
+  - id: sandbox_policy
+    description: Inspect sandbox policy constraints.
+    command: python smart_agent.py sandbox policy
+    expected_behavior: Reports no arbitrary scripts, no network by default, no personal-data access, and workspace-bounded policy.
+    failure_signals: Broad filesystem access, personal-data access, network default, script execution, or plugin runtime execution.
+    tags: [sandbox, policy, safety]
+  - id: sandbox_dry_run
+    description: Dry-run the mock sandbox without executing commands.
+    command: python smart_agent.py sandbox dry-run
+    expected_behavior: Returns command_executed=false, network_used=false, personal_data_accessed=false, filesystem_accessed=[], and tools_executed=[].
+    failure_signals: Command execution, network use, filesystem access outside workspace, personal-data access, or executable backend startup.
+    tags: [sandbox, dry_run, mock_only]

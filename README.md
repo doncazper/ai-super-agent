@@ -111,6 +111,78 @@ Runtime control plane:
 
 Runtime orchestration is metadata-only in v1. These commands do not call LM Studio, read personal connectors, start background jobs, or execute tools. Real tool execution remains behind `ToolBroker`, `PolicyEngine`, approvals, and audit logging.
 
+Brain Runtime Independence is a controlled track for decoupling the agent brain from one concrete model runtime while preserving current LM Studio/Qwopus behavior. LM Studio remains the current supported runtime and default provider. The provider-neutral interface, lazy model registry, LM Studio provider adapter, disabled-by-default llama.cpp server provider scaffold, disabled-by-default Ollama provider scaffold, optional disabled-by-default llama-cpp-python in-process scaffold, MLX strategy/stub, mock-first benchmark/eval layer, dry-run provider router, disabled MCP interop stubs, and release-gate evidence now exist; no runtime install, model download, paid/cloud API default, MCP server, network listener, in-process model load at startup, or persisted default-provider switch is enabled. See [docs/brain/BRAIN_RUNTIME_STRATEGY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/BRAIN_RUNTIME_STRATEGY.md>), [docs/brain/BRAIN_PROVIDER_INTERFACE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/BRAIN_PROVIDER_INTERFACE.md>), [docs/brain/MODEL_REGISTRY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/MODEL_REGISTRY.md>), [docs/brain/BRAIN_RUNTIME_RELEASE_GATE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/BRAIN_RUNTIME_RELEASE_GATE.md>), [docs/brain/BRAIN_RUNTIME_MATURITY_REVIEW.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/BRAIN_RUNTIME_MATURITY_REVIEW.md>), and [docs/decisions/brain_runtime_independence.md](</Users/sambehdjou/Documents/AI Super Agent/docs/decisions/brain_runtime_independence.md>).
+
+Provider diagnostics and safe routing:
+
+```bash
+./scripts/agent brain providers
+./scripts/agent brain status
+./scripts/agent brain doctor
+./scripts/agent brain benchmark --safe
+./scripts/agent brain eval --safe
+./scripts/agent brain report --last
+./scripts/agent brain fallback-status
+./scripts/agent brain switch lmstudio --dry-run
+./scripts/agent session continuity status
+./scripts/agent session continuity export --redacted
+./scripts/agent session continuity clear
+./scripts/agent brain route "hello" --no-tools
+./scripts/agent brain mcp-decision
+./scripts/agent mcp status
+./scripts/agent mcp doctor
+./scripts/agent mcp server --dry-run
+./scripts/agent mcp clients
+```
+
+Provider listing/status/doctor/fallback/route/MCP commands are metadata-only diagnostics. Safe benchmark/eval commands use deterministic mock fixtures by default and write local redacted reports; they do not call paid/cloud providers, access personal data, execute high-risk tools, start runtimes, start MCP, or download models. Fallback remains disabled by default, `brain switch` creates a compatibility/rollback preview and non-dry-run switch requests remain blocked in v1, cloud/paid fallback is disabled by default, and routing decisions cannot alter ToolBroker, policy, approval, audit, or memory behavior. Session continuity is opt-in and disabled by default; redacted continuity export writes no file, carries no personal data, and does not bypass memory policy. MCP remains optional interoperability, not the brain runtime; MCP server/client stubs are disabled by default and start no listener or external connection. See [docs/brain/PROVIDER_FALLBACK_POLICY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/PROVIDER_FALLBACK_POLICY.md>), [docs/brain/MODEL_ROUTING_POLICY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/MODEL_ROUTING_POLICY.md>), [docs/autonomy/MODEL_SWITCHING.md](</Users/sambehdjou/Documents/AI Super Agent/docs/autonomy/MODEL_SWITCHING.md>), [docs/autonomy/CROSS_SESSION_CONTINUITY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/autonomy/CROSS_SESSION_CONTINUITY.md>), [docs/brain/MCP_IS_NOT_THE_BRAIN_RUNTIME.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/MCP_IS_NOT_THE_BRAIN_RUNTIME.md>), and [docs/mcp/MCP_ADAPTER_BOUNDARIES.md](</Users/sambehdjou/Documents/AI Super Agent/docs/mcp/MCP_ADAPTER_BOUNDARIES.md>).
+
+Safe gateway channel inspection:
+
+```bash
+./scripts/agent channels list
+./scripts/agent channels status
+./scripts/agent channels show telegram
+./scripts/agent telegram doctor
+./scripts/agent telegram status
+./scripts/agent mobile status
+./scripts/agent mobile pairing-status
+```
+
+The Hermes-inspired channel gateway scaffold is metadata-only. It lists future CLI, Telegram, iOS companion, Mac app, Windows app, local dashboard, email, manual handoff, and mock channel records without connecting to external services, reading personal data, sending messages, approving actions, executing tools, starting listeners, or creating background persistence. Telegram/mobile commands are config/status only: no bot starts, no polling/webhook server starts, no Telegram API call is made, no message is sent, and no mobile pairing or approval path is enabled. Future channel requests must route through the orchestrator and then ToolBroker, PolicyEngine, PermissionManager, ApprovalManager where required, and AuditLogger. See [docs/channels/GATEWAY_CHANNEL_ARCHITECTURE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/channels/GATEWAY_CHANNEL_ARCHITECTURE.md>), [docs/channels/CHANNEL_SECURITY_MODEL.md](</Users/sambehdjou/Documents/AI Super Agent/docs/channels/CHANNEL_SECURITY_MODEL.md>), [docs/channels/TELEGRAM_MOBILE_ACCESS.md](</Users/sambehdjou/Documents/AI Super Agent/docs/channels/TELEGRAM_MOBILE_ACCESS.md>), and [docs/channels/MOBILE_CHANNEL_SECURITY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/channels/MOBILE_CHANNEL_SECURITY.md>).
+
+Creative media planning:
+
+```bash
+./scripts/agent media plan "make me a thumbnail for this vlog"
+./scripts/agent media thumbnail "make me a thumbnail for this vlog" --dry-run
+./scripts/agent media generate image "a product sketch" --dry-run
+./scripts/agent media generate video "a 10-second intro animation" --dry-run
+./scripts/agent media generate audio "soft notification chime" --dry-run
+./scripts/agent media generate music "short lo-fi bed" --dry-run
+./scripts/agent eval run --media
+```
+
+Creative media commands are planning-only in this track. They run safety preflight and return dry-run plans, provider/setup hints, and exact next commands, but they do not call providers, generate media, upload, publish, read personal media, store request history, or bypass the safety control plane. Natural-language requests such as "make me a thumbnail" can route to `media plan` as preflight metadata only. Fixture-backed media evals and dogfood suites validate these boundaries without real generation. See [docs/media/MEDIA_WORKFLOW_COMMANDS_AND_NL_ROUTING.md](</Users/sambehdjou/Documents/AI Super Agent/docs/media/MEDIA_WORKFLOW_COMMANDS_AND_NL_ROUTING.md>) and [docs/media/MEDIA_DOGFOOD_RUNBOOK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/media/MEDIA_DOGFOOD_RUNBOOK.md>).
+
+Optional local runtime scaffold:
+
+- `llama_cpp_server` is available as a disabled-by-default provider for a user-managed OpenAI-compatible llama.cpp server.
+- Configure it with `LLAMA_CPP_SERVER_ENABLED=true`, `LLAMA_CPP_SERVER_BASE_URL`, and `LLAMA_CPP_SERVER_MODEL` only after starting the server yourself.
+- Tool-call support remains off unless `LLAMA_CPP_SERVER_SUPPORTS_TOOL_CALLS=true` is explicitly set after verification.
+- See [docs/brain/providers/llama_cpp_server.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/providers/llama_cpp_server.md>).
+- `ollama` is available as a disabled-by-default provider for a user-managed local Ollama daemon.
+- Configure it with `OLLAMA_ENABLED=true`, `OLLAMA_BASE_URL`, `OLLAMA_OPENAI_COMPAT_BASE_URL`, and `OLLAMA_MODEL` only after starting Ollama and pulling the model yourself.
+- Tool-call support remains off unless `OLLAMA_SUPPORTS_TOOL_CALLS=true` is explicitly set after verification.
+- See [docs/brain/providers/ollama.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/providers/ollama.md>).
+- `llama_cpp_inprocess` is available as an optional disabled-by-default scaffold for a user-installed `llama-cpp-python` runtime and local GGUF model path.
+- Configure it with `LLAMA_CPP_INPROCESS_ENABLED=true` and `LLAMA_CPP_INPROCESS_MODEL_PATH` only after installing the optional dependency and choosing a model yourself.
+- Health checks do not load the model; chat loading is lazy and future provider routing remains gated.
+- See [docs/brain/providers/llama_cpp_inprocess.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/providers/llama_cpp_inprocess.md>).
+- `mlx` is available as an experimental disabled-by-default strategy stub for future Apple Silicon MLX/MLX-LM support.
+- The current stub only reports setup/status. It does not install MLX, download models, start a server, import native MLX modules, load a model, generate text, or become the default provider.
+- See [docs/brain/providers/mlx.md](</Users/sambehdjou/Documents/AI Super Agent/docs/brain/providers/mlx.md>) and [docs/decisions/mlx_provider_strategy.md](</Users/sambehdjou/Documents/AI Super Agent/docs/decisions/mlx_provider_strategy.md>).
+
 Cross-platform scaffolding is metadata-only and disabled/lazy by default. `agent.platforms` can detect `macos`, `windows`, `linux`, or `unknown`, infer an explicit runtime mode such as `cli` or `test`, and compute project-local platform paths without scanning personal files, creating directories, importing native frameworks, requesting permissions, starting app bridge servers, or enabling platform actions. Future bridges still require manifest entries, ToolBroker routing, PolicyEngine/PermissionManager checks, ApprovalManager gates, and AuditLogger evidence.
 
 Read-only platform inspection commands:
@@ -301,6 +373,12 @@ Secret/config doctor:
 ```bash
 python smart_agent.py secrets doctor
 python smart_agent.py secrets status
+python smart_agent.py secrets list
+python smart_agent.py secrets redaction-test
+python smart_agent.py secrets policy
+python smart_agent.py secrets sources
+python smart_agent.py secrets doctor reddit
+python smart_agent.py secrets doctor all
 python smart_agent.py connectors status searxng
 python smart_agent.py connectors status brave
 python smart_agent.py connectors status serpapi
@@ -320,6 +398,29 @@ python smart_agent.py reddit auth-check
 These checks report whether optional Brave, SerpAPI, WeatherAPI, Gmail, Telegram, and Reddit credentials appear configured, whether cost policy allows them, whether they are defaults, and which setup hints apply. Status and doctor commands do not call provider APIs, read Gmail, send Telegram messages, fetch Reddit posts/comments, or print raw secret values. Existing keys do not promote Brave, SerpAPI, or WeatherAPI into the default path; paid/quota-limited providers remain disabled unless the cost-policy config explicitly allows them.
 
 The focused Gmail and Telegram doctors are config-only. Gmail checks `GMAIL_USER`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_TOKEN_PATH`, and `GMAIL_SCOPES`, warns on broad or send-capable scopes, and warns if the token path points inside the repo. Telegram checks `TELEGRAM_BOT_TOKEN`, `TELEGRAM_DEFAULT_CHAT_ID`, and `TELEGRAM_ALLOWED_CHAT_IDS`, warns when default or allowed chat IDs are missing, and never prints the bot token. Gmail and Telegram connectors remain disabled by default; future sends remain CRITICAL, per-action approval-only, and not enabled by these doctor commands.
+
+Secrets policy and setup docs live under [docs/secrets/SECRETS_MANAGEMENT_POLICY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/secrets/SECRETS_MANAGEMENT_POLICY.md>). Real API keys, OAuth tokens, private keys, and credential files must stay out of git. Use a password manager, macOS Keychain, process environment variables, or a local ignored `.env`; `.env.example` and [docs/templates/env_template.example](</Users/sambehdjou/Documents/AI Super Agent/docs/templates/env_template.example>) are placeholder-only. If a key is exposed, revoke/rotate it before continuing release work.
+
+Keychain inspection is dry-run/status-only in v1:
+
+```bash
+python smart_agent.py secrets keychain status
+python smart_agent.py secrets keychain get github_token --dry-run
+python smart_agent.py secrets keychain set github_token --dry-run
+```
+
+These commands do not read or write Keychain values and return setup metadata only.
+
+Before committing or pushing, run the redacted local preflight:
+
+```bash
+python smart_agent.py secrets scan
+python smart_agent.py secrets scan --staged
+python smart_agent.py git preflight
+python smart_agent.py git preflight --staged
+```
+
+The scanner is best-effort and dependency-free. It reports redacted paths/line numbers for likely leaks and never rewrites Git history.
 
 ### Reddit Setup
 
@@ -563,13 +664,18 @@ Command registry and manual QA:
 python smart_agent.py commands list
 python smart_agent.py commands show CMD-WEATHER-003
 python smart_agent.py commands search weather
+python smart_agent.py commands intents
+python smart_agent.py commands suggest "what is the weather in phoenix"
+python smart_agent.py nl preflight "what is the weather in Phoenix"
+python smart_agent.py nl explain "send this email"
+python smart_agent.py nl suggest "look up latest Python release"
 python smart_agent.py commands legacy
 python smart_agent.py commands validate
 python smart_agent.py commands qa-plan
 python smart_agent.py commands qa-run Weather
 ```
 
-The durable command catalog lives in `docs/COMMAND_REGISTRY.md`; manual test coverage lives in `docs/COMMAND_TEST_MATRIX.md`; deprecated and blocked paths live in `docs/COMMAND_LEGACY.md`; and the manual QA process lives in `docs/COMMAND_QA_RUNBOOK.md`. Use `commands qa-plan` to find commands that need manual testing, and log command bugs by adding bug IDs to the test matrix before creating regression tests.
+The durable command catalog lives in `docs/COMMAND_REGISTRY.md`; manual test coverage lives in `docs/COMMAND_TEST_MATRIX.md`; deprecated and blocked paths live in `docs/COMMAND_LEGACY.md`; and the manual QA process lives in `docs/COMMAND_QA_RUNBOOK.md`. Use `commands intents` and `commands suggest` to inspect the deterministic natural-language intent index; both commands print metadata only and do not execute suggested commands. Use `nl preflight`, `nl explain`, and `nl suggest` to preview natural-language command plans; they execute no tools or commands and HIGH/CRITICAL or missing-setup requests are not safe to execute from natural language. Use `commands qa-plan` to find commands that need manual testing, and log command bugs by adding bug IDs to the test matrix before creating regression tests.
 
 Live session logging and replay:
 
@@ -622,6 +728,16 @@ python smart_agent.py skills docs-generate --dry-run
 python smart_agent.py skills docs-generate --write
 python smart_agent.py skills catalog
 python smart_agent.py skills docs-check
+python smart_agent.py skills propose-from-sessions
+python smart_agent.py skills propose-from-commands
+python smart_agent.py skills proposals list
+python smart_agent.py skills proposals show <proposal_id>
+python smart_agent.py skills proposals approve <proposal_id> --dry-run
+python smart_agent.py skills improve-propose <skill_id>
+python smart_agent.py skills improve-from-bugs <skill_id>
+python smart_agent.py skills improve-from-dogfood <skill_id>
+python smart_agent.py skills improvements list
+python smart_agent.py skills improvements show <improvement_id>
 python smart_agent.py skills find "I need to work with PDFs"
 python smart_agent.py skills find "Can you help with meeting follow-up?"
 python smart_agent.py skills inspect ./workspace/skills/example/SKILL.md
@@ -654,6 +770,10 @@ The native skill system release gate is recorded in `docs/native_skills/NATIVE_S
 
 `skills find` searches only local reviewed metadata: native skill manifests, the native candidate matrix, feature registry, and maturity tracker. It returns implemented matches, planned candidates, maturity/readiness, required approvals, and next work needed. It does not browse external marketplaces, install skills, execute external code, or write memory.
 
+Skill proposal commands create candidate ideas from redacted command/session metadata only. They skip personal-data patterns by default, mark higher-risk candidates for review, write redacted local proposal reports under `reports/autonomy/`, and never create, import, enable, install, or execute skills. `skills proposals approve <proposal_id> --dry-run` is a preview of review steps only.
+
+Skill improvement commands create evidence-backed proposals from redacted bug and dogfood metadata. They include expected files, tests, docs, lockfile impact, rollback plan, and human-review status, but they do not modify skill files, update lockfiles, enable skills, execute scripts, or raise maturity. Use `skills improvements show <improvement_id>` as review evidence for a later explicit implementation prompt.
+
 Native skill inspection and vetting are static analysis only. They read candidate skill files only from approved workspace/project skill paths or known native skill ids, treat them as `UNTRUSTED_DOCUMENT`, parse `SKILL.md` frontmatter when present, and flag scripts, shell commands, package installs, network calls, secret references, filesystem escapes, personal-data access, browser cookie/session access, prompt-injection language, approval-bypass language, opaque binaries, and missing license/tests/docs/risk metadata. The vetter never executes scripts, installs dependencies, grants permissions, accesses network, or stores skill content in memory by default. Vetting reports are saved under `reports/native_skills/`; all inspection/vetting commands execute through `ToolBroker`, `PolicyEngine`, and `AuditLogger`.
 
 PDF workspace native skill:
@@ -670,6 +790,12 @@ PDF operations are workspace-bounded, audited, and labeled `UNTRUSTED_DOCUMENT`.
 Scheduler / Automation v1:
 
 ```bash
+python smart_agent.py schedule explain
+python smart_agent.py schedule templates
+python smart_agent.py schedule preview connector_doctor
+python smart_agent.py schedule dry-run connector_doctor
+python smart_agent.py schedule risks daily_briefing
+python smart_agent.py schedule review
 python smart_agent.py schedule list
 python smart_agent.py schedule create --workflow connector_doctor --schedule daily@08:00 --name "Connector doctor"
 python smart_agent.py schedule create --workflow daily_briefing --arg sections=weather --arg weather_location="Phoenix, AZ"
@@ -679,7 +805,28 @@ python smart_agent.py schedule pause <schedule_id>
 python smart_agent.py schedule delete <schedule_id>
 ```
 
-Scheduler v1 is manual-run only: it stores explicit local schedule records and never installs a LaunchAgent, cron job, daemon, login item, or hidden background runner. Scheduled workflows still use the existing safety path where tools are involved; personal-data sections require approval, CRITICAL actions are never executed automatically, and scheduled backups are redacted-only brokered `backup.create` calls. Details live in `docs/SCHEDULER.md`.
+Scheduler v1 is manual-run only: it stores explicit local schedule records and never installs a LaunchAgent, cron job, daemon, login item, or hidden background runner. Scheduler UX commands let you explain, preview, dry-run, and review workflow metadata before manual runs; dry-runs execute no tools and create no Action Center items. Scheduled workflows still use the existing safety path where tools are involved; personal-data sections require approval, CRITICAL actions are never executed automatically, and scheduled backups are redacted-only brokered `backup.create` calls. Details live in `docs/SCHEDULER.md` and `docs/autonomy/SCHEDULER_UX.md`.
+
+Subagent isolation profiles are mock-only safety metadata for future researcher/coder/tester/security/docs/planner roles:
+
+```bash
+python smart_agent.py subagents list
+python smart_agent.py subagents show researcher
+python smart_agent.py subagents policy
+python smart_agent.py subagents dry-run coder "review this diff"
+```
+
+No real subagent launches in this scaffold. Profiles cannot call tools directly, write files by default, access personal data, execute CRITICAL actions, approve actions, or bypass ToolBroker/PolicyEngine/PermissionManager/ApprovalManager/AuditLogger. Dry-run output is `MODEL_OUTPUT` and reports `tools_executed=[]`.
+
+Sandbox backend abstraction is mock-only and policy-first for future execution backends:
+
+```bash
+python smart_agent.py sandbox backends
+python smart_agent.py sandbox policy
+python smart_agent.py sandbox dry-run
+```
+
+Sandbox v1 does not execute commands, run scripts, install Docker/VM tools, start browser automation, enable networked sandboxes, mount broad filesystem roots, or access personal data. The mock backend is the only default backend; planned Docker/rootless, macOS sandbox, VM, browser, and cloud backends return setup/stub guidance until future approval gates add real execution.
 
 Weather-aware research:
 
@@ -1036,9 +1183,13 @@ python smart_agent.py memory export
 python smart_agent.py memory delete <id>
 python smart_agent.py memory clear
 python smart_agent.py memory context "ToolBroker" --max-chars 1200
+python smart_agent.py memory context-preview "ToolBroker" --max-records 3
+python smart_agent.py memory continuity status
+python smart_agent.py memory continuity build-summary --query "ToolBroker"
+python smart_agent.py memory continuity clear
 ```
 
-Memory refuses secrets and personal email/message/contact/calendar content by default. Approval-gated personal memory exists as a separate capability. Memory search supports category filters, and context injection is bounded, non-personal by default, and audited with the injected memory IDs. Deletion is best effort: SQLite rows are deleted and `VACUUM` is attempted, but external logs and filesystem backups are not rewritten.
+Memory refuses secrets and personal email/message/contact/calendar content by default. Approval-gated personal memory exists as a separate capability. Memory search supports category filters, and context injection is bounded, non-personal by default, redacted, and audited with the injected memory IDs. `context-preview` shows the bounded context candidate without injecting it. Continuity commands build redacted, non-personal summaries only; they do not create a separate continuity store, use cloud embeddings, write memory, or carry personal data by default. Deletion is best effort: SQLite rows are deleted and `VACUUM` is attempted, but external logs and filesystem backups are not rewritten. See [docs/memory/LONG_TERM_MEMORY_SEARCH.md](</Users/sambehdjou/Documents/AI Super Agent/docs/memory/LONG_TERM_MEMORY_SEARCH.md>), [docs/memory/CROSS_SESSION_CONTINUITY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/memory/CROSS_SESSION_CONTINUITY.md>), and [docs/memory/MEMORY_INJECTION_POLICY.md](</Users/sambehdjou/Documents/AI Super Agent/docs/memory/MEMORY_INJECTION_POLICY.md>).
 
 Inspection commands:
 
@@ -1066,6 +1217,9 @@ python smart_agent.py backup list
 python smart_agent.py backup inspect <backup_id>
 python smart_agent.py backup verify <backup_id>
 python smart_agent.py backup export --redacted
+python smart_agent.py backup roundtrip --dry-run
+python smart_agent.py backup policy-check
+python smart_agent.py backup restore-check <backup_id>
 python smart_agent.py backup restore <backup_id>
 python smart_agent.py memory list
 python smart_agent.py config show
@@ -1085,10 +1239,13 @@ python smart_agent.py backup list
 python smart_agent.py backup inspect <backup_id>
 python smart_agent.py backup verify <backup_id>
 python smart_agent.py backup export --redacted
+python smart_agent.py backup roundtrip --dry-run
+python smart_agent.py backup policy-check
+python smart_agent.py backup restore-check <backup_id>
 python smart_agent.py backup restore <backup_id>
 ```
 
-Backups are local redacted archive directories under `workspace/backups` by default, or under `BACKUP_DIR` / `--backup-dir` when explicitly configured. Backup v1 includes config with secrets redacted, docs/tracking files, feature registry/maturity/roadmap, native skill manifests, redacted memory export metadata, redacted Action Center metadata, optional captures, and optional audit metadata. It never fetches personal connector data and does not store or export API keys, tokens, `.env`, private keys, raw mail/messages/calendar/contact data, or browser/session data. Each archive has `manifest.json` with content hashes and an integrity hash. `backup restore` is HIGH risk, approval-gated, verifies hashes first, creates pre-restore copies where possible, and rejects backed-up capability manifests that would weaken policy or enable personal connectors.
+Backups are local redacted archive directories under `workspace/backups` by default, or under `BACKUP_DIR` / `--backup-dir` when explicitly configured. Backup v1 includes config with secrets redacted, docs/tracking files, feature registry/maturity/roadmap, native skill manifests, redacted memory export metadata, redacted Action Center metadata, optional captures, and optional audit metadata. It never fetches personal connector data and does not store or export API keys, tokens, `.env`, private keys, raw mail/messages/calendar/contact data, or browser/session data. Each archive has `manifest.json` with content hashes and an integrity hash. `backup roundtrip --dry-run`, `backup policy-check`, and `backup restore-check` are read-only/brokered guard commands. `backup restore` is HIGH risk, approval-gated, verifies hashes first, creates pre-restore copies where possible, and rejects backed-up capability manifests or archive contents that would weaken policy, reuse CRITICAL approvals, enable personal connectors, expose unredacted secrets, or traverse paths. Live restore smoke tests should use disposable project copies only.
 
 The `doctor` command does not send prompts to the model, attach tools, access personal data, change config, or grant permissions. It checks Python, required imports, runtime config, `LMSTUDIO_BASE_URL`, `LMSTUDIO_MODEL`, LM Studio reachability, `/v1/models`, selected model availability when confirmable, startup policy validation, normalized capability manifest validation, audit path writability, tool registry loading, `ToolBroker` initialization, connector registry loading, whether personal-data tools are disabled by default, and whether any CRITICAL actions are enabled by default.
 
@@ -1339,6 +1496,7 @@ python smart_agent.py eval run --policy
 python smart_agent.py eval run --tools
 python smart_agent.py eval run --workflows
 python smart_agent.py eval run --prompt-injection
+python smart_agent.py eval run --natural-language
 python smart_agent.py eval run --lmstudio-live
 python smart_agent.py eval run --web
 python smart_agent.py eval run --weather
@@ -1347,7 +1505,7 @@ python smart_agent.py eval run --memory
 python smart_agent.py eval report
 ```
 
-`eval run --safe` now runs the Golden Eval Suite: data-file backed router checks, policy allow/ask/deny checks, ToolBroker denial/allow checks, prompt-injection wrapper checks, workflow dry-runs, no-tool LM Studio chat when `LMSTUDIO_MODEL` is configured, safe time-tool execution, weather current/forecast when a provider is configured, web search/fetch when configured, controlled workspace read/write under `./workspace/eval`, non-sensitive memory add/search/delete, dry-run/preflight, and connector doctor checks. Personal-data evals for calendar, contacts, email, and messages are skipped by default.
+`eval run --safe` now runs the Golden Eval Suite: data-file backed router checks, policy allow/ask/deny checks, ToolBroker denial/allow checks, prompt-injection wrapper checks, natural-language command understanding fixtures, workflow dry-runs, no-tool LM Studio chat when `LMSTUDIO_MODEL` is configured, safe time-tool execution, weather current/forecast when a provider is configured, web search/fetch when configured, controlled workspace read/write under `./workspace/eval`, non-sensitive memory add/search/delete, dry-run/preflight, and connector doctor checks. Personal-data evals for calendar, contacts, email, and messages are skipped by default. `eval run --natural-language` runs only the natural-language fixtures and executes no mapped commands.
 
 Golden cases live in `eval_cases/` so regression prompts, expected routes, and policy expectations can be reviewed as data. Eval runs produce structured pass/fail/skipped results, category scorecards, `logs/eval_results.json`, per-run JSON under `reports/evals/`, and [docs/EVAL_REPORT.md](</Users/sambehdjou/Documents/AI Super Agent/docs/EVAL_REPORT.md>). Tool actions execute through `ToolBroker` and are audited. Evals do not send emails/texts, do not write calendar/contact data, do not infer location, and do not store personal data in memory.
 
@@ -1391,13 +1549,27 @@ python smart_agent.py dogfood run all_safe --dry-run
 python smart_agent.py dogfood run all_safe
 python smart_agent.py session start --name dogfood-all-safe
 python smart_agent.py dogfood run all_safe --session
+python smart_agent.py dogfood run natural_language_core --session
+python smart_agent.py dogfood run natural_language_risky --session
 python smart_agent.py session replay --last
 python smart_agent.py session end
 ```
 
-Suites live in `dogfood_suites/` and are documented in [docs/dogfood/DOGFOOD_GUIDE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/DOGFOOD_GUIDE.md>) and [docs/dogfood/COMMAND_SUITES.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/COMMAND_SUITES.md>). The live validation workflow is documented in [docs/dogfood/LIVE_TEST_RUNBOOK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/LIVE_TEST_RUNBOOK.md>), with daily and weekly checklists in [docs/dogfood/DAILY_DOGFOOD_CHECKLIST.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/DAILY_DOGFOOD_CHECKLIST.md>) and [docs/dogfood/WEEKLY_RELEASE_CHECK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/WEEKLY_RELEASE_CHECK.md>). Start with `all_safe`; use `personal_dry_run` only for preflight-only personal connector checks.
+Suites live in `dogfood_suites/` and are documented in [docs/dogfood/DOGFOOD_GUIDE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/DOGFOOD_GUIDE.md>) and [docs/dogfood/COMMAND_SUITES.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/COMMAND_SUITES.md>). The live validation workflow is documented in [docs/dogfood/LIVE_TEST_RUNBOOK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/LIVE_TEST_RUNBOOK.md>), with daily and weekly checklists in [docs/dogfood/DAILY_DOGFOOD_CHECKLIST.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/DAILY_DOGFOOD_CHECKLIST.md>) and [docs/dogfood/WEEKLY_RELEASE_CHECK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/dogfood/WEEKLY_RELEASE_CHECK.md>). Natural-language command dogfood is documented in [docs/natural_language/NL_DOGFOOD_RUNBOOK.md](</Users/sambehdjou/Documents/AI Super Agent/docs/natural_language/NL_DOGFOOD_RUNBOOK.md>). Start with `all_safe`; use `personal_dry_run` only for preflight-only personal connector checks.
 
 Daily dogfood should start a session, run safe suites, add feedback, end the session, review it, generate bugs for confirmed failures, and create regression tests when feasible. `dogfood next` uses feature maturity notes plus the latest session metadata to recommend the next safe step without running commands.
+
+For natural-language command misunderstandings, attach redacted feedback and create a local bug/fixture:
+
+```bash
+python smart_agent.py feedback nl-bug --last --expected-intent weather.current
+python smart_agent.py bugs create-nl-regression BUG-0001
+python smart_agent.py nl regressions list
+```
+
+See [docs/natural_language/NL_BUG_TRIAGE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/natural_language/NL_BUG_TRIAGE.md>) for the supported tags and review rules.
+
+Natural-language command release-gate evidence is tracked in [docs/natural_language/NL_COMMAND_RELEASE_GATE.md](</Users/sambehdjou/Documents/AI Super Agent/docs/natural_language/NL_COMMAND_RELEASE_GATE.md>) and [docs/natural_language/NL_COMMAND_MATURITY_REVIEW.md](</Users/sambehdjou/Documents/AI Super Agent/docs/natural_language/NL_COMMAND_MATURITY_REVIEW.md>).
 
 ## Product Quality Dashboard
 

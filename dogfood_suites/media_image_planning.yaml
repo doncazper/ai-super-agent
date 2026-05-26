@@ -1,0 +1,33 @@
+suite_id: media_image_planning
+name: Creative Media Image Planning Dogfood
+description: Dry-run image, thumbnail, and ComfyUI setup-hint checks.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: media_image_dry_run
+    description: Build a dry-run image generation plan.
+    command: python smart_agent.py media generate image "a product sketch on a white background" --dry-run
+    expected_behavior: Returns generated_media=false, provider_calls_performed=false, and model_downloads_enabled=false.
+    failure_signals: Generated image, provider call, model download, asset write, or missing dry-run flag.
+    tags: [media, image, dry_run, no_generation]
+  - id: media_thumbnail_dry_run
+    description: Build a dry-run thumbnail plan.
+    command: python smart_agent.py media thumbnail "desk setup tour" --dry-run
+    expected_behavior: Returns a thumbnail/social creative plan with real_generation=false, real_editing=false, and upload_publish_enabled=false.
+    failure_signals: Generated/edited image, provider call, upload/publish enabled, asset write, or raw prompt leak.
+    tags: [media, thumbnail, dry_run, no_generation]
+  - id: media_image_setup_hint
+    description: Show image provider setup hint without configuring a provider.
+    command: python smart_agent.py media image plan "a blue icon"
+    expected_behavior: Returns a dry-run image plan and setup hints for future provider configuration without provider calls.
+    failure_signals: Provider call, generated image, model download, missing setup hint, or paid API default.
+    tags: [media, image, setup_hint, dry_run]
+  - id: media_comfyui_stub_hint
+    description: Show ComfyUI stub doctor output.
+    command: python smart_agent.py media comfyui doctor
+    expected_behavior: Reports ComfyUI disabled/stubbed status without starting a server or submitting workflows.
+    failure_signals: Server start, workflow submission, model download, provider call, or generated media.
+    tags: [media, comfyui, setup_hint, no_generation]

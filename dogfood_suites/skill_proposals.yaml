@@ -1,0 +1,33 @@
+suite_id: skill_proposals
+name: Skill Proposal Dogfood
+description: Validates proposal-only skill creation and improvement flows without enabling or editing skills.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: skill_propose_from_commands
+    description: Generate candidate skill proposals from command metadata only.
+    command: python smart_agent.py skills propose-from-commands
+    expected_behavior: Writes redacted proposal metadata only; proposals are disabled candidates and creates_enabled_skills=false.
+    failure_signals: Enabled skill creation, skill import, dependency install, external script execution, personal-data read, or raw command history storage.
+    tags: [skills, proposals, metadata]
+  - id: skill_proposals_list
+    description: List candidate skill proposals without enabling or executing them.
+    command: python smart_agent.py skills proposals list
+    expected_behavior: Lists local proposal metadata only; no skill enablement, import, or execution.
+    failure_signals: Skill enablement, skill execution, script execution, provider call, or personal-data access.
+    tags: [skills, proposals, list]
+  - id: skill_improve_propose
+    description: Create an evidence-backed improvement proposal without editing skill files.
+    command: python smart_agent.py skills improve-propose native_skill_vetter
+    expected_behavior: Reports proposal/no-evidence metadata with modifies_files=false and no lockfile or skill file changes.
+    failure_signals: Skill file modification, lockfile update, skill enablement, script execution, package install, or unredacted evidence use.
+    tags: [skills, improvements, proposal_only]
+  - id: skill_improvements_list
+    description: List improvement proposals without applying changes.
+    command: python smart_agent.py skills improvements list
+    expected_behavior: Lists redacted improvement metadata only; no patches or skill execution.
+    failure_signals: File modification, lockfile update, skill enablement, script execution, or personal-data evidence exposure.
+    tags: [skills, improvements, list]

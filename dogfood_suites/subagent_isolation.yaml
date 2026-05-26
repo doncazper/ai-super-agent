@@ -1,0 +1,27 @@
+suite_id: subagent_isolation
+name: Subagent Isolation Dogfood
+description: Validates mock-only subagent profiles and no direct tool/write/personal-data defaults.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: subagents_list
+    description: List subagent profiles without launching subagents.
+    command: python smart_agent.py subagents list
+    expected_behavior: Lists static profiles with mock_only/execution disabled metadata.
+    failure_signals: Real subagent launch, tool execution, write access, personal-data access, or background worker.
+    tags: [subagents, metadata, mock_only]
+  - id: subagents_policy
+    description: Inspect global subagent isolation policy.
+    command: python smart_agent.py subagents policy
+    expected_behavior: Reports no default write access, no personal-data access, no direct tools, no approval bypass, and CRITICAL denial.
+    failure_signals: Direct tool calls, approval bypass, write default, personal-data default, CRITICAL action support, or real execution.
+    tags: [subagents, policy, isolation]
+  - id: subagents_dry_run
+    description: Dry-run a researcher profile without executing tools.
+    command: python smart_agent.py subagents dry-run researcher "summarize safe autonomy docs"
+    expected_behavior: Returns mock output with tools_executed=[], execution_enabled=false, and direct_tool_calls_allowed=false.
+    failure_signals: Tool execution, file write, provider call, personal-data access, or background task startup.
+    tags: [subagents, dry_run, mock_only]

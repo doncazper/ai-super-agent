@@ -39,6 +39,8 @@ python smart_agent.py web search "local AI news" --provider brave
 
 The doctor and connector status commands are config-only checks. They do not call Brave Search and do not print the API key.
 
+Secret setup is tracked in `docs/secrets/PROVIDER_SECRET_SETUP.md`. Run `python smart_agent.py secrets doctor brave` to check whether `BRAVE_SEARCH_API_KEY` appears configured without showing the value, and run `python smart_agent.py secrets scan` before committing any config changes.
+
 ## Errors
 
 - Missing key returns setup guidance for `BRAVE_SEARCH_API_KEY`.

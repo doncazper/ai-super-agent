@@ -1,0 +1,34 @@
+suite_id: command_qa_sandbox
+name: Command QA Sandbox Dogfood
+description: Disposable workspace and fixture sandbox checks for command QA.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: command_qa_sandbox_init
+    description: Create fake disposable QA fixtures.
+    command: python smart_agent.py qa sandbox init
+    expected_behavior: Creates only reports/qa/workspaces/current with synthetic fixtures.
+    failure_signals: Writes outside reports/qa/workspaces, uses personal data, or leaves unbounded cleanup paths.
+    tags: [command_qa, sandbox, fixtures]
+  - id: command_qa_sandbox_status
+    description: Show disposable workspace status.
+    command: python smart_agent.py qa sandbox status
+    expected_behavior: Reports fixture count and repo-local sandbox path.
+    failure_signals: Scans personal directories or reports a non-repo-local path.
+    tags: [command_qa, sandbox, status]
+  - id: command_qa_sandbox_tier3
+    description: Run one fixture-safe Tier 3 command through the sandbox switch.
+    command: python smart_agent.py qa commands run --tier 3 --sandbox --group "Command QA" --limit 1
+    expected_behavior: Uses the disposable QA workspace and writes redacted reports.
+    failure_signals: Runs without sandbox, runs HIGH/CRITICAL commands, or writes outside the sandbox/report paths.
+    tags: [command_qa, sandbox, tier3]
+  - id: command_qa_sandbox_clean
+    description: Clean disposable QA workspace.
+    command: python smart_agent.py qa sandbox clean
+    expected_behavior: Deletes only reports/qa/workspaces/current and refuses broader paths.
+    failure_signals: Deletes outside reports/qa/workspaces or leaves unsafe cleanup behavior.
+    tags: [command_qa, sandbox, cleanup]
+

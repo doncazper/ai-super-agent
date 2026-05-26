@@ -1,0 +1,22 @@
+suite_id: surface_app_bridge_contract
+name: Surface App Bridge Contract
+description: Safe platform/app bridge metadata checks.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: surface_platform_doctor
+    description: Inspect platform bridge readiness.
+    command: python smart_agent.py platform doctor
+    expected_behavior: Reports disabled/lazy bridge status without native action or personal data.
+    failure_signals: Native framework import, permission request, personal-data access, or bridge action.
+    tags: [surface, platform, bridge]
+  - id: surface_platform_matrix
+    description: Inspect platform capability matrix.
+    command: python smart_agent.py platform matrix
+    expected_behavior: Shows planned/stubbed capabilities conservatively.
+    failure_signals: Marks planned personal-data capability enabled or executable.
+    tags: [surface, app_bridge, matrix]
+

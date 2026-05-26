@@ -13,7 +13,7 @@ imported_at: 2026-05-25T09:50:27+00:00
 source_pack: prompts/packs/native-skill-system-hardening-v1.md
 trust_level: UNTRUSTED_DOCUMENT
 started_at: 2026-05-25T09:50:42+00:00
-completed_at: 2026-05-25T09:57:15+00:00
+completed_at: 2026-05-25T22:00:01+00:00
 branch:
 commit_hash:
 related_feature_ids: []
@@ -22,7 +22,7 @@ files_expected:
 files_changed:
 tests_expected:
 tests_run:
-test_result: targeted native skill roots/manifest tests 15 passed; focused roots/manifest/command tests 20 passed; make policy-check passed; command registry validation passed with 402 commands; full suite passed with 1130 passed, 1 skipped
+test_result: completed prompt file and prompt audit evidence verified during SOURCE-TRUTH-RECONCILE-01
 docs_updated: yes
 changelog_updated:
 feature_registry_updated:
@@ -34,7 +34,7 @@ blockers:
 next_prompt_id:
 supersedes:
 superseded_by:
-notes: Completed SKILL-01 roots/scopes/precedence milestone without external skill install, script execution, plugin runtime, personal-data tools, or safety bypass.
+notes: Reconciled stale imported row from completed prompt file and prompt audit evidence; no prompt was run by this reconciliation.
 ---
 
 # Prompt

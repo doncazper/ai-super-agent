@@ -13,7 +13,7 @@ imported_at: 2026-05-25T09:50:27+00:00
 source_pack: prompts/packs/native-skill-system-hardening-v1.md
 trust_level: UNTRUSTED_DOCUMENT
 started_at: 2026-05-25T09:57:20+00:00
-completed_at: 2026-05-25T10:06:15+00:00
+completed_at: 2026-05-25T22:00:01+00:00
 branch:
 commit_hash:
 related_feature_ids: []
@@ -22,7 +22,7 @@ files_expected:
 files_changed:
 tests_expected:
 tests_run:
-test_result: targeted native skill manifest/dependency/root tests 24 passed; focused manifest/dependency/root/command tests 29 passed; make policy-check passed; command registry validation passed with 402 commands; full suite passed with 1139 passed, 1 skipped
+test_result: completed prompt file and prompt audit evidence verified during SOURCE-TRUTH-RECONCILE-01
 docs_updated: yes
 changelog_updated:
 feature_registry_updated:
@@ -34,7 +34,7 @@ blockers:
 next_prompt_id:
 supersedes:
 superseded_by:
-notes: Completed SKILL-02 manifest schema/dependency gating without installs, script execution, provider/connector calls, plugin runtime, personal-data enablement, or safety bypass.
+notes: Reconciled stale imported row from completed prompt file and prompt audit evidence; no prompt was run by this reconciliation.
 ---
 
 # Prompt

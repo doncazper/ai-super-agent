@@ -237,7 +237,17 @@ def test_prompt_tracking_docs_are_valid() -> None:
     assert ledger_rows
     assert all(row["prompt_id"] for row in queue_rows)
     assert all(row["prompt_id"] for row in ledger_rows)
-    assert {row["status"] for row in queue_rows} <= {"queued", "active", "completed", "skipped", "failed", "superseded", "blocked"}
+    assert {row["status"] for row in queue_rows} <= {
+        "queued",
+        "active",
+        "completed",
+        "skipped",
+        "failed",
+        "superseded",
+        "blocked",
+        "approval_required",
+        "needs_review",
+    }
     active_prompt_ids = {row["prompt_id"] for row in ledger_rows + queue_rows if row["status"] == "active"}
     assert len(active_prompt_ids) <= 1
     assert "active_prompt_id" in project_state

@@ -26,6 +26,475 @@ tools:
     - result_summary
     setup_hint: Safe local time tool.
     docs_reference: README.md#usage
+  perf.report:
+    capability_name: perf.report
+    tool_name: perf.report
+    connector_name: performance
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Reads the latest redacted local performance report without running scans or benchmarks.
+    docs_reference: docs/performance/PERFORMANCE_REPORTS.md
+  perf.scan:
+    capability_name: perf.scan
+    tool_name: perf.scan
+    connector_name: performance
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Runs the default safe local performance scan; v1 runs static scanning only and writes redacted reports.
+    docs_reference: docs/performance/STATIC_BOTTLENECK_SCANNER.md
+  perf.scan_static:
+    capability_name: perf.scan_static
+    tool_name: perf.scan_static
+    connector_name: performance
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Runs a safe static bottleneck scan without executing scanned code and writes a redacted report.
+    docs_reference: docs/performance/STATIC_BOTTLENECK_SCANNER.md
+  perf.scan_startup:
+    capability_name: perf.scan_startup
+    tool_name: perf.scan_startup
+    connector_name: performance
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Measures safe startup/import timings with bounded subprocesses and no provider/model calls.
+    docs_reference: docs/performance/STARTUP_OVERHEAD_SCANNER.md
+  perf.benchmark:
+    capability_name: perf.benchmark
+    tool_name: perf.benchmark
+    connector_name: performance
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Benchmarks only SAFE/LOW read-only command registry commands with bounded subprocesses and redacted timing reports.
+    docs_reference: docs/performance/SAFE_COMMAND_BENCHMARKS.md
+  perf.tests_profile:
+    capability_name: perf.tests_profile
+    tool_name: perf.tests_profile
+    connector_name: performance
+    risk_level: MEDIUM
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 5
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Runs pytest --durations for safe local test targets only; full-suite profiling requires explicit opt-in.
+    docs_reference: docs/performance/TEST_SUITE_PERFORMANCE.md
+  perf.tests_report:
+    capability_name: perf.tests_report
+    tool_name: perf.tests_report
+    connector_name: performance
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Reads the latest redacted test-suite performance profile without running tests.
+    docs_reference: docs/performance/TEST_SUITE_PERFORMANCE.md
+  perf.suggest_fixes:
+    capability_name: perf.suggest_fixes
+    tool_name: perf.suggest_fixes
+    connector_name: performance
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Generates advisory optimization recommendations from redacted local performance reports without applying patches.
+    docs_reference: docs/performance/OPTIMIZATION_RECOMMENDATIONS.md
+  perf.baseline_create:
+    capability_name: perf.baseline_create
+    tool_name: perf.baseline_create
+    connector_name: performance
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Creates a redacted local performance baseline from latest safe reports.
+    docs_reference: docs/performance/PERFORMANCE_BASELINES.md
+  perf.baseline_compare:
+    capability_name: perf.baseline_compare
+    tool_name: perf.baseline_compare
+    connector_name: performance
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Compares latest safe performance report with a redacted local baseline.
+    docs_reference: docs/performance/PERFORMANCE_BASELINES.md
+  perf.regressions:
+    capability_name: perf.regressions
+    tool_name: perf.regressions
+    connector_name: performance
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 20
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows local performance regression status without running providers or benchmarks.
+    docs_reference: docs/performance/PERFORMANCE_BASELINES.md
+  perf.patch_plan:
+    capability_name: perf.patch_plan
+    tool_name: perf.patch_plan
+    connector_name: performance
+    risk_level: LOW
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: true
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Creates metadata-only optimization patch plans without applying patches, installing packages, committing, or pushing.
+    docs_reference: docs/performance/PERFORMANCE_PATCH_PLANNER.md
+  perf.dashboard:
+    capability_name: perf.dashboard
+    tool_name: perf.dashboard
+    connector_name: performance
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Reads performance dashboard summaries from redacted local reports without executing scans, tests, benchmarks, or fixes.
+    docs_reference: docs/performance/PERFORMANCE_DASHBOARD.md
+  perf.status:
+    capability_name: perf.status
+    tool_name: perf.status
+    connector_name: performance
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Reads compact performance status from redacted local reports.
+    docs_reference: docs/performance/PERFORMANCE_DASHBOARD.md
+  perf.next_fix:
+    capability_name: perf.next_fix
+    tool_name: perf.next_fix
+    connector_name: performance
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows the next safe performance action from local reports without executing it.
+    docs_reference: docs/performance/PERFORMANCE_DASHBOARD.md
+  perf.trends:
+    capability_name: perf.trends
+    tool_name: perf.trends
+    connector_name: performance
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Reads trend and regression summaries from redacted local reports without running benchmarks.
+    docs_reference: docs/performance/PERFORMANCE_DASHBOARD.md
+  perf.findings:
+    capability_name: perf.findings
+    tool_name: perf.findings
+    connector_name: performance
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Reads findings from the latest redacted local performance report without running scans or benchmarks.
+    docs_reference: docs/performance/PERFORMANCE_REPORTS.md
   platform.doctor:
     capability_name: platform.doctor
     tool_name: platform.doctor
@@ -161,6 +630,276 @@ tools:
     - result_summary
     setup_hint: Explains one platform capability record without executing platform actions.
     docs_reference: docs/platforms/CAPABILITY_MATRIX.md
+  channels.list:
+    capability_name: channels.list
+    tool_name: channels.list
+    connector_name: channels
+    risk_level: SAFE
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Lists safe gateway channel metadata without connecting to channels, sending messages, or reading personal data.
+    docs_reference: docs/channels/GATEWAY_CHANNEL_ARCHITECTURE.md
+  channels.status:
+    capability_name: channels.status
+    tool_name: channels.status
+    connector_name: channels
+    risk_level: SAFE
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows gateway channel status without channel connections, background persistence, sends, approvals, or personal-data access.
+    docs_reference: docs/channels/CHANNEL_SECURITY_MODEL.md
+  channels.show:
+    capability_name: channels.show
+    tool_name: channels.show
+    connector_name: channels
+    risk_level: SAFE
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows one safe gateway channel record; unknown channels are denied.
+    docs_reference: docs/channels/GATEWAY_CHANNEL_ARCHITECTURE.md
+  telegram.doctor:
+    capability_name: telegram.doctor
+    tool_name: telegram.doctor
+    connector_name: telegram
+    risk_level: SAFE
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows Telegram config readiness without API calls, polling, webhooks, chat reads, or sends.
+    docs_reference: docs/channels/TELEGRAM_MOBILE_ACCESS.md
+  telegram.status:
+    capability_name: telegram.status
+    tool_name: telegram.status
+    connector_name: telegram
+    risk_level: SAFE
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows compact Telegram status without API calls, polling, webhooks, chat reads, or sends.
+    docs_reference: docs/channels/TELEGRAM_MOBILE_ACCESS.md
+  mobile.status:
+    capability_name: mobile.status
+    tool_name: mobile.status
+    connector_name: mobile_companion
+    risk_level: SAFE
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows future mobile companion status without pairing, personal-data access, network calls, or background services.
+    docs_reference: docs/channels/MOBILE_CHANNEL_SECURITY.md
+  mobile.pairing_status:
+    capability_name: mobile.pairing_status
+    tool_name: mobile.pairing_status
+    connector_name: mobile_companion
+    risk_level: SAFE
+    trust_level: UNTRUSTED_MESSAGE
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows future mobile pairing status without pairing, network calls, personal-data access, or background services.
+    docs_reference: docs/channels/MOBILE_CHANNEL_SECURITY.md
+  sandbox.backends:
+    capability_name: sandbox.backends
+    tool_name: sandbox.backends
+    connector_name: sandbox
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Lists sandbox backend metadata without installing runtimes, starting sandboxes, or executing commands.
+    docs_reference: docs/autonomy/SANDBOX_BACKEND_ABSTRACTION.md
+  sandbox.policy:
+    capability_name: sandbox.policy
+    tool_name: sandbox.policy
+    connector_name: sandbox
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Shows sandbox safety policy without starting sandboxes, using network, reading personal data, or executing commands.
+    docs_reference: docs/autonomy/SANDBOX_POLICY.md
+  sandbox.dry_run:
+    capability_name: sandbox.dry_run
+    tool_name: sandbox.dry_run
+    connector_name: sandbox
+    risk_level: LOW
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - network_domains
+    - result_summary
+    setup_hint: Validates a sandbox request through ToolBroker/PolicyEngine without executing commands or starting a sandbox.
+    docs_reference: docs/autonomy/SANDBOX_BACKEND_ABSTRACTION.md
   web.search:
     capability_name: web.search
     tool_name: web.search
@@ -2797,6 +3536,114 @@ tools:
     setup_hint: Memory context injection is bounded, non-personal by default, and
       audited with injected memory ids.
     docs_reference: README.md#memory
+  memory.continuity_status:
+    capability_name: memory.continuity_status
+    tool_name: memory.continuity_status
+    connector_name: memory
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Memory continuity status reports safe local memory counts only; it does
+      not inject prompt context, write memory, or include personal data by default.
+    docs_reference: docs/memory/CROSS_SESSION_CONTINUITY.md
+  memory.continuity_build_summary:
+    capability_name: memory.continuity_build_summary
+    tool_name: memory.continuity_build_summary
+    connector_name: memory
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Continuity summaries are redacted, non-personal, token-bounded, and
+      preview-only unless a later brokered context tool injects selected ids.
+    docs_reference: docs/memory/CROSS_SESSION_CONTINUITY.md
+  memory.continuity_clear:
+    capability_name: memory.continuity_clear
+    tool_name: memory.continuity_clear
+    connector_name: memory
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: No separate continuity profile is persisted in v1; clear is a safe
+      no-op and does not delete normal memory records.
+    docs_reference: docs/memory/CROSS_SESSION_CONTINUITY.md
+  memory.context_preview:
+    capability_name: memory.context_preview
+    tool_name: memory.context_preview
+    connector_name: memory
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Context preview shows redacted non-personal snippets without injecting
+      them into a prompt or writing memory.
+    docs_reference: docs/memory/MEMORY_INJECTION_POLICY.md
   native_skills.inspect_skill:
     capability_name: native_skills.inspect_skill
     tool_name: native_skills.inspect_skill
@@ -2972,6 +3819,302 @@ tools:
       External marketplace browsing, installation, and execution are not part of
       this capability.
     docs_reference: docs/native_skills/NATIVE_SKILLS_PROGRAM.md
+  native_skills.propose_from_commands:
+    capability_name: native_skills.propose_from_commands
+    tool_name: native_skills.propose_from_commands
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
+    setup_hint: Generate disabled candidate skill proposals from command metadata only.
+      This capability never creates, imports, enables, or executes skills.
+    docs_reference: docs/native_skills/SKILL_PROPOSAL_PROCESS.md
+  native_skills.propose_from_sessions:
+    capability_name: native_skills.propose_from_sessions
+    tool_name: native_skills.propose_from_sessions
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
+    setup_hint: Generate disabled candidate skill proposals from redacted session
+      metadata only. Unredacted or personal-data session content is skipped by default.
+    docs_reference: docs/autonomy/SKILL_CREATION_FROM_REPEATED_TASKS.md
+  native_skills.proposals_list:
+    capability_name: native_skills.proposals_list
+    tool_name: native_skills.proposals_list
+    connector_name: native_skills
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: List local candidate skill proposal metadata. Run propose-from-commands
+      or propose-from-sessions first if no proposal report exists.
+    docs_reference: docs/native_skills/SKILL_PROPOSAL_PROCESS.md
+  native_skills.proposals_show:
+    capability_name: native_skills.proposals_show
+    tool_name: native_skills.proposals_show
+    connector_name: native_skills
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Show one local candidate skill proposal. Proposal display does not
+      import, enable, or execute skills.
+    docs_reference: docs/native_skills/SKILL_PROPOSAL_PROCESS.md
+  native_skills.proposals_approve_dry_run:
+    capability_name: native_skills.proposals_approve_dry_run
+    tool_name: native_skills.proposals_approve_dry_run
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Preview proposal approval next steps only. Actual skill creation,
+      import, enablement, or execution requires a separate reviewed prompt.
+    docs_reference: docs/native_skills/SKILL_PROPOSAL_PROCESS.md
+  native_skills.improve_propose:
+    capability_name: native_skills.improve_propose
+    tool_name: native_skills.improve_propose
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
+    setup_hint: Generate evidence-backed native skill improvement proposals from
+      redacted bugs and dogfood metadata only. This capability never edits skills,
+      updates lockfiles, enables skills, or executes skill code.
+    docs_reference: docs/autonomy/SKILL_IMPROVEMENT_FROM_EXPERIENCE.md
+  native_skills.improve_from_bugs:
+    capability_name: native_skills.improve_from_bugs
+    tool_name: native_skills.improve_from_bugs
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
+    setup_hint: Generate a native skill improvement proposal from redacted bug
+      evidence only. Unredacted and personal-data evidence is skipped by default.
+    docs_reference: docs/native_skills/SKILL_IMPROVEMENT_REVIEW.md
+  native_skills.improve_from_dogfood:
+    capability_name: native_skills.improve_from_dogfood
+    tool_name: native_skills.improve_from_dogfood
+    connector_name: native_skills
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 10
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    - files_written
+    setup_hint: Generate a native skill improvement proposal from redacted dogfood
+      failure metadata only. Raw sessions and personal content are not used.
+    docs_reference: docs/autonomy/SKILL_IMPROVEMENT_FROM_EXPERIENCE.md
+  native_skills.improvements_list:
+    capability_name: native_skills.improvements_list
+    tool_name: native_skills.improvements_list
+    connector_name: native_skills
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: List local native skill improvement proposal metadata. Run an
+      improve-* command first if no improvement report exists.
+    docs_reference: docs/native_skills/SKILL_IMPROVEMENT_REVIEW.md
+  native_skills.improvements_show:
+    capability_name: native_skills.improvements_show
+    tool_name: native_skills.improvements_show
+    connector_name: native_skills
+    risk_level: SAFE
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit:
+      requests_per_minute: 30
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Show one native skill improvement proposal. Proposal display cannot
+      modify, enable, or execute skills.
+    docs_reference: docs/native_skills/SKILL_IMPROVEMENT_REVIEW.md
   documents.pdf.read:
     capability_name: documents.pdf.read
     tool_name: documents.pdf.read
@@ -5444,6 +6587,90 @@ tools:
     - files_read
     setup_hint: Verify checks manifest and content hashes before restore.
     docs_reference: README.md#backup--restore
+  backup.roundtrip:
+    capability_name: backup.roundtrip
+    tool_name: backup.roundtrip
+    connector_name: backup
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Roundtrip v1 is dry-run only and recommends restore smoke tests in
+      disposable workspace copies.
+    docs_reference: docs/backup/BACKUP_ROUNDTRIP_VALIDATION.md
+  backup.policy_check:
+    capability_name: backup.policy_check
+    tool_name: backup.policy_check
+    connector_name: backup
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Policy check validates current restore hardening guards without
+      writing restored files.
+    docs_reference: docs/backup/RESTORE_POLICY_WEAKENING_GUARDS.md
+  backup.restore_check:
+    capability_name: backup.restore_check
+    tool_name: backup.restore_check
+    connector_name: backup
+    risk_level: LOW
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    - files_read
+    setup_hint: Restore-check verifies integrity and policy guards before a separate
+      approval-gated restore.
+    docs_reference: docs/backup/BACKUP_ROUNDTRIP_VALIDATION.md
   backup.export:
     capability_name: backup.export
     tool_name: backup.export
@@ -5504,6 +6731,765 @@ tools:
     setup_hint: Restore requires explicit approval, verifies hashes, previews changed
       files, and rejects policy-weakening manifests.
     docs_reference: README.md#backup--restore
+  media.providers:
+    capability_name: media.providers
+    tool_name: media.providers
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: registry
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists static creative media provider metadata; no provider calls, downloads, uploads, or media generation.
+    docs_reference: docs/media/MEDIA_PROVIDER_REGISTRY.md
+  media.doctor:
+    capability_name: media.doctor
+    tool_name: media.doctor
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: registry
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows creative media scaffold readiness and safety gates without provider calls or media generation.
+    docs_reference: docs/media/MEDIA_PROVIDER_REGISTRY.md
+  media.plan:
+    capability_name: media.plan
+    tool_name: media.plan
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_planner
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Builds a dry-run media workflow plan with safety preflight; no provider calls, generation, upload, or publishing.
+    docs_reference: docs/media/MEDIA_WORKFLOW_COMMANDS_AND_NL_ROUTING.md
+  media.assets.list:
+    capability_name: media.assets.list
+    tool_name: media.assets.list
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_workspace
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - files_read
+    - result_summary
+    setup_hint: Lists redacted media asset metadata under the controlled workspace media root.
+    docs_reference: docs/media/MEDIA_ASSET_MANAGER.md
+  media.assets.show:
+    capability_name: media.assets.show
+    tool_name: media.assets.show
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_workspace
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - files_read
+    - result_summary
+    setup_hint: Shows one redacted media asset metadata record from the controlled workspace media root.
+    docs_reference: docs/media/MEDIA_ASSET_MANAGER.md
+  media.assets.cleanup:
+    capability_name: media.assets.cleanup
+    tool_name: media.assets.cleanup
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_workspace
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - files_read
+    - result_summary
+    setup_hint: Plans bounded media workspace cleanup in dry-run mode only for MEDIA-02.
+    docs_reference: docs/media/MEDIA_ASSET_MANAGER.md
+  media.safety_check:
+    capability_name: media.safety_check
+    tool_name: media.safety_check
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_deterministic
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Runs deterministic local media prompt safety preflight without generation or external moderation calls.
+    docs_reference: docs/media/MEDIA_PROMPT_SAFETY.md
+  media.license.report:
+    capability_name: media.license.report
+    tool_name: media.license.report
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_metadata
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows media provider/model license metadata and uncertainty; not legal advice and no generation.
+    docs_reference: docs/media/MEDIA_COPYRIGHT_AND_LICENSE_POLICY.md
+  media.consent.policy:
+    capability_name: media.consent.policy
+    tool_name: media.consent.policy
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_metadata
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows media consent rules without enabling likeness or voice workflows.
+    docs_reference: docs/media/MEDIA_CONSENT_POLICY.md
+  media.comfyui.doctor:
+    capability_name: media.comfyui.doctor
+    tool_name: media.comfyui.doctor
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: comfyui_stub
+    status: stubbed
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows ComfyUI provider stub status without server start, model download, workflow submission, or generation.
+    docs_reference: docs/media/providers/COMFYUI_PROVIDER.md
+  media.workflows.list:
+    capability_name: media.workflows.list
+    tool_name: media.workflows.list
+    connector_name: media
+    risk_level: SAFE
+    trust_level: UNTRUSTED_DOCUMENT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: media_workflow_registry
+    status: stubbed
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists vetted workflow metadata only; ComfyUI workflow JSON remains untrusted and unsubmitted.
+    docs_reference: docs/media/providers/COMFYUI_PROVIDER.md
+  media.generate.image:
+    capability_name: media.generate.image
+    tool_name: media.generate.image
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_dry_run
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: MEDIA-05 supports dry-run image plans only; real image generation remains unimplemented.
+    docs_reference: docs/media/IMAGE_GENERATION_STRATEGY.md
+  media.image.providers:
+    capability_name: media.image.providers
+    tool_name: media.image.providers
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_metadata
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists image provider candidates and setup hints without runtime imports or provider calls.
+    docs_reference: docs/media/providers/IMAGE_PROVIDER_CANDIDATES.md
+  media.image.plan:
+    capability_name: media.image.plan
+    tool_name: media.image.plan
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_dry_run
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Builds image generation dry-run plans with safety and license metadata; no generation.
+    docs_reference: docs/media/IMAGE_GENERATION_STRATEGY.md
+  media.thumbnail:
+    capability_name: media.thumbnail
+    tool_name: media.thumbnail
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_dry_run
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Builds thumbnail/social creative dry-run plans only; no image editing, generation, upload, or publication.
+    docs_reference: docs/media/THUMBNAIL_SOCIAL_CREATIVE_WORKFLOWS.md
+  media.creative.plan:
+    capability_name: media.creative.plan
+    tool_name: media.creative.plan
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_dry_run
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Builds creative workflow dry-run plans with templates, safety, license, and size metadata only.
+    docs_reference: docs/media/THUMBNAIL_SOCIAL_CREATIVE_WORKFLOWS.md
+  media.creative.templates:
+    capability_name: media.creative.templates
+    tool_name: media.creative.templates
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_metadata
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists creative workflow templates without media generation, editing, upload, or publication.
+    docs_reference: docs/media/THUMBNAIL_SOCIAL_CREATIVE_WORKFLOWS.md
+  media.generate.video:
+    capability_name: media.generate.video
+    tool_name: media.generate.video
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_dry_run
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: MEDIA-07 supports dry-run video plans only; real video generation remains unimplemented.
+    docs_reference: docs/media/VIDEO_GENERATION_STRATEGY.md
+  media.video.providers:
+    capability_name: media.video.providers
+    tool_name: media.video.providers
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_metadata
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists video provider candidates and resource/setup hints without runtime imports or provider calls.
+    docs_reference: docs/media/providers/VIDEO_PROVIDER_CANDIDATES.md
+  media.video.plan:
+    capability_name: media.video.plan
+    tool_name: media.video.plan
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_dry_run
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Builds video generation dry-run plans with safety, license, and resource metadata; no generation.
+    docs_reference: docs/media/VIDEO_GENERATION_STRATEGY.md
+  media.generate.audio:
+    capability_name: media.generate.audio
+    tool_name: media.generate.audio
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_dry_run
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: MEDIA-08 supports dry-run audio plans only; real audio generation remains unimplemented.
+    docs_reference: docs/media/AUDIO_MUSIC_GENERATION_STRATEGY.md
+  media.generate.music:
+    capability_name: media.generate.music
+    tool_name: media.generate.music
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_dry_run
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: MEDIA-08 supports dry-run music plans only; real music generation remains unimplemented.
+    docs_reference: docs/media/AUDIO_MUSIC_GENERATION_STRATEGY.md
+  media.audio.providers:
+    capability_name: media.audio.providers
+    tool_name: media.audio.providers
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_metadata
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists audio/music provider candidates and license/setup hints without runtime imports or provider calls.
+    docs_reference: docs/media/providers/AUDIO_PROVIDER_CANDIDATES.md
+  media.music.plan:
+    capability_name: media.music.plan
+    tool_name: media.music.plan
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_dry_run
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Builds music generation dry-run plans with safety, license, and artist-imitation metadata; no generation.
+    docs_reference: docs/media/AUDIO_MUSIC_GENERATION_STRATEGY.md
+  media.tts.plan:
+    capability_name: media.tts.plan
+    tool_name: media.tts.plan
+    connector_name: media
+    risk_level: LOW
+    trust_level: TRUSTED_USER
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_dry_run
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Builds TTS/voice strategy plans without generating voice audio; voice cloning remains denied/deferred.
+    docs_reference: docs/media/TTS_VOICE_GENERATION_STRATEGY.md
+  media.voice.consent_policy:
+    capability_name: media.voice.consent_policy
+    tool_name: media.voice.consent_policy
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_metadata
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows voice consent rules without enabling voice cloning, impersonation, or generation.
+    docs_reference: docs/media/VOICE_CONSENT_POLICY.md
+  media.voice.providers:
+    capability_name: media.voice.providers
+    tool_name: media.voice.providers
+    connector_name: media
+    risk_level: SAFE
+    trust_level: MODEL_OUTPUT
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local_metadata
+    status: scaffolded
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists TTS/voice provider candidates without runtime imports, generation, or voice cloning.
+    docs_reference: docs/media/TTS_VOICE_GENERATION_STRATEGY.md
   news.providers.status:
     capability_name: news.providers.status
     tool_name: news.providers.status
@@ -6090,3 +8076,255 @@ tools:
     - result_summary
     setup_hint: Secret-reading capabilities are forbidden.
     docs_reference: docs/THREAT_MODEL.md#threats-and-mitigations
+  secrets.list:
+    capability_name: secrets.list
+    tool_name: secrets.list
+    connector_name: secrets
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local
+    status: active
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Lists static secret metadata only; no values are read or returned.
+    docs_reference: docs/secrets/SECRET_REGISTRY.md
+  secrets.redaction_test:
+    capability_name: secrets.redaction_test
+    tool_name: secrets.redaction_test
+    connector_name: secrets
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local
+    status: active
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Runs a fake-secret redaction self-test only; no real values are read or returned.
+    docs_reference: docs/secrets/SECRET_REDACTION_POLICY.md
+  secrets.policy:
+    capability_name: secrets.policy
+    tool_name: secrets.policy
+    connector_name: secrets
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local
+    status: active
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows secrets policy metadata and docs paths without reading values.
+    docs_reference: docs/secrets/SECRETS_MANAGEMENT_POLICY.md
+  secrets.sources:
+    capability_name: secrets.sources
+    tool_name: secrets.sources
+    connector_name: secrets
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local
+    status: active
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows approved secret source metadata and .env hygiene without reading values.
+    docs_reference: docs/secrets/SECRET_SOURCES.md
+  secrets.keychain.status:
+    capability_name: secrets.keychain.status
+    tool_name: secrets.keychain.status
+    connector_name: secrets
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local
+    status: active
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Shows optional macOS Keychain adapter status without accessing Keychain.
+    docs_reference: docs/secrets/MACOS_KEYCHAIN_INTEGRATION.md
+  secrets.keychain.get:
+    capability_name: secrets.keychain.get
+    tool_name: secrets.keychain.get
+    connector_name: secrets
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local
+    status: active
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Dry-runs a future Keychain lookup and never reads or returns values.
+    docs_reference: docs/secrets/MACOS_KEYCHAIN_INTEGRATION.md
+  secrets.keychain.set:
+    capability_name: secrets.keychain.set
+    tool_name: secrets.keychain.set
+    connector_name: secrets
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local
+    status: active
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Dry-runs a future Keychain write and never writes values.
+    docs_reference: docs/secrets/MACOS_KEYCHAIN_INTEGRATION.md
+  secrets.scan:
+    capability_name: secrets.scan
+    tool_name: secrets.scan
+    connector_name: secrets
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local
+    status: active
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Runs a best-effort local redacted secret scan over tracked files or staged diffs.
+    docs_reference: docs/secrets/SECRET_LEAK_SCANNING.md
+  git.preflight:
+    capability_name: git.preflight
+    tool_name: git.preflight
+    connector_name: git
+    risk_level: SAFE
+    trust_level: LOCAL_PRIVATE_DATA
+    default_enabled: true
+    approval_required: false
+    approval_reuse_allowed: true
+    stores_data: false
+    provider: local
+    status: active
+    rate_limit: null
+    memory_behavior: no_store
+    audit_fields:
+    - timestamp
+    - session_id
+    - request_id
+    - tool_name
+    - capability
+    - risk_level
+    - trust_level
+    - policy_decision
+    - approval_result
+    - sanitized_args
+    - result_summary
+    setup_hint: Runs redacted Git preflight checks before commit/push without modifying history.
+    docs_reference: docs/git/SAFE_GIT_PREFLIGHT.md

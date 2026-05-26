@@ -53,6 +53,7 @@ This update also records generated artifact hygiene for the release-boundary blo
 | Release blockers reflected in dashboard | Fixed by this pass | Dashboard now summarizes the top P2/P3/P4 blockers. | none |
 | Command registry linked to tracker index | Fixed by this pass | Registry intro now points to `docs/TRACKER_INDEX.md`. | none |
 | Generated artifacts classified for release boundary | Fixed by hardening continuation | `docs/release/GENERATED_ARTIFACT_HYGIENE.md` and `.gitignore` now separate local generated eval/lead/messaging/export artifacts from reviewable source fixtures. | none |
+| CODEBUG controlled batch prompt state | Fixed by CODEBUG-08 | `docs/PROMPT_QUEUE.md` imported CODEBUG rows were reconciled for CODEBUG-01 through CODEBUG-08 after prompt completion evidence existed. The batch completed with release-gate evidence and no prompt left active. | none |
 
 ## Consistency Issues To Carry Forward
 
@@ -63,6 +64,7 @@ This update also records generated artifact hygiene for the release-boundary blo
 5. Decide an archive layout before splitting `docs/COMPLETION_REPORT.md`.
 6. Keep `docs/TRACKER_DASHBOARD.md` refreshed after major batches so dense trackers can stay detailed.
 7. Establish a human-reviewed clean release candidate branch or commit series; generated artifact hygiene reduces noise but does not replace source review.
+8. Use the CODEBUG static-scan and release-gate evidence to guide the next focused clean release-candidate boundary prompt.
 
 ## Current Classification
 

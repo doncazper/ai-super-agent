@@ -1,0 +1,33 @@
+suite_id: media_core
+name: Creative Media Core Dogfood
+description: Safe creative media scaffold checks for provider status, doctor output, asset metadata, and workflow planning.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: media_core_providers
+    description: List creative media provider metadata.
+    command: python smart_agent.py media providers
+    expected_behavior: Shows static provider metadata with real_generation_enabled=false, paid_apis_enabled=false, and provider_calls_performed=false.
+    failure_signals: Provider call, generated media, model download, paid API use, heavy runtime import, or missing disabled-generation flags.
+    tags: [media, providers, safe, no_generation]
+  - id: media_core_doctor
+    description: Show creative media doctor output.
+    command: python smart_agent.py media doctor
+    expected_behavior: Reports provider, safety, consent, and asset workspace status without generation or provider calls.
+    failure_signals: Generated media, external provider call, missing safety gate, upload/publish enabled, or personal-data access.
+    tags: [media, doctor, safe, no_generation]
+  - id: media_core_assets_list
+    description: List bounded media asset metadata.
+    command: python smart_agent.py media assets list
+    expected_behavior: Lists redacted metadata under workspace/media only, or an empty list if no assets exist.
+    failure_signals: Raw prompt leak, path escape, generated-content read, personal-data read, or non-workspace file access.
+    tags: [media, assets, safe, bounded_workspace]
+  - id: media_core_plan
+    description: Build a safe all-purpose media workflow plan.
+    command: python smart_agent.py media plan "make me a thumbnail for this vlog"
+    expected_behavior: Returns a dry-run plan with safety_preflight_first=true and no provider calls, generation, asset writes, uploads, or publishing.
+    failure_signals: Provider call, generated media, asset write, upload/publish enabled, natural-language auto-execution, or missing setup hint.
+    tags: [media, planning, dry_run, no_generation]

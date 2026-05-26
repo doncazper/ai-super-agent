@@ -1,0 +1,22 @@
+suite_id: surface_action_center
+name: Surface Action Center
+description: Safe read-only checks for approvals and Action Center surfaces.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: surface_approvals_list
+    description: List approval requests.
+    command: python smart_agent.py approvals list
+    expected_behavior: Reads local approval metadata only and consumes no approval.
+    failure_signals: Approval decision, action execution, or personal-data read.
+    tags: [surface, approvals, read_only]
+  - id: surface_actions_list
+    description: List pending actions.
+    command: python smart_agent.py actions list
+    expected_behavior: Reads local Action Center metadata only.
+    failure_signals: Executes action, changes action status, or prints secrets.
+    tags: [surface, actions, read_only]
+

@@ -1,0 +1,18 @@
+id: nl.regression.BUG-0000
+category: natural_language
+title: Redacted natural-language misunderstanding
+input_text: "<sanitized user phrase>"
+expected_intent: needs_review
+expected_safety_outcome: needs_review
+expected_command_group: ""
+should_execute: false
+should_clarify: false
+should_require_approval: false
+should_deny: false
+risk_level: LOW
+personal_data: false
+live: false
+tags:
+  - natural_language
+  - regression
+notes: Review before promoting into the checked-in eval set.

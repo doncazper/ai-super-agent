@@ -13,7 +13,7 @@ imported_at: 2026-05-25T09:50:27+00:00
 source_pack: prompts/packs/native-skill-system-hardening-v1.md
 trust_level: UNTRUSTED_DOCUMENT
 started_at: 2026-05-25T10:25:39+00:00
-completed_at: 2026-05-25T10:31:05+00:00
+completed_at: 2026-05-25T22:00:02+00:00
 branch:
 commit_hash:
 related_feature_ids: []
@@ -22,7 +22,7 @@ files_expected:
 files_changed:
 tests_expected:
 tests_run:
-test_result: focused profile/allowlist/native-skill manifest/command tests 20 passed; focused profile/inspection/provenance/manifest/native-skill/command tests 37 passed; docs/prompt/release artifact tests 21 passed; profile CLI smokes passed; make policy-check passed; command registry validation passed with 412 commands; full suite passed with 1165 passed, 1 skipped
+test_result: completed prompt file and prompt audit evidence verified during SOURCE-TRUTH-RECONCILE-01
 docs_updated: yes
 changelog_updated:
 feature_registry_updated:
@@ -34,7 +34,7 @@ blockers:
 next_prompt_id:
 supersedes:
 superseded_by:
-notes: Added advisory native skill profile and allowlist visibility rules, read-only profile CLI commands, docs, template, command registry/test matrix, feature/risk/threat trackers. Next prompt: SKILL-06.
+notes: Reconciled stale imported row from completed prompt file and prompt audit evidence; no prompt was run by this reconciliation.
 ---
 
 # Prompt

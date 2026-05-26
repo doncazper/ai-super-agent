@@ -1,0 +1,28 @@
+suite_id: surface_channels_status
+name: Surface Channels Status
+description: Safe channel, Telegram, and mobile status checks.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: surface_channels_status
+    description: Inspect channel gateway status.
+    command: python smart_agent.py channels status
+    expected_behavior: Reports no direct tool execution, no sends, and no background persistence.
+    failure_signals: Channel connection, message read/send, direct tool execution, or self-approval.
+    tags: [surface, channels, safe]
+  - id: surface_telegram_status
+    description: Inspect Telegram disabled status.
+    command: python smart_agent.py telegram status
+    expected_behavior: Metadata only; no polling, webhook, read, send, or raw token output.
+    failure_signals: Telegram API call, raw token output, polling/webhook start, or message send.
+    tags: [surface, telegram, disabled]
+  - id: surface_mobile_status
+    description: Inspect mobile companion disabled/unpaired status.
+    command: python smart_agent.py mobile status
+    expected_behavior: Metadata only; no network call, approval execution, or personal-data read.
+    failure_signals: Pairing mutation, mobile approval execution, or personal-data access.
+    tags: [surface, mobile, disabled]
+

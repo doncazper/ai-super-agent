@@ -25,6 +25,14 @@ VALID_FEEDBACK_TAGS = {
     "UX_confusing",
     "docs_gap",
     "test_gap",
+    "misunderstood_intent",
+    "wrong_command_suggested",
+    "should_have_clarified",
+    "should_have_denied",
+    "should_have_required_approval",
+    "executed_when_should_not",
+    "failed_to_find_command",
+    "poor_natural_language_answer",
 }
 
 
@@ -171,7 +179,7 @@ def _build_feedback_record(session_id: str, command_id: str, feedback: FeedbackI
 def _severity_for(tags: list[str], requested: str) -> str:
     if "unsafe_behavior" in tags:
         return "high"
-    if any(tag in tags for tag in ("command_failed", "command_hung", "hallucination")):
+    if any(tag in tags for tag in ("command_failed", "command_hung", "hallucination", "executed_when_should_not")):
         return "medium" if requested == "low" else requested
     return requested
 

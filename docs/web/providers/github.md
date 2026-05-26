@@ -12,3 +12,5 @@ python smart_agent.py web api-search github "openai"
 ```
 
 `GITHUB_OFFICIAL_API_ENABLED=false` is the safe default. A future live implementation must route through `ToolBroker`, declare manifest entries, redact tokens, respect provider rate limits, and label results `UNTRUSTED_WEB`.
+
+Secret setup is tracked in `docs/secrets/PROVIDER_SECRET_SETUP.md`. Run `python smart_agent.py secrets doctor github` to check whether `GITHUB_TOKEN` appears configured without showing the token. Prefer least-privilege tokens and run `python smart_agent.py git preflight` before committing.

@@ -13,7 +13,7 @@ imported_at: 2026-05-25T09:50:27+00:00
 source_pack: prompts/packs/native-skill-system-hardening-v1.md
 trust_level: UNTRUSTED_DOCUMENT
 started_at: 2026-05-25T10:47:02+00:00
-completed_at: 2026-05-25T10:56:02+00:00
+completed_at: 2026-05-25T22:00:03+00:00
 branch:
 commit_hash:
 related_feature_ids: []
@@ -22,7 +22,7 @@ files_expected:
 files_changed:
 tests_expected:
 tests_run:
-test_result: focused harness tests 10 passed; broader harness/conflict/compatibility/dogfood/eval/command-registry tests 63 passed; docs/prompt/release artifact tests 21 passed; startup policy and capability manifest validation passed via make policy-check; command registry validation passed with 424 commands; native skill manifest validation passed with 3 valid; CLI smokes passed for skills test native_skill_vetter, skills test --all-safe, skills dogfood native_skill_vetter, eval run --native-skills --json, and dogfood show native_skills_core; full suite passed with 1197 passed, 1 skipped
+test_result: completed prompt file and prompt audit evidence verified during SOURCE-TRUTH-RECONCILE-01
 docs_updated: yes
 changelog_updated:
 feature_registry_updated:
@@ -34,7 +34,7 @@ blockers:
 next_prompt_id:
 supersedes:
 superseded_by:
-notes: Completed metadata-only native skill test and dogfood harness. Added harness and dogfood modules, read-only skills test/dogfood commands, fixture-backed native skill evals, native skill dogfood suites, docs, command registry rows, and tracker updates. No untrusted skill execution, external script execution, dependency install, provider/connector call, plugin runtime execution, high/critical or personal-data auto-run, skill enablement, personal-data access, memory write, permission grant, or safety bypass added.
+notes: Reconciled stale imported row from completed prompt file and prompt audit evidence; no prompt was run by this reconciliation.
 ---
 
 # Prompt

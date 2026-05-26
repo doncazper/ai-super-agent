@@ -1,0 +1,48 @@
+{
+  "category": "command_qa",
+  "cases": [
+    {
+      "id": "command_qa.safe_plan_boundaries",
+      "title": "Safe command QA plan excludes high-risk automatic execution",
+      "input": "qa commands plan --safe-only",
+      "expect": {
+        "should_execute_high_critical": false,
+        "should_access_personal_data": false,
+        "should_store_memory": false
+      },
+      "risk_level": "SAFE",
+      "personal_data": false,
+      "live": false,
+      "tags": ["command_qa", "plan", "safe"]
+    },
+    {
+      "id": "command_qa.sandbox_boundaries",
+      "title": "Disposable sandbox constrains writes",
+      "input": "qa commands run --tier 3 --sandbox",
+      "expect": {
+        "allowed_path_prefix": "reports/qa/workspaces/",
+        "should_run_high_critical": false,
+        "should_send_external": false
+      },
+      "risk_level": "LOW",
+      "personal_data": false,
+      "live": false,
+      "tags": ["command_qa", "sandbox"]
+    },
+    {
+      "id": "command_qa.self_heal_conservative",
+      "title": "Self-heal loop requires human review",
+      "input": "qa self-heal run --safe-only --bug BUG-0001",
+      "expect": {
+        "commit_created": false,
+        "push_performed": false,
+        "human_review_required": true
+      },
+      "risk_level": "LOW",
+      "personal_data": false,
+      "live": false,
+      "tags": ["command_qa", "self_heal"]
+    }
+  ]
+}
+

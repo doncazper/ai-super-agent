@@ -1,0 +1,22 @@
+suite_id: surface_cli_core
+name: Surface CLI Core
+description: Safe surface-lane checks for CLI core and command registry metadata.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: surface_cli_doctor
+    description: Run local doctor metadata.
+    command: python smart_agent.py doctor
+    expected_behavior: Reports local setup status without personal-data access.
+    failure_signals: Raw secret output, personal-data access, or unexpected side effect.
+    tags: [surface, cli, safe]
+  - id: surface_commands_validate
+    description: Validate command registry metadata.
+    command: python smart_agent.py commands validate
+    expected_behavior: Returns status ok with no missing registry/matrix IDs.
+    failure_signals: Missing command metadata, registry drift, or validation failure.
+    tags: [surface, commands, safe]
+

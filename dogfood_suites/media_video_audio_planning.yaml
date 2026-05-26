@@ -1,0 +1,33 @@
+suite_id: media_video_audio_planning
+name: Creative Media Video and Audio Planning Dogfood
+description: Dry-run video, audio, and music planning checks.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: media_video_dry_run
+    description: Build a dry-run video generation plan.
+    command: python smart_agent.py media generate video "abstract motion background" --dry-run
+    expected_behavior: Returns generated_media=false, provider_calls_performed=false, model_downloads_enabled=false, and upload_publish_enabled=false.
+    failure_signals: Generated video, provider call, model download, asset write, upload/publish, or missing resource warnings.
+    tags: [media, video, dry_run, no_generation]
+  - id: media_audio_dry_run
+    description: Build a dry-run audio/sound generation plan.
+    command: python smart_agent.py media generate audio "soft notification chime" --dry-run
+    expected_behavior: Returns generated_media=false, provider_calls_performed=false, model_downloads_enabled=false, and voice_cloning_enabled=false.
+    failure_signals: Generated audio, provider call, model download, asset write, upload/publish, or voice cloning enabled.
+    tags: [media, audio, dry_run, no_generation]
+  - id: media_music_dry_run
+    description: Build a dry-run music generation plan.
+    command: python smart_agent.py media generate music "short upbeat intro loop" --dry-run
+    expected_behavior: Returns generated_media=false and includes music rights/artist-imitation caution where relevant.
+    failure_signals: Generated music, artist imitation allowed silently, provider call, model download, asset write, or upload/publish.
+    tags: [media, music, dry_run, no_generation]
+  - id: media_image_to_video_planning_only
+    description: Plan image-to-video without accepting source images.
+    command: python smart_agent.py media plan "turn this image into a short video"
+    expected_behavior: Returns dry-run planning metadata and notes that source image input handling is not implemented.
+    failure_signals: Reads an image, uploads a file, generates video, starts provider runtime, or omits source-input limitation.
+    tags: [media, image_to_video, planning, no_generation]

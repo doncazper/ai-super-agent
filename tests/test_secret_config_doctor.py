@@ -4,7 +4,7 @@ import json
 import subprocess
 
 from agent.config.loader import load_capabilities_config
-from agent.connectors.secret_doctor import gmail_doctor, gmail_scopes, secrets_doctor, telegram_doctor
+from agent.connectors.secret_doctor import gmail_doctor, gmail_scopes, provider_status, secrets_doctor, telegram_doctor
 from agent.ui.cli_commands import dispatch_cli
 from agent.ui.connectors import connector_status, format_connectors_json
 
@@ -200,3 +200,68 @@ def test_sends_and_personal_tools_remain_disabled_by_default() -> None:
     for name, capability in capabilities.items():
         if capability.get("connector_name") in personal_connectors:
             assert capability["default_enabled"] is False, name
+
+
+def test_provider_secret_doctor_all_includes_new_providers(tmp_path) -> None:
+    report = secrets_doctor(project_root=tmp_path, environ={})
+    providers = {item["name"]: item for item in report["providers"]}
+
+    for name in ("reddit", "brave", "newsapi", "mediacloud", "microsoft", "github", "media", "lmstudio", "ollama", "llama_cpp"):
+        assert name in providers
+        assert providers[name]["metadata"]["no_api_calls_made"] is True
+    assert providers["microsoft"]["allowed"] is False
+    assert providers["media"]["metadata"]["real_generation_enabled"] is False
+
+
+def test_provider_secret_doctor_fake_present_without_values(tmp_path) -> None:
+    fake = "ghp_" + "a" * 24
+    report = secrets_doctor(project_root=tmp_path, provider="github", environ={"GITHUB_TOKEN": fake})
+    text = json.dumps(report)
+    provider = report["providers"][0]
+
+    assert provider["name"] == "github"
+    assert provider["configured"] is True
+    assert fake not in text
+    assert "GITHUB_TOKEN" in provider["present_env"]
+
+
+def test_provider_secret_doctor_broad_scope_and_token_path_warnings(tmp_path) -> None:
+    token_path = tmp_path / "token.json"
+    token_path.write_text("{}", encoding="utf-8")
+    microsoft = provider_status(
+        "microsoft",
+        environ={
+            "MICROSOFT_CLIENT_ID": "client",
+            "MICROSOFT_TENANT_ID": "tenant",
+            "MICROSOFT_CLIENT_SECRET": "fake-secret",
+            "MICROSOFT_SCOPES": "Mail.Send Calendars.ReadWrite",
+        },
+    )
+    gmail = secrets_doctor(project_root=tmp_path, provider="gmail", environ={"GMAIL_TOKEN_PATH": str(token_path)})
+
+    assert microsoft.metadata["broad_scope_warning"] is True
+    assert any(warning["code"] == "token_path_inside_repo" for warning in gmail["warnings"])
+
+
+def test_provider_secret_doctor_paid_provider_policy_note(tmp_path) -> None:
+    report = secrets_doctor(project_root=tmp_path, provider="brave", environ={"BRAVE_SEARCH_API_KEY": "fake-brave-secret"})
+    provider = report["providers"][0]
+
+    assert provider["configured"] is True
+    assert provider["paid_or_quota_limited"] is True
+    assert provider["disabled_by_cost_policy"] is True
+
+
+def test_provider_specific_cli_doctors_are_redacted(capsys, monkeypatch, tmp_path) -> None:
+    fake = "fake-newsapi-secret"
+    monkeypatch.setenv("NEWSAPI_API_KEY", fake)
+
+    assert dispatch_cli(["secrets", "doctor", "newsapi"], project_root=tmp_path) == 0
+    report = json.loads(capsys.readouterr().out)
+
+    assert report["providers"][0]["name"] == "newsapi"
+    assert fake not in json.dumps(report)
+
+    assert dispatch_cli(["secrets", "doctor", "all"], project_root=tmp_path) == 0
+    all_report = json.loads(capsys.readouterr().out)
+    assert len(all_report["providers"]) >= 10

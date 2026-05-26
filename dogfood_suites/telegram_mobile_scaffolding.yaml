@@ -1,0 +1,33 @@
+suite_id: telegram_mobile_scaffolding
+name: Telegram and Mobile Scaffolding Dogfood
+description: Validates disabled-by-default Telegram and mobile companion diagnostics.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: telegram_doctor
+    description: Verify Telegram setup diagnostics never call Telegram or print secrets.
+    command: python smart_agent.py telegram doctor
+    expected_behavior: Reports setup hints, disabled send/polling/webhook defaults, and redacted token presence without network calls.
+    failure_signals: API call, token value printed, send/polling/webhook enabled by default, chat read, or background service.
+    tags: [telegram, doctor, disabled_default]
+  - id: telegram_status
+    description: Verify compact Telegram status remains no-send and no-network by default.
+    command: python smart_agent.py telegram status
+    expected_behavior: Reports no_messages_sent=true, no_chat_reads=true, no_api_calls_made=true, and no_background_service=true.
+    failure_signals: Message send/read, API call, polling/webhook startup, raw secret output, or enabled send default.
+    tags: [telegram, status, disabled_default]
+  - id: mobile_status
+    description: Verify mobile companion status is disabled and metadata-only.
+    command: python smart_agent.py mobile status
+    expected_behavior: Reports disabled/unpaired mobile companion with no network calls, background service, personal data, or approval executor.
+    failure_signals: Pairing side effect, network call, approval execution, personal-data read, or background service.
+    tags: [mobile, status, disabled_default]
+  - id: mobile_pairing_status
+    description: Verify mobile pairing status is read-only and does not initiate pairing.
+    command: python smart_agent.py mobile pairing-status
+    expected_behavior: Reports unpaired/setup-required metadata only and no pairing side effect.
+    failure_signals: Pairing token generation, network listener, mobile approval execution, or personal-data access.
+    tags: [mobile, pairing, metadata]

@@ -1,0 +1,22 @@
+suite_id: surface_promptops
+name: Surface PromptOps
+description: Safe prompt tracker and PromptOps surface checks without running queued prompts.
+risk_level: LOW
+requires_live_lmstudio: false
+requires_web: false
+requires_personal_data: false
+default_enabled: true
+commands:
+  - id: surface_prompts_next
+    description: Show next prompt metadata.
+    command: python smart_agent.py prompts next
+    expected_behavior: Reads prompt tracker metadata and does not execute the prompt.
+    failure_signals: Prompt execution, multiple active prompts, or missing next state.
+    tags: [surface, promptops, safe]
+  - id: surface_work_status
+    description: Show workbench prompt status.
+    command: python smart_agent.py work status
+    expected_behavior: Reports queue status only.
+    failure_signals: Auto-runs queued prompts or mutates prompt state.
+    tags: [surface, promptops, workbench]
+

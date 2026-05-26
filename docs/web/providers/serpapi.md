@@ -38,6 +38,8 @@ python smart_agent.py research "local AI news" --provider serpapi
 
 The doctor and connector status commands are config-only. They do not call SerpAPI and never print the API key.
 
+Secret setup is tracked in `docs/secrets/PROVIDER_SECRET_SETUP.md`. Run `python smart_agent.py secrets doctor serpapi` to check whether `SERPAPI_API_KEY` appears configured without showing the value, and run `python smart_agent.py secrets scan` before committing any config changes.
+
 ## Safety Rules
 
 - SerpAPI is explicit fallback only.

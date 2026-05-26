@@ -50,8 +50,10 @@ import json
 import os
 from pathlib import Path
 
+from agent.brain.errors import BrainProviderError
+from agent.brain.providers.lmstudio import LMStudioBrainProvider
 from agent.config.runtime import RuntimeConfig, RuntimeConfigError
-from agent.core.lmstudio_client import LMStudioClient, LMStudioConfig, LMStudioError
+from agent.core.lmstudio_client import LMStudioConfig, LMStudioError
 from agent.core.orchestrator import Orchestrator, OrchestratorResult, new_session_id
 from agent.core.tool_broker import ToolBroker
 from agent.config.loader import load_capabilities_config
@@ -146,6 +148,8 @@ from agent.workflows.self_improvement_loop import (
     run_self_improvement_tests,
     show_self_improvement_diff,
 )
+from agent.self_improvement.artifact_hashes import build_artifact_hash_report
+from agent.self_improvement.safety_lints import lint_project_diff, verify_self_heal_artifacts
 from agent.workflows.tasks import TASK_CREATE_ACTION, execute_task_action
 from agent.workflows.task_extraction import extract_personal_tasks
 
@@ -259,8 +263,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_improve_command(args.message[1:], broker, debug=debug_enabled)
 
     try:
-        client = LMStudioClient(config)
-    except LMStudioError as exc:
+        client = LMStudioBrainProvider(config=config)
+    except (LMStudioError, BrainProviderError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
     orchestrator = Orchestrator(client, registry, broker, debug=debug_enabled)
@@ -1525,6 +1529,27 @@ def _run_skills_command(argv: list[str], broker: ToolBroker, *, debug: bool = Fa
     find_parser = subparsers.add_parser("find", help="Find local native skills and reviewed candidates for a requested capability.")
     find_parser.add_argument("query")
     find_parser.add_argument("--max-results", type=int, default=5)
+    subparsers.add_parser("propose-from-sessions", help="Create candidate skill proposals from redacted session metadata only.")
+    subparsers.add_parser("propose-from-commands", help="Create candidate skill proposals from command metadata only.")
+    proposals_parser = subparsers.add_parser("proposals", help="Inspect local candidate skill proposals.")
+    proposals_subparsers = proposals_parser.add_subparsers(dest="proposals_command", required=True)
+    proposals_subparsers.add_parser("list", help="List local candidate skill proposals.")
+    proposals_show = proposals_subparsers.add_parser("show", help="Show one candidate skill proposal.")
+    proposals_show.add_argument("proposal_id")
+    proposals_approve = proposals_subparsers.add_parser("approve", help="Preview proposal approval without creating or enabling a skill.")
+    proposals_approve.add_argument("proposal_id")
+    proposals_approve.add_argument("--dry-run", action="store_true", required=True, help="Required; approval is preview-only in this milestone.")
+    improve_propose_parser = subparsers.add_parser("improve-propose", help="Create an evidence-backed skill improvement proposal.")
+    improve_propose_parser.add_argument("skill_id")
+    improve_bugs_parser = subparsers.add_parser("improve-from-bugs", help="Create a skill improvement proposal from redacted bug evidence.")
+    improve_bugs_parser.add_argument("skill_id")
+    improve_dogfood_parser = subparsers.add_parser("improve-from-dogfood", help="Create a skill improvement proposal from redacted dogfood failure evidence.")
+    improve_dogfood_parser.add_argument("skill_id")
+    improvements_parser = subparsers.add_parser("improvements", help="Inspect local skill improvement proposals.")
+    improvements_subparsers = improvements_parser.add_subparsers(dest="improvements_command", required=True)
+    improvements_subparsers.add_parser("list", help="List local skill improvement proposals.")
+    improvements_show = improvements_subparsers.add_parser("show", help="Show one skill improvement proposal.")
+    improvements_show.add_argument("improvement_id")
 
     try:
         parsed = parser.parse_args(argv)
@@ -1597,12 +1622,42 @@ def _run_skills_command(argv: list[str], broker: ToolBroker, *, debug: bool = Fa
         payload = _execute_cli_tool(broker, "cli_skills_score", "native_skills.score_candidate", {"path": parsed.path_or_skill_id})
     elif parsed.command == "report":
         payload = _execute_cli_tool(broker, "cli_skills_report_last", "native_skills.report_last", {})
-    else:
+    elif parsed.command == "find":
         payload = _execute_cli_tool(
             broker,
             "cli_skills_find",
             "native_skills.find_skill",
             {"query": parsed.query, "max_results": parsed.max_results},
+        )
+    elif parsed.command == "propose-from-sessions":
+        payload = _execute_cli_tool(broker, "cli_skills_propose_from_sessions", "native_skills.propose_from_sessions", {})
+    elif parsed.command == "propose-from-commands":
+        payload = _execute_cli_tool(broker, "cli_skills_propose_from_commands", "native_skills.propose_from_commands", {})
+    elif parsed.command == "proposals" and parsed.proposals_command == "list":
+        payload = _execute_cli_tool(broker, "cli_skills_proposals_list", "native_skills.proposals_list", {})
+    elif parsed.command == "proposals" and parsed.proposals_command == "show":
+        payload = _execute_cli_tool(broker, "cli_skills_proposals_show", "native_skills.proposals_show", {"proposal_id": parsed.proposal_id})
+    elif parsed.command == "proposals":
+        payload = _execute_cli_tool(
+            broker,
+            "cli_skills_proposals_approve_dry_run",
+            "native_skills.proposals_approve_dry_run",
+            {"proposal_id": parsed.proposal_id},
+        )
+    elif parsed.command == "improve-propose":
+        payload = _execute_cli_tool(broker, "cli_skills_improve_propose", "native_skills.improve_propose", {"skill_id": parsed.skill_id})
+    elif parsed.command == "improve-from-bugs":
+        payload = _execute_cli_tool(broker, "cli_skills_improve_from_bugs", "native_skills.improve_from_bugs", {"skill_id": parsed.skill_id})
+    elif parsed.command == "improve-from-dogfood":
+        payload = _execute_cli_tool(broker, "cli_skills_improve_from_dogfood", "native_skills.improve_from_dogfood", {"skill_id": parsed.skill_id})
+    elif parsed.command == "improvements" and parsed.improvements_command == "list":
+        payload = _execute_cli_tool(broker, "cli_skills_improvements_list", "native_skills.improvements_list", {})
+    else:
+        payload = _execute_cli_tool(
+            broker,
+            "cli_skills_improvements_show",
+            "native_skills.improvements_show",
+            {"improvement_id": parsed.improvement_id},
         )
     if debug and isinstance(payload, dict) and payload.get("debug"):
         from agent.core.orchestrator import format_debug_payload
@@ -1680,6 +1735,25 @@ def _run_memory_command(argv: list[str], broker: ToolBroker, *, debug: bool = Fa
     context_parser.add_argument("--max-records", type=int, default=5)
     context_parser.add_argument("--max-chars", type=int, default=1200)
 
+    continuity_parser = subparsers.add_parser("continuity", help="Inspect redacted cross-session memory continuity.")
+    continuity_subparsers = continuity_parser.add_subparsers(dest="continuity_command", required=True)
+    continuity_status_parser = continuity_subparsers.add_parser("status", help="Show continuity status and safe memory counts.")
+    continuity_status_parser.add_argument("--scope", default="default")
+    continuity_summary_parser = continuity_subparsers.add_parser("build-summary", help="Build a redacted non-personal continuity summary.")
+    continuity_summary_parser.add_argument("--scope", default="default")
+    continuity_summary_parser.add_argument("--query", default="")
+    continuity_summary_parser.add_argument("--category", action="append", default=[])
+    continuity_summary_parser.add_argument("--max-records", type=int, default=8)
+    continuity_summary_parser.add_argument("--max-chars", type=int, default=1600)
+    continuity_subparsers.add_parser("clear", help="Clear separate continuity profile; v1 is a safe no-op.")
+
+    preview_parser = subparsers.add_parser("context-preview", help="Preview bounded non-personal memory context without injection.")
+    preview_parser.add_argument("query")
+    preview_parser.add_argument("--scope", default="default")
+    preview_parser.add_argument("--category", action="append", default=[])
+    preview_parser.add_argument("--max-records", type=int, default=5)
+    preview_parser.add_argument("--max-chars", type=int, default=1200)
+
     try:
         parsed = parser.parse_args(argv)
     except SystemExit as exc:
@@ -1713,6 +1787,31 @@ def _run_memory_command(argv: list[str], broker: ToolBroker, *, debug: bool = Fa
     elif parsed.command == "clear":
         tool_name = "memory.clear"
         arguments = {"scope": parsed.scope}
+    elif parsed.command == "continuity":
+        if parsed.continuity_command == "status":
+            tool_name = "memory.continuity_status"
+            arguments = {"scope": parsed.scope}
+        elif parsed.continuity_command == "build-summary":
+            tool_name = "memory.continuity_build_summary"
+            arguments = {
+                "scope": parsed.scope,
+                "query": parsed.query,
+                "categories": parsed.category,
+                "max_records": parsed.max_records,
+                "max_chars": parsed.max_chars,
+            }
+        else:
+            tool_name = "memory.continuity_clear"
+            arguments = {}
+    elif parsed.command == "context-preview":
+        tool_name = "memory.context_preview"
+        arguments = {
+            "query": parsed.query,
+            "scope": parsed.scope,
+            "categories": parsed.category,
+            "max_records": parsed.max_records,
+            "max_chars": parsed.max_chars,
+        }
     else:
         tool_name = "memory.context"
         arguments = {
@@ -3181,6 +3280,12 @@ def _run_improve_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     commit_parser = subparsers.add_parser("commit", help="Execute an approved self-improvement commit action.")
     commit_parser.add_argument("--from-action", required=True)
     commit_parser.add_argument("--json", action="store_true")
+    lint_parser = subparsers.add_parser("lint-diff", help="Lint the current git diff for unsafe self-heal/code-mode patterns without patching files.")
+    lint_parser.add_argument("--json", action="store_true")
+    hash_parser = subparsers.add_parser("artifact-hashes", help="Compute redacted artifact hashes for code-mode/self-heal review evidence.")
+    hash_parser.add_argument("--json", action="store_true")
+    verify_parser = subparsers.add_parser("verify-artifacts", help="Verify self-heal artifact hashes and safety lints without executing or patching.")
+    verify_parser.add_argument("--json", action="store_true")
     try:
         parsed = parser.parse_args(argv)
     except SystemExit as exc:
@@ -3290,6 +3395,27 @@ def _run_improve_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
         else:
             print(json.dumps(payload, indent=2, sort_keys=True))
         return 0 if payload.get("committed") is True else 2
+    if parsed.command == "lint-diff":
+        payload = lint_project_diff(".")
+        if parsed.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(_format_self_improvement_lint(payload))
+        return 0 if payload.get("safe_only_allowed") is True else 2
+    if parsed.command == "artifact-hashes":
+        payload = build_artifact_hash_report(".")
+        if parsed.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(_format_self_improvement_hashes(payload))
+        return 0 if payload.get("status") == "ok" else 2
+    if parsed.command == "verify-artifacts":
+        payload = verify_self_heal_artifacts(".")
+        if parsed.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(_format_self_improvement_verify(payload))
+        return 0 if payload.get("safe_only_allowed") is True else 2
     payload = self_improvement_backlog(
         broker,
         mode=parsed.command,
@@ -3309,6 +3435,60 @@ def _run_improve_command(argv: list[str], broker: ToolBroker, *, debug: bool = F
     else:
         print(_format_improvement_backlog(payload))
     return 0 if payload.get("status") in {"ok", "dry_run"} else 2
+
+
+def _format_self_improvement_lint(payload: dict[str, object]) -> str:
+    lines = [
+        f"Self-improvement safety lint ({payload.get('status')})",
+        f"safe_only_allowed: {payload.get('safe_only_allowed')}",
+        f"findings: {payload.get('finding_count')} blockers: {payload.get('blocker_count')}",
+        "raw_evidence_included: false",
+    ]
+    findings = payload.get("findings", [])
+    if isinstance(findings, list) and findings:
+        lines.append("Findings:")
+        for item in findings:
+            if isinstance(item, dict):
+                lines.append(
+                    f"- {item.get('severity')} {item.get('rule_id')}: {item.get('description')} "
+                    f"evidence_hash={item.get('evidence_hash')}"
+                )
+    return "\n".join(lines)
+
+
+def _format_self_improvement_hashes(payload: dict[str, object]) -> str:
+    touched = payload.get("touched_file_hashes", {})
+    reports = payload.get("generated_report_hashes", {})
+    lines = [
+        f"Self-improvement artifact hashes ({payload.get('status')})",
+        f"algorithm: {payload.get('algorithm')}",
+        f"redacted: {payload.get('redacted')}",
+        f"git_diff_hash: {payload.get('git_diff_hash')}",
+        f"test_command_output_hash: {payload.get('test_command_output_hash')}",
+        f"approval_preview_hash: {payload.get('approval_preview_hash')}",
+        f"command_registry_snapshot_hash: {payload.get('command_registry_snapshot_hash')}",
+        f"capability_manifest_hash: {payload.get('capability_manifest_hash')}",
+        f"touched_file_count: {len(touched) if isinstance(touched, dict) else 0}",
+        f"generated_report_count: {len(reports) if isinstance(reports, dict) else 0}",
+        f"side_effects: {payload.get('side_effects')}",
+    ]
+    return "\n".join(lines)
+
+
+def _format_self_improvement_verify(payload: dict[str, object]) -> str:
+    lint_report = payload.get("lint_report", {})
+    artifact_hashes = payload.get("artifact_hashes", {})
+    lint_status = lint_report.get("status") if isinstance(lint_report, dict) else "unknown"
+    hash_status = artifact_hashes.get("status") if isinstance(artifact_hashes, dict) else "unknown"
+    return "\n".join(
+        [
+            f"Self-improvement artifact verification ({payload.get('status')})",
+            f"safe_only_allowed: {payload.get('safe_only_allowed')}",
+            f"lint_status: {lint_status}",
+            f"artifact_hash_status: {hash_status}",
+            f"side_effects: {payload.get('side_effects')}",
+        ]
+    )
 
 
 def _format_improvement_commit_action(payload: dict[str, object]) -> str:
@@ -3426,4 +3606,11 @@ def _print_debug_events(result: OrchestratorResult) -> None:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except BrokenPipeError:
+        try:
+            sys.stdout = open(os.devnull, "w")
+        except OSError:
+            pass
+        raise SystemExit(0)

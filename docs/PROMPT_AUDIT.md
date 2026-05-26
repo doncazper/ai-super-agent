@@ -8,11 +8,63 @@ Completion evidence classifications: `complete_verified`, `likely_complete`, `pa
 
 | category | count | notes |
 |---|---:|---|
-| definitely completed | 181 | Inferred from implemented files, tests, docs, feature registry, maturity tracker, changelog, completion report, prompt tracker release-gate docs, prompt completion evidence, and `./.venv/bin/python smart_agent.py prompts audit`. |
+| definitely completed | 250 | Inferred from implemented files, tests, docs, feature registry, maturity tracker, changelog, completion report, prompt tracker release-gate docs, prompt completion evidence, and local validation through MEDIA-12. |
 | likely completed | 0 | No separate likely bucket is currently needed; uncertain items are left queued or blocked. |
-| queued but not confirmed | 3 | Queue still points at `news-provider-registry-status-commands` after the Native Skill System Hardening batch; native-skill-specific follow-up should be a reviewed lockfile/pinning workflow or clean release-candidate boundary prompt before external skill import/runtime work. |
+| queued but not confirmed | 3 | Standing queue still includes `news-provider-registry-status-commands` and platform manifest/startup follow-ups. CODEBUG recommends a focused clean release-candidate boundary and prompt tracker reconciliation before returning to the standing feature queue. |
+| blocked by missing source files | 0 | Creative Media pack is now imported and complete through `MEDIA-12`; Secrets pack remains `needs_review` because it has not been imported/run in this pass. |
 | blocked by approval gates | 0 | No queued prompt is currently blocked in prompt tracking. |
 | superseded by later work | 1 | Superseded rows remain documented below where older tracking concepts were replaced by mature features. |
+
+## SOURCE-TRUTH-RECONCILE-01 Snapshot
+
+- snapshot_at: 2026-05-25 after `SOURCE-TRUTH-RECONCILE-01`
+- current_active_prompt: none
+- evidence: added `docs/reconciliation/*`; reconciled stale queue/ledger rows for SKILL, CODEBUG, NLCMD, and QA prompts; changed recovered Media/Secrets pack imports to `needs_review`
+- validation: command registry validation passed; policy-check passed; doctor passed; full suite passed with 1493 passed and 1 skipped; safe eval passed with 58 pass, 0 fail, 6 skipped; prompt audit passed with active_count 0 and blocked_count 0; safe dogfood dry-run passed
+- next_action: after completion, return to `news-provider-registry-status-commands` unless the user chooses clean release-candidate boundary work first
+
+## QA-FE-BE-01 Snapshot
+
+- snapshot_at: 2026-05-25 after `QA-FE-BE-01`
+- current_active_prompt: none
+- completed_prompt: `QA-FE-BE-01`
+- evidence: added `agent/qa/api_models.py`, `agent/qa/service.py`, service-backed `agent/qa/dashboard.py`, frontend/backend boundary docs, API contract docs, regression tests, command registry/test matrix updates, and tracker updates
+- validation: boundary/dashboard tests 13 passed; QA tests 56 passed; full suite 1493 passed, 1 skipped; command registry validation passed; startup policy and capability manifest validation passed; `qa dashboard` and `qa status` smokes passed
+- next_action: return to `news-provider-registry-status-commands` unless the user chooses release hardening or prompt-tracker cleanup first
+
+## Creative Media Generation Controlled Batch Snapshot
+
+- snapshot_at: 2026-05-25 after `MEDIA-12`
+- requested_pack: `creative-media-generation-v1`
+- expected_source_file: `prompts/packs/creative-media-generation-v1.promptpack.md`
+- current_active_prompt: none
+- status: completed_verified
+- completed_in_batch: `MEDIA-01` through `MEDIA-12`
+- queued_remaining_in_batch: none
+- evidence: prompt pack validated/imported, `prompts/completed/MEDIA-01.md` through `MEDIA-12.md` exist, completion report contains MEDIA-01 through MEDIA-12 evidence, creative media docs/tests/commands exist, full suite passed with 1580 tests, focused media release suite passed with 77 tests, command registry validation passed with 529 commands, and policy-check passed.
+- next_action: return to `news-provider-registry-status-commands` unless the user selects a separate future Creative Media provider implementation prompt.
+
+## Command QA Controlled Batch Snapshot
+
+- snapshot_at: 2026-05-25 after `QA-10`
+- imported_pack: `command-qa-sandbox-self-heal-v1`
+- current_active_prompt: none
+- completed_in_batch: `QA-01` through `QA-10`
+- queued_remaining_in_batch: none
+- prompt_audit_result: active_count 0, completed_count 235, queued_count 3, blocked_count 0, superseded_count 1, completed_missing_evidence empty.
+- tracker_fix: `QA-10` was marked complete with full-suite, command-registry, policy-check, command-QA eval, and dogfood dry-run evidence.
+- next_action: return to the standing next prompt `news-provider-registry-status-commands`, or run clean release-candidate boundary work first if the user wants hardening before more feature expansion.
+
+## CODEBUG Controlled Batch Snapshot
+
+- snapshot_at: 2026-05-25 during `CODEBUG-06`
+- imported_pack: `codebase-bug-review-and-hardening-v1`
+- current_active_prompt: `CODEBUG-06`
+- completed_in_batch: `CODEBUG-01`, `CODEBUG-02`, `CODEBUG-03`, `CODEBUG-04`, `CODEBUG-05`
+- queued_remaining_in_batch: `CODEBUG-07`, `CODEBUG-08`
+- prompt_audit_result: active_count 1, completed_count 212, queued_count 5, completed_missing_evidence empty.
+- tracker_fix: `docs/PROMPT_QUEUE.md` CODEBUG rows were updated from imported `queued` defaults to the current controlled-batch statuses with evidence notes.
+- next_action: continue to `CODEBUG-07` after `CODEBUG-06` is marked complete.
 
 ## Definitely Completed
 
@@ -141,7 +193,7 @@ Completion evidence classifications: `complete_verified`, `likely_complete`, `pa
 
 ## Queued But Not Confirmed
 
-- news-capability-manifest-provider-policy
+- news-provider-registry-status-commands
 - PLATFORM-CAPABILITY-MANIFEST-MAPPING
 - PLATFORM-STARTUP-LAZYLOAD-GUARDRAILS
 
@@ -151,6 +203,7 @@ Completion evidence classifications: `complete_verified`, `likely_complete`, `pa
 
 ## Missing Evidence
 
+- MATURITY-AUDIT-01 found prompt tracker disagreements on 2026-05-25: `news-capability-manifest-provider-policy` is complete in the ledger/project state but was still listed as queued here; `docs/PROMPT_QUEUE.md` and `docs/PROMPT_LEDGER.md` still contain stale imported `SKILL-*` queued rows despite completed native-skill release evidence; `prompts/queued/REDDIT-OAUTH-CONFIG-DOCTOR.md` appears stale because Reddit OAuth/config doctor completion evidence exists. See `docs/productization/PROMPT_TRACKER_MISSED_PROMPTS_AUDIT.md`.
 - PTM-01 through PTM-10 are complete with targeted tests, prompt tracker docs, and release-gate evidence.
 - Apple Messaging/iMessage implementation prompts now have `MESSAGE-CHANNEL-ABSTRACTION` evidence for no-send schemas, registry, validation, previews, brokered metadata/draft inspection, CLI commands, command registry, and tests. `MESSAGE-SAFETY-ACTION-CENTER` adds brokered draft creation and CRITICAL Action Center send-action proposals with exact local previews, draft-edit approval invalidation, and audit redaction. `LEAD-INBOX-ABSTRACTION` adds a mock-only, brokered lead model/provider/classifier/draft/follow-up foundation with no real provider reads, sends, CRM sync, or memory writes by default. `IOS-CONFIRMED-COMPOSE` adds an agent-side local handoff payload/status/result interface with no iOS app and no silent send. `MACOS-MESSAGES-PROBE` adds metadata-only macOS feasibility probing with no private DB, Full Disk Access, account/message reads, UI Send scripting, or send path. `MESSAGES-DRAFT-HANDOFF-WORKFLOW` adds local draft-id handoff ergonomics, `messages draft`, `messages handoff`, draft-id save/copy approval flow, and no-send Lead Inbox draft creation. `INCOMING-MESSAGE-STRATEGY` adds a manual/mock inbound inbox with workspace-only imports, `UNTRUSTED_MESSAGE` labels, no `chat.db`/Full Disk Access/watcher/send, Lead Inbox candidate metadata, and draft-only replies. `MACOS-APPROVED-IMESSAGE-SEND` adds a disabled-by-default, allowlist/live-probe/Action-Center-gated macOS send adapter with no private DB, no Full Disk Access, no bulk/group/attachment sends, and unsupported fallback. `APPLE-MESSAGES-BUSINESS` adds a mock/local Apple Messages for Business provider stub with config-only doctor/status, local mock inbound Lead Inbox mapping, draft-only MessageDraft response creation, disabled future CRITICAL send, and no live provider calls, sends, private Messages DB access, Full Disk Access, hidden polling, credential printing, or memory writes. `APPROVED-LEAD-RESPONSE-SEND` adds CRITICAL exact-preview lead send proposals, no approval reuse, draft-edit invalidation, iOS compose handoff, manual fallback, macOS gate delegation, unsupported-channel fallback, and no bulk/auto-send/memory write.
 - Agent Runtime Orchestration ORCH-01 through ORCH-10 are complete. Recovery on 2026-05-23 found stale queued ORCH rows in `docs/PROMPT_LEDGER.md`; those rows were corrected to completed entries while `docs/PROMPT_QUEUE.md`, completed prompt files, runtime docs, runtime tests, and completion report already showed completion.
@@ -184,12 +237,12 @@ Completion evidence classifications: `complete_verified`, `likely_complete`, `pa
 
 ## Next Recommended Prompt
 
-news-capability-manifest-provider-policy
+news-provider-registry-status-commands
 
 Before running it:
 
-1. Declare disabled/planned `news.*` capability manifest entries before runtime implementation.
-2. Keep paid providers disabled by default and require explicit config/approval gates.
+1. Reconcile prompt tracker stale rows first if the user wants tracker hygiene before feature work.
+2. Keep the news provider registry/status milestone metadata-only: no live provider calls, article fetching, paid API default, history storage, or bypass behavior.
 3. Do not fetch articles, call providers, scrape paywalls/login/CAPTCHA-protected pages, or add browser automation.
 4. Preserve no search/news history and no full article-body storage by default.
 5. Preserve ToolBroker, PolicyEngine, ApprovalManager where needed, and AuditLogger gates for all future runtime news work.
@@ -247,3 +300,140 @@ Before running it:
 - prompt_count: 10
 - prompt_ids: SKILL-01, SKILL-02, SKILL-03, SKILL-04, SKILL-05, SKILL-06, SKILL-07, SKILL-08, SKILL-09, SKILL-10
 - execution: import_only; no prompt executed automatically.
+## Prompt Pack Import
+
+- imported_at: 2026-05-25T15:32:48+00:00
+- pack_id: brain-runtime-independence-v1
+- pack_title: Brain Runtime Independence Track
+- mode: controlled_batch_until_blocked
+- prompt_count: 11
+- prompt_ids: BRAIN-01, BRAIN-02, BRAIN-03, BRAIN-04, BRAIN-05, BRAIN-06, BRAIN-07, BRAIN-08, BRAIN-09, BRAIN-10, BRAIN-11
+- execution: import_only; no prompt executed automatically.
+
+## Brain Runtime Independence Batch Progress
+
+- updated_at: 2026-05-25T17:45:00+00:00
+- pack_id: brain-runtime-independence-v1
+- completed_prompt_ids: BRAIN-01, BRAIN-02, BRAIN-03, BRAIN-04, BRAIN-05, BRAIN-06, BRAIN-07, BRAIN-08, BRAIN-09, BRAIN-10, BRAIN-11
+- active_prompt_id: none
+- next_prompt_id: news-provider-registry-status-commands
+- evidence: BRAIN-01 docs/command/full-suite validation complete; BRAIN-02 provider-interface/registry/full-suite validation complete; BRAIN-03 LM Studio provider refactor/full-suite validation complete; BRAIN-04 llama.cpp server provider focused validation complete; BRAIN-05 Ollama provider focused validation complete; BRAIN-06 llama-cpp-python in-process provider validation complete; BRAIN-07 MLX provider strategy/stub validation complete; BRAIN-08 model health/benchmark/eval validation complete with full-suite evidence; BRAIN-09 provider fallback/router validation complete; BRAIN-10 MCP decision/adapter-stub validation complete; BRAIN-11 release gate complete with focused tests, command registry validation, policy-check, provider/MCP smokes, safe benchmark/eval smokes, optional import guard, release-gate docs, maturity review, and full suite 1285 passed / 1 skipped.
+- stop_conditions_hit: none so far.
+## Prompt Pack Import
+
+- imported_at: 2026-05-25T17:28:14+00:00
+- pack_id: hermes-inspired-safe-autonomy-v1
+- pack_title: Hermes-Inspired Safe Autonomy Groundwork Track
+- mode: controlled_batch_until_blocked
+- prompt_count: 13
+- prompt_ids: HERMES-01, HERMES-02, HERMES-03, HERMES-04, HERMES-05, HERMES-06, HERMES-07, HERMES-08, HERMES-09, HERMES-10, HERMES-11, HERMES-12, HERMES-13
+- execution: import_only; no prompt executed automatically.
+
+## Hermes-Inspired Safe Autonomy Batch Progress
+
+- updated_at: 2026-05-25T18:24:00+00:00
+- pack_id: hermes-inspired-safe-autonomy-v1
+- completed_prompt_ids: HERMES-01, HERMES-02, HERMES-03, HERMES-04, HERMES-05, HERMES-06, HERMES-07, HERMES-08, HERMES-09, HERMES-10, HERMES-11, HERMES-12, HERMES-13
+- active_prompt_id: none
+- next_prompt_id: news-provider-registry-status-commands
+- evidence: HERMES-01 architecture/docs tests and policy-check complete; HERMES-02 gateway/channel scaffold tests, CLI smokes, command validation, and policy-check complete; HERMES-03 Telegram/mobile status scaffold tests, CLI smokes, command validation, and policy-check complete; HERMES-04 repeated-task skill proposal tests passed with 8 focused and 41 combined focused tests, command registry ok with 453 commands, policy-check passed, and proposal CLI smokes used a temporary report path; HERMES-05 skill improvement proposal tests passed with 9 focused and 50 combined focused tests, command registry ok with 458 commands, and policy-check passed; HERMES-06 scheduler UX tests and existing scheduler policy tests passed with 21 focused tests, command registry ok with 464 commands, and policy-check passed; HERMES-07 subagent isolation tests passed with 9 focused tests, command registry ok with 468 commands, and policy-check passed; HERMES-08 sandbox abstraction tests passed with 10 focused tests and 23 combined tests, command registry ok with 471 commands, and policy-check passed; HERMES-09 model switching/session-continuity tests passed with 19 focused and command registry ok with 474 commands; HERMES-10 memory continuity tests passed with 20 focused and command registry ok with 478 commands; HERMES-11 authorized web boundary tests passed with 24 focused and command registry ok with 481 commands; HERMES-12 safe autonomy dogfood/eval tests passed with 32 focused, safe autonomy eval and dogfood dry-run passed, and command registry ok with 484 commands; HERMES-13 release gate passed with full suite 1380 passed/1 skipped, 74 focused tests, safe autonomy eval, dogfood dry-run, policy-check, command registry validation, and active_count 0 prompt audit.
+- stop_conditions_hit: none so far.
+## Prompt Pack Import
+
+- imported_at: 2026-05-25T19:29:34+00:00
+- pack_id: codebase-bug-review-and-hardening-v1
+- pack_title: Full Codebase Bug Review and Hardening Track
+- mode: controlled_batch_until_blocked
+- prompt_count: 8
+- prompt_ids: CODEBUG-01, CODEBUG-02, CODEBUG-03, CODEBUG-04, CODEBUG-05, CODEBUG-06, CODEBUG-07, CODEBUG-08
+- execution: import_only; no prompt executed automatically.
+
+## Codebase Bug Review and Hardening Batch Progress
+
+- updated_at: 2026-05-25T20:45:00+00:00
+- pack_id: codebase-bug-review-and-hardening-v1
+- completed_prompt_ids: CODEBUG-01, CODEBUG-02, CODEBUG-03, CODEBUG-04, CODEBUG-05, CODEBUG-06, CODEBUG-07, CODEBUG-08
+- active_prompt_id: none
+- next_prompt_id: clean-release-candidate-boundary-and-prompt-tracker-reconciliation
+- evidence: CODEBUG-01 baseline docs and validation complete; CODEBUG-02 safety-control tests passed with 61 focused tests; CODEBUG-03 fixed closed-pipe `commands list` traceback and command registry tests passed; CODEBUG-04 runtime/brain tests passed with 148 focused tests plus full suite; CODEBUG-05 connector/workflow tests passed with 440 focused tests; CODEBUG-06 prompt/tracker/docs tests passed with 66 focused tests and CODEBUG queue rows reconciled; CODEBUG-07 static scan/report completed with no scoped immediate code fix; CODEBUG-08 release gate passed with full suite 1387 passed / 1 skipped, docs-focused tests 43 passed, command registry validation with 484 commands, policy-check, safe eval 40 pass / 0 fail / 6 skipped, and all_safe dogfood dry-run.
+- stop_conditions_hit: none.
+- remaining_follow_up: clean release-candidate boundary, broader prompt tracker reconciliation, dedicated docs validation command gap, and subprocess/file-deletion allowlist review.
+## Prompt Pack Import
+
+- imported_at: 2026-05-25T19:52:09+00:00
+- pack_id: natural-language-command-understanding-v1
+- pack_title: Natural Language Command Understanding Track
+- mode: controlled_batch_until_blocked
+- prompt_count: 10
+- prompt_ids: NLCMD-01, NLCMD-02, NLCMD-03, NLCMD-04, NLCMD-05, NLCMD-06, NLCMD-07, NLCMD-08, NLCMD-09, NLCMD-10
+- execution: import_only; no prompt executed automatically.
+## Prompt Pack Import
+
+- imported_at: 2026-05-25T20:51:30+00:00
+- pack_id: command-qa-sandbox-self-heal-v1
+- pack_title: Command QA Sandbox and Self-Healing Loop
+- mode: controlled_batch_until_blocked
+- prompt_count: 10
+- prompt_ids: QA-01, QA-02, QA-03, QA-04, QA-05, QA-06, QA-07, QA-08, QA-09, QA-10
+- execution: import_only; no prompt executed automatically.
+## Prompt Pack Import
+
+- imported_at: 2026-05-25T22:15:16+00:00
+- pack_id: creative-media-generation-v1
+- pack_title: Creative Media Generation Track
+- mode: controlled_batch_until_blocked
+- prompt_count: 12
+- prompt_ids: MEDIA-01, MEDIA-02, MEDIA-03, MEDIA-04, MEDIA-05, MEDIA-06, MEDIA-07, MEDIA-08, MEDIA-09, MEDIA-10, MEDIA-11, MEDIA-12
+- execution: import_only; no prompt executed automatically.
+## Prompt Pack Import
+
+- imported_at: 2026-05-26T00:00:44+00:00
+- pack_id: secrets-and-api-key-management-v1
+- pack_title: Secrets and API Key Management Track
+- mode: controlled_batch_until_blocked
+- prompt_count: 8
+- prompt_ids: SECRETS-01, SECRETS-02, SECRETS-03, SECRETS-04, SECRETS-05, SECRETS-06, SECRETS-07, SECRETS-08
+- execution: import_only; no prompt executed automatically.
+
+## Secrets and API Key Management Batch Progress
+
+- updated_at: 2026-05-26T01:10:00+00:00
+- pack_id: secrets-and-api-key-management-v1
+- completed_prompt_ids: SECRETS-01, SECRETS-02, SECRETS-03, SECRETS-04, SECRETS-05, SECRETS-06, SECRETS-07, SECRETS-08
+- active_prompt_id: none
+- next_prompt_id: news-provider-registry-status-commands
+- evidence: SECRETS-01 policy/docs tests passed; SECRETS-02 registry/redaction tests and command validation passed; SECRETS-03 resolver/env-loader tests and command validation passed; SECRETS-04 provider doctor tests, command validation, policy-check, and full suite 1602 passed after scoped fixes; SECRETS-05 Keychain dry-run/status tests and smokes passed; SECRETS-06 scanner/preflight tests plus tracked/staged scan/preflight smokes passed; SECRETS-07 docs/scanner tests and provider-doctor smoke passed; SECRETS-08 release gate passed with full suite 1616 tests, `tests/secrets` 31 tests, command registry 541 commands, policy-check, tracked/staged scans, and Git preflight.
+- stop_conditions_hit: none.
+- remaining_follow_up: clean release-candidate boundary review before commit/push, external scanner parity if desired, real Keychain adapter only under a future explicit approval-gated prompt, and live provider credential validation only if configured and explicitly requested.
+## Prompt Pack Import
+
+- imported_at: 2026-05-26T00:56:39+00:00
+- pack_id: performance-bottleneck-scanner-v1
+- pack_title: Performance Bottleneck Scanner and Optimization Advisor
+- mode: controlled_batch_until_blocked
+- prompt_count: 11
+- prompt_ids: PERF-01, PERF-02, PERF-03, PERF-04, PERF-05, PERF-06, PERF-07, PERF-08, PERF-09, PERF-10, PERF-11
+- execution: controlled batch by explicit user request. PERF-01 through PERF-11 complete with evidence.
+- evidence: PERF-01 docs tests passed; PERF-02 model/report tests passed; PERF-03 static scanner tests passed; PERF-04 startup scanner tests passed; PERF-05 safe benchmark tests passed; PERF-06 test profiler tests and full suite passed; PERF-07 recommendation tests passed; PERF-08 baseline tests passed; PERF-09 patch planner tests passed; PERF-10 dashboard tests and read-only CLI smokes passed; PERF-11 release gate passed with full suite 1665, focused performance tests 49, command registry validation 561, policy-check, safe static/startup/benchmark/test-profile/recommendation/baseline/dashboard smokes, release docs, and maturity review.
+- stop_conditions_hit: none.
+- remaining_follow_up: clean release-candidate boundary review before commit/push; manual/live validation; human review of static findings before any optimization patch.
+## Prompt Pack Import
+
+- imported_at: 2026-05-26T04:45:51+00:00
+- pack_id: canonical-runtime-gateway-hardening-v1
+- pack_title: Canonical Runtime State, Agent Gateway / Runtime Kernel, and External Review Hardening
+- mode: controlled_batch_until_blocked
+- prompt_count: 11
+- prompt_ids: CANON-01, CANON-02, CANON-03, CANON-04, CANON-05, CANON-06, CANON-07, CANON-08, CANON-09, EXTREV-01, CANON-10
+- execution: import_only; no prompt executed automatically.
+
+## Prompt Batch Progress
+
+- updated_at: 2026-05-26T06:35:00+00:00
+- pack_id: canonical-runtime-gateway-hardening-v1
+- completed_verified: CANON-01, CANON-02, CANON-03, CANON-04, CANON-05, CANON-06, CANON-07, CANON-08, CANON-09, EXTREV-01, CANON-10
+- active_prompt_id: none
+- next_prompt_id: news-provider-registry-status-commands
+- queued_remaining: none for this pack
+- evidence: completion report entries, completed prompt files, full suite 1723 passed, focused release-gate tests 58 passed, command registry validation, policy-check, prompt audit, and all_safe dogfood dry-run evidence.
+- blockers: none for CANON-10. Repo-level blockers remain: large dirty worktree, clean release-candidate boundary review, external secret scan gap, and live/manual validation gaps.
